@@ -20,13 +20,13 @@ export class MapScene extends Phaser.Scene {
   ready = false; transitioning = false; overlay = false; shiftLocked = false; shifting = false; wasMoving = false; trail: { x: number; y: number }[] = []; shiftCool = 0;
   hud!: Win; hudG!: Phaser.GameObjects.Graphics; hudTxt!: Phaser.GameObjects.Text; hudLum!: Phaser.GameObjects.Text; vig!: Phaser.GameObjects.Image; glows: Phaser.GameObjects.Image[] = []; motes: { s: Phaser.GameObjects.Rectangle; vx: number; vy: number }[] = [];
   tintRect!: Phaser.GameObjects.Rectangle; banner: Win | null = null; stepsLeft = 50; scrollX = 0; scrollY = 0; camOverride: { x: number; y: number } | null = null; lowWarned = false; lastBgm = '';
-  saveIcon!: Phaser.GameObjects.Text; fadingNow = false; shake_ = 0; pendingMode: any; mapLights: any[] = [];
+  introBlack = false; saveIcon!: Phaser.GameObjects.Text; fadingNow = false; shake_ = 0; pendingMode: any; mapLights: any[] = [];
   constructor() { super('Map'); }
   init(data: any) { this.pendingMode = data || {}; }
   create() {
     this.cameras.main.setBackgroundColor(0x000000);
     this.world = this.add.container(0, 0).setScale(3); this.fxLayer = this.add.container(0, 0).setDepth(50); this.ui = this.add.container(0, 0).setDepth(100);
-    this.msg = new MessageSystem(this, this.ui); this.fader = new Fader(this, 99999); this.interp = new Interpreter(this);
+    this.msg = new MessageSystem(this, this.ui); this.fader = new Fader(this, 99999); this.fader.rect.fillAlpha = 1; /* black from the first frame; start() reveals */ this.interp = new Interpreter(this);
     // darkness vignette (Far Shore): clear centre, dark edges
     const vw = 1632, vh = 1248; if (!this.textures.exists('vig')) { const vc = this.textures.createCanvas('vig', vw, vh)!; const vx = vc.getContext(); const g = vx.createRadialGradient(vw / 2, vh / 2, 250, vw / 2, vh / 2, 640);
     g.addColorStop(0, 'rgba(4,10,40,0)'); g.addColorStop(0.55, 'rgba(4,10,40,0.28)'); g.addColorStop(1, 'rgba(2,6,28,0.62)'); vx.fillStyle = g; vx.fillRect(0, 0, vw, vh); vc.refresh(); }
@@ -44,7 +44,9 @@ export class MapScene extends Phaser.Scene {
     const mode = this.pendingMode.mode || 'load';
     if (mode === 'new') { $.newGame(); }
     await this.loadMap($.map.id, $.map.x, $.map.y, $.map.dir as Dir, { first: true });
-    this.ready = true; await this.fader.in(this, 500); this.checkAutoRun();
+    this.ready = true;
+    if (mode === 'new') { this.introBlack = true; this.checkAutoRun(); this.time.delayedCall(4000, () => { if (this.introBlack) { this.introBlack = false; this.fader.in(this, 500); } }); }   // the opening narration takes over from the black screen
+    else { await this.fader.in(this, 500); this.checkAutoRun(); }
   }
   mapBgm() { const b = this.mapData.bgm || {}; return $.realm === 'far' ? b.far || b.near : b.near; }
   // ------------------------------------------------------------ map building

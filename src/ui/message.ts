@@ -144,10 +144,13 @@ export class MessageSystem {
     return win;
   }
   /** Full-screen narration on black (intro/outro). */
+  narrating = false; narrDone = false;
   async narrate(lines: string[], opts: { color?: string; hold?: number } = {}) {
-    const bg = this.scene.add.rectangle(0, 0, W, H, 0x000000, 1).setOrigin(0, 0); this.layer.add(bg); bg.setAlpha(0); this.scene.tweens.add({ targets: bg, alpha: 1, duration: 500 });
-    this.busy = true;
-    await new Promise((r) => this.scene.time.delayedCall(550, r));
+    const S: any = this.scene; const fromBlack = !!S.introBlack;
+    const bg = this.scene.add.rectangle(0, 0, W, H, 0x000000, 1).setOrigin(0, 0); this.layer.add(bg);
+    this.busy = true; this.narrating = true;
+    if (fromBlack) { /* New Game: the screen is already black (fader); swap to the narration backdrop in the same frame so the map never shows */ bg.setAlpha(1); S.introBlack = false; S.fader.rect.fillAlpha = 0; await new Promise((r) => this.scene.time.delayedCall(250, r)); }
+    else { bg.setAlpha(0); this.scene.tweens.add({ targets: bg, alpha: 1, duration: 500 }); await new Promise((r) => this.scene.time.delayedCall(550, r)); }
     for (const ln of lines) {
       const wrapped = this.wrap(ln, 640).join('\n');
       const t = this.scene.add.text(W / 2, H / 2, wrapped, { fontFamily: FONT, fontSize: '28px', color: opts.color ?? '#dfe8ff', align: 'center', lineSpacing: 10, stroke: '#000', strokeThickness: 4 }).setOrigin(0.5); this.layer.add(t);
@@ -156,7 +159,7 @@ export class MessageSystem {
       await new Promise<void>((r) => this.scene.tweens.add({ targets: t, alpha: 0, duration: 350, onComplete: () => { t.destroy(); r(); } }));
     }
     this.scene.tweens.add({ targets: bg, alpha: 0, duration: 500, onComplete: () => bg.destroy() });
-    this.busy = false;
+    this.busy = false; this.narrating = false; this.narrDone = true;
   }
 }
 void COL;
