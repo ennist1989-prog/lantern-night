@@ -1,10 +1,10 @@
 // Headless balance/behaviour sim of the battle engine (no browser). Usage: node tests/sim.cjs
 const { execSync } = require('child_process'); const fs = require('fs'); const path = require('path');
-execSync('npx tsc src/battle/engine.ts src/battle/party.ts src/battle/spec.ts --outDir /tmp/eng --module commonjs --target es2022 --skipLibCheck --esModuleInterop --ignoreConfig', { stdio: 'inherit', cwd: path.join(__dirname, '..') });
-const { Battle } = require('/tmp/eng/engine.js'); const { partyBattler } = require('/tmp/eng/party.js'); const { setSpec, SPEC } = require('/tmp/eng/spec.js');
+try { execSync('npx tsc src/battle/engine.ts src/battle/party.ts src/battle/spec.ts --rootDir src --outDir /tmp/eng --module commonjs --target es2022 --skipLibCheck --esModuleInterop --ignoreConfig', { stdio: 'pipe', cwd: path.join(__dirname, '..') }); } catch (e) { /* strictness diagnostics only; JS is still emitted */ }
+const { Battle } = require('/tmp/eng/battle/engine.js'); const { partyBattler } = require('/tmp/eng/battle/party.js'); const { setSpec, SPEC } = require('/tmp/eng/battle/spec.js');
 const D = path.join(__dirname, '../public/data'); const J = (f) => JSON.parse(fs.readFileSync(path.join(D, f)));
-const spec = {}; for (const n of ['enemies', 'skills', 'states', 'troops', 'bosses', 'zones', 'parley', 'bonds', 'elements', 'progression']) spec[n] = J('spec/' + n + '.json'); setSpec(spec);
-const ACT = J('actors.json'), ITEMS = J('items.json');
+const spec = {}; for (const n of ['enemies', 'skills', 'states', 'troops', 'bosses', 'zones', 'parley', 'bonds', 'elements', 'progression', 'summons', 'learn']) spec[n] = J('spec/' + n + '.json'); setSpec(spec);
+const ACT = J('actors.json'), ITEMS = J('items.json'); const { DB } = require('/tmp/eng/core/db.js'); DB.items = ITEMS; DB.equipment = J('equipment.json');
 function mkParty(ids, lv) { return ids.map((id) => { const a = { id, level: lv, exp: 0, hp: 9999, sp: 9999, equips: { ...ACT[id].equip, bond: null }, skills: [], states: [] }; for (const [l, s] of ACT[id].skills) if (lv >= l) a.skills.push(s); return partyBattler(a, ACT[id], ITEMS, {}); }); }
 // simple bot: mixes weakness hunting, parley on calm-able foes optionally
 function bot(B, p, style) {

@@ -3,6 +3,7 @@ import { $ } from '../core/state';
 import { DB } from '../core/db';
 import { Audio } from '../core/audio';
 import { Dir } from './character';
+import { lockOpen } from '../core/locks';
 const ABORT = { abort: true };
 export class Interpreter {
   scene: any; running = 0;
@@ -11,10 +12,13 @@ export class Interpreter {
   cond(c: any, ctx: any): boolean {
     if (!c) return true;
     if (c.sw) for (const s of [].concat(c.sw)) if (!$.sw(s)) return false;
+    if (c.anysw && !(c.anysw as string[]).some((x) => $.sw(x))) return false;
     if (c.nsw) for (const s of [].concat(c.nsw)) if ($.sw(s)) return false;
     if (c.v) { const [n, op, val] = c.v; const x = $.v(n); if (op === '>=' && !(x >= val)) return false; if (op === '==' && !(x === val)) return false; if (op === '<' && !(x < val)) return false; if (op === '>' && !(x > val)) return false; if (op === '<=' && !(x <= val)) return false; if (op === '!=' && !(x !== val)) return false; }
     if (c.self) { if (!ctx || ctx.ev == null) return false; if (!$.selfSwitches[$.selfKey(ctx.map, ctx.ev, c.self)]) return false; }
     if (c.nself) { if (ctx && ctx.ev != null && $.selfSwitches[$.selfKey(ctx.map, ctx.ev, c.nself)]) return false; }
+    if (c.lock && !lockOpen(c.lock)) return false;
+    if (c.nlock && lockOpen(c.nlock)) return false;
     if (c.item && !$.has(c.item)) return false;
     if (c.noitem && $.has(c.noitem)) return false;
     if (c.gold !== undefined && $.gold < c.gold) return false;
@@ -37,11 +41,15 @@ export class Interpreter {
         case 'if': { if (this.cond(c.cond, ctx)) await this.exec(c.then, ctx); else if (c.else) await this.exec(c.else, ctx); break; }
         case 'set': $.setSw(c.sw, c.v !== false); S.refreshEvents(); break;
         case 'var': { const cur = $.v(c.name); const v = c.v; $.setV(c.name, c.op === '+=' ? cur + v : c.op === '-=' ? cur - v : v); break; }
-        case 'self': { const id = c.ev ?? ctx.ev; $.selfSwitches[$.selfKey(ctx.map ?? $.map.id, id, c.k)] = c.v !== false; S.refreshEvents(); break; }
+        case 'self': { const id = c.ev ?? ctx.ev; { const sk = $.selfKey(ctx.map ?? $.map.id, id, c.k); if (c.v === false) delete $.selfSwitches[sk]; else $.selfSwitches[sk] = true; } S.refreshEvents(); break; }
+        case 'litpost': { const P = S.player; $.litPost = { map: S.mapData.id, x: P.tx, y: P.ty, dir: P.dir }; break; }
+        case 'sqreward': { const q = DB.sidequests?.quests?.[c.id]; if (!q) break; const r = q.reward; if (r.gold) $.gold += r.gold; for (const it of r.items) $.gain(it.id, it.qty); for (const k of r.keyItems) $.gain(k, 1); if (r.nameFragments) { $.fragments += r.nameFragments; } if (r.bondOfferings) $.gain(DB.sidequests.offeringItem, r.bondOfferings); Audio.se('powerup'); S.msg.toast(`Reward: ` + [r.gold ? r.gold + ' g' : '', ...r.items.map((i: any) => (DB.items[i.id]?.name || i.id) + (i.qty > 1 ? ' ×' + i.qty : '')), r.nameFragments ? `Name Fragment ×${r.nameFragments}` : '', r.bondOfferings ? `${DB.items[DB.sidequests.offeringItem]?.name} ×${r.bondOfferings}` : ''].filter(Boolean).join(', '), 3200, 14, '#9ee6ff'); break; }
+        case 'frag': { $.fragments += c.n ?? 1; Audio.se('powerup'); S.msg.toast(`Name Fragment ×${c.n ?? 1}`, 2600, 14, '#cfe9ff'); break; }
+        case 'toast': S.msg.toast(c.text, c.ms ?? 3400, 14, c.color ?? '#ffe9a0'); break;
         case 'wait': await S.wait(c.ms ?? 500); break;
         case 'fade': { if (c.dir === 'in') await S.fader.in(S, c.ms ?? 400); else await S.fader.out(S, c.ms ?? 400, c.white ? 0xffffff : 0x000000); break; }
         case 'transfer': await S.transfer(c.map, c.x, c.y, c.dir || 'down', c); break;
-        case 'item': { $.gain(c.id, c.n ?? 1); const it = DB.items[c.id]; if (!c.quiet) { Audio.se('pickup'); S.msg.toast(`Obtained ${it.name}${(c.n ?? 1) > 1 ? ' ×' + c.n : ''}`, 2200, 14, '#ffe9a0'); } break; }
+        case 'item': { $.gain(c.id, c.n ?? 1); const it = DB.items[c.id]; if (it.type === 'key' && (c.n ?? 1) > 0) { $.refreshAllSkills(); if (!c.quiet) { Audio.se('powerup'); S.msg.toast(`Key Item: ${it.name}`, 2800, 14, '#ffd36a'); } break; } if (!c.quiet) { Audio.se('pickup'); S.msg.toast(`Obtained ${it.name}${(c.n ?? 1) > 1 ? ' ×' + c.n : ''}`, 2200, 14, '#ffe9a0'); } break; }
         case 'gold': { $.gold = Math.max(0, $.gold + c.n); if (c.n > 0 && !c.quiet) { Audio.se('coin'); S.msg.toast(`Received ${c.n} gold`, 2000, 14, '#ffe9a0'); } break; }
         case 'exp': { await S.giveExp(c.n); break; }
         case 'battle': { const r = await S.startBattle(c.troop, c); ctx.result = r; $.setV('battle_result', r === 'win' ? 1 : r === 'escape' ? 2 : r === 'calm' ? 3 : 0); if (r === 'win' || r === 'calm') { if (c.win) await this.exec(c.win, ctx); } else if (r === 'escape') { if (c.escape) await this.exec(c.escape, ctx); } else if (c.lose) await this.exec(c.lose, ctx); break; }

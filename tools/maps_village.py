@@ -94,8 +94,15 @@ def build_village():
         m.event(x, y, [page(trigger='touch', through=True, list=[say(None, None, t), {'c': 'move', 'route': ['down']}])])
     # ---- shrine gate
     m.event(18, 4, [page(trigger='touch', through=True, list=[
-        IF({'item': 'shrine_key'}, [IF({'nsw': 'gate_open'}, [{'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
-           [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['down']}])])])])
+        IF({'nlock': 'L02'}, [{'c': 'se', 'name': 'buzzer'}, say('villager3', 'Gate Guard', 'Halt. No one climbs to the Shrine after dusk without the Elder’s seal. Orders.'), say('mio', 'Mio', 'Elder Matsu has one for us, I think. Let’s ask him.'), {'c': 'move', 'route': ['down']}],
+           [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [{'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The Guard checks the Elder’s seal and waves you through. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
+              [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['down']}])])])])], realm='near')
+    # Far Shore: no guard stands here (lock L02 alternative route)
+    m.event(18, 4, [page(trigger='touch', through=True, list=[
+        IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [{'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
+           [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['down']}])])])], realm='far')
+    # Gate Guard (Near only): his post by the gate
+    m.event(19, 4, [page(g=NPC('villager3', 'left'), list=[say('villager3', 'Gate Guard', 'Up to the Shrine? Not without the Elder’s seal, miss. Not after dusk. Though the wind says the other shore has no guards…'), IF({'lock': 'L02'}, [say('villager3', 'Gate Guard', 'Ah, the seal. All in order. Go on.')])])], realm='near')
     m.event(17, 4, [page(trigger='touch', through=True, list=[{'c': 'balloon', 'icon': '…'}])]) if False else None
     # ---- Lantern Post tutorial (square): first interaction lights it (event on top of generic post event)
     m.events[[e['x'] for e in m.events].index(16)]['pages'] = [  # post at (16,16)
@@ -103,7 +110,7 @@ def build_village():
             say('mio', 'Mio', 'The Lantern Post is cold and dark… Granny said it would wake for the Lantern.'),
             {'c': 'flash', 'color': 0xcff6ff, 'ms': 500}, {'c': 'se', 'name': 'powerup'},
             say(None, None, 'Mio lifts the Lantern. The wick catches, and the post blooms with pale light.'),
-            sw('post_lit'), {'c': 'lumen', 'n': 100}, quest('main', 1),
+            sw('post_lit'), {'c': 'litpost'}, {'c': 'lumen', 'n': 100}, quest('main', 1),
             tut('post', 'Lantern Posts: rest, save, and Shift for free nearby. Now press Q to Shift to the Far Shore!', 7000)]),
         page(cond={'sw': 'post_lit'}, g=dict(obj='lantern_post'), trigger='action', marker=True, list=[{'c': 'post'}])]
     # ---- NPCs (Near)
@@ -114,7 +121,11 @@ def build_village():
                say('elder', 'Elder Matsu', 'Listen. The Shrine Bell has not rung since Priest Ren left us. Without it, no Lantern will light, and the spirits grow restless.'),
                say('elder', 'Elder Matsu', 'The gate to the Shrine is locked, and the key was lost down Ashiro Well. Long ago, they say the Well Spirit took it.'),
                say('elder', 'Elder Matsu', 'The path to the Well is blocked by a boulder, since the last storm. Our young ones can’t shift it. But you… well. You carry a Lantern.'),
-               sw('elder_told'), sw('boulder_known'), quest('main', 3), say('kaze', 'Kaze', 'Boulder, Well, key. Sounds like a morning stroll. Let’s go.')],
+               say('elder', 'Elder Matsu', 'Take my seal; the guard at the Shrine gate answers to it. Show him, and he will let you pass.'), item('elder_seal'),
+               say(None, None, 'The Well. The one place Granny Sachi said, her whole life, never to go.'),
+               choice(['Go to the Well', 'Wait. Sit with Granny a moment first'], [[say('mio', 'Mio', 'Then I’ll go now, before I think about it.')],
+                   [say(None, None, 'Mio goes back to the little house and sits by the bed. Sachi’s breath is slow and even, and the hearth is cold.'),
+                    say('mio', 'Mio', 'I’m scared, Granny. …But you’d tell me to go.'), say(None, None, 'Sachi doesn’t answer. Mio closes her fingers around the Lantern, and walks back out into the dusk.'), sw('mio_sat_first')]]), sw('elder_told'), sw('boulder_known'), quest('main', 3), say('kaze', 'Kaze', 'Boulder, Well, key. Sounds like a morning stroll. Let’s go.')],
               [IF({'nsw': 'daigo_joined'}, [say('elder', 'Elder Matsu', 'The Well lies past the boulder, south-west. Mind your Lumen on the Far Shore.')],
                   [IF({'nsw': 'key_got'}, [say('elder', 'Elder Matsu', 'Daigo is with you? Good lad. Find that key.')],
                      [say('elder', 'Elder Matsu', 'The key! Then climb, children. The Bell has waited long enough.')])])])])])])
@@ -128,10 +139,10 @@ def build_village():
     m.event(14, 19, [page(g=NPC('villager2', 'down'), move=dict(type='random', r=2), list=[say('villager2', 'Villager', 'Tonight’s the Lantern Festival, and not one lantern will light! Granny Sachi’s girl just got hers, though. That’s a start.')])], realm='near')
     m.event(22, 18, [page(g=NPC('woman', 'left'), move=dict(type='random', r=1), list=[
         IF({'sw': 'daigo_joined'}, [say('woman', 'Aunt Fumi', 'Daigo’s back, safe and sooty! You pulled him out of that Well, Mio. Eat something, you two.')],
-           [say('woman', 'Aunt Fumi', 'Daigo went down the Well days ago looking for the old bell clapper. He’s stubborn like his father. Someone should look for him.')])])], realm='near')
+           [say('woman', 'Aunt Fumi', 'Daigo’s gone off to the Well this morning, looking for the old bell clapper. He’s stubborn like his father. Someone should look for him.')])])], realm='near')
     m.event(9, 13, [page(g=NPC('villager3', 'right'), list=[say('villager3', 'Boy', 'I saw a fox! Just for a second, sitting by the post. Then — poof! — I blinked and it was gone.')])], realm='near')
     m.event(26, 19, [page(g=NPC('child', 'down'), move=dict(type='random', r=2), list=[
-        IF({'item': 'wind_chime'}, [say('child', 'Kiku', 'My wind-chime!! You found it!'), say('child', 'Kiku', 'It was hanging in a tree I can’t even see! Thank you thank you thank you!'), {'c': 'item', 'id': 'lucky_knot'}, gold(40), {'c': 'item', 'id': 'wind_chime', 'n': -1, 'quiet': True}, quest('chime', 1, True), sw('chime_done')],
+        IF({'item': 'wind_chime'}, [say('child', 'Kiku', 'My wind-chime!! You found it!'), say('child', 'Kiku', 'It was hanging in a tree I can’t even see! Thank you thank you thank you!'), {'c': 'item', 'id': 'lucky_knot'}, {'c': 'item', 'id': 'chime_offering'}, gold(40), {'c': 'item', 'id': 'wind_chime', 'n': -1, 'quiet': True}, quest('chime', 1, True), sw('chime_done')],
            [IF({'sw': 'chime_done'}, [say('child', 'Kiku', 'It sings in the wind again. Sometimes it sings back, when nobody’s listening.')],
               [IF({'sw': 'chime_taken'}, [say('child', 'Kiku', 'Please find my chime! Granny says things that fall into the Far Shore don’t come back, but you can go there!')],
                  [say('child', 'Kiku', 'My wind-chime is gone! It was Grandpa’s. I was swinging it and—it just flew off, and sparkled, and then it was gone.'), say('mio', 'Mio', 'I’ll look for it. Somewhere only the Lantern can see, maybe.'), sw('chime_taken'), quest('chime', 0)])])])])], realm='near')
@@ -144,24 +155,45 @@ def build_village():
         say('kaze', 'Kaze', 'Word on this shore: the Bell’s gone silent, and that means trouble for both worlds. You’re headed up the Shrine, aren’t you? Then I’m coming.'),
         say('mio', 'Mio', 'Fine. But try not to be sarcastic about everything.'), say('kaze', 'Kaze', 'No promises.'),
         {'c': 'me', 'name': 'secret'}, {'c': 'party', 'add': 'kaze'}, sw('kaze_joined'), quest('main', 2), {'c': 'erase'},
-        {'c': 'tutorial', 'id': 'weak', 'text': 'Kaze joined! Hit weaknesses for Echo bonuses. Check Menu → Bestiary.', 'ms': 6000}])], realm='far')
+        {'c': 'tutorial', 'id': 'weak', 'text': 'Kaze joined! Hit weaknesses for Echo bonuses. Spirits you meet are recorded in the Bestiary once Granny Sachi gives you her Ledger.', 'ms': 6000}])], realm='far')
     m.event(30, 13, [page(g=NPC('ghostman', 'left', step=False), list=[
-        IF({'sw': 'hanzo_told'}, [IF({'nsw': 'hanzo_paid'}, [say('ghostman', 'Old Shiro', 'He said that? The boat’s still tied at the third post… and he never stopped looking.'), say('ghostman', 'Old Shiro', 'Hm. That is enough. Take this, child. Ghosts don’t need charms.'), {'c': 'item', 'id': 'spirit_charm'}, quest('hanzo', 1, True), sw('hanzo_paid')], [say('ghostman', 'Old Shiro', 'Thank you. Tell Hanzo he can finally mend that net.')])],
-           [say('ghostman', 'Old Shiro', 'You… can see me? Then listen. There’s a fisherman, Hanzo, in the Near village.'), say('ghostman', 'Old Shiro', 'Tell him the net is finally mended, and that I forgive him for the storm. Please.'), sw('shiro_asked'), quest('hanzo', 0)])])], realm='far')
+        IF({'sw': 'hanzo_told'}, [IF({'nsw': 'hanzo_paid'}, [say('ghostman', 'Old Shiro', 'He said that? The boat’s still tied at the third post… and he never stopped looking.'), say('ghostman', 'Old Shiro', 'Hm. That is enough. Take this, child. Ghosts don’t need charms.'), {'c': 'item', 'id': 'spirit_charm'}, {'c': 'item', 'id': 'paper_charm', 'n': 2}, quest('hanzo', 1, True), sw('hanzo_paid')], [say('ghostman', 'Old Shiro', 'Thank you. Tell Hanzo he can finally mend that net.')])],
+           [say('ghostman', 'Old Shiro', 'You… can see me? Then listen. There’s a fisherman, Hanzo, in the Near village.'), say('ghostman', 'Old Shiro', 'Tell him the net is finally mended, and that I forgive him for the storm. Please.'), item('hanzo_note'), sw('shiro_asked'), quest('hanzo', 0)])])], realm='far')
     m.event(14, 15, [page(g=NPC('ghostgirl', 'down'), move=dict(type='random', r=2), list=[say('ghostgirl', 'Spirit Girl', 'The Lantern posts are my favorite. They’re like little stars that stayed.')])], realm='far')
     m.event(23, 12, [page(g=NPC('spirit', 'down'), move=dict(type='random', r=2), list=[say('spirit', 'Wandering Spirit', 'The Bell would sing me home, if it still rang. I don’t mind waiting. I just… don’t want to wait forever.')])], realm='far')
     m.event(31, 21, [page(cond={'nself': 'A'}, g=dict(obj='gem_white', nofar=False), list=[{'c': 'se', 'name': 'pickup'}, say(None, None, 'A wind-chime hangs from a branch that exists only on this shore. It tinkles faintly.'), {'c': 'item', 'id': 'wind_chime'}, self_sw('A')])], realm='far')
+    # ---- Hollowed Pilgrim (Name Whisper target; Far only)
+    m.event(31, 26, [page(cond={'nsw': 'pilgrim_named'}, g=NPC('ghostman', 'up', step=False), ft='hollowed_npc', list=[
+            say(None, None, 'A pilgrim stands in a grey robe. Their face is blank. Not hostile, only… emptied. Something might reach them, if you knew a name to whisper.'), tut('whisper', 'Field spells: Menu → Skill → pick a Field spell when you stand beside a target. (Mio learns Name Whisper at Lv 6.)', 7000)],
+            fieldList=[say('mio', 'Mio', '…Tomo? Is that who you were?'), {'c': 'se', 'name': 'secret'}, {'c': 'flash', 'color': 0xcff6ff, 'ms': 400}, say('ghostman', 'Pilgrim', 'Tomo. Yes. That was a good name.'), say('ghostman', 'Pilgrim', 'Take the piece I kept for you. A name only fades when no one says it.'), {'c': 'frag', 'n': 1}, sw('pilgrim_named')]),
+        page(cond={'sw': 'pilgrim_named'}, g=NPC('ghostman', 'up', step=False), list=[say('ghostman', 'Tomo', 'Thank you for saying it. I will walk to the Bell now.')])], realm='far')
+    # ---- Daigo cameo (hero-journey beat: the Near-side skeptic, before he goes to the Well)
+    m.event(14, 12, [page(cond={'nsw': 'post_lit'}, g=NPC('smith', 'left', step=False), list=[
+        IF({'nsw': 'daigo_cameo'}, [
+            say('smith', 'Daigo', 'You’re up early, Mio. Or you never slept. Your eyes say never.'),
+            say('smith', 'Daigo', 'The Bell’s quiet and the lanterns won’t catch. Don’t tell me it’s ghosts. I’ve heard that talk all week.'),
+            say('mio', 'Mio', '…I didn’t say anything.'),
+            say('smith', 'Daigo', 'You were about to. Look, if it’s the old clapper that’s gone missing, I’ll go and find it myself. Hammers fix things. Spirits don’t.'),
+            sw('daigo_cameo')],
+           [say('smith', 'Daigo', 'Go on, then. Light your lamp. I’ll be at the Well, if you want proof the world is only one shape.')])])])
     # ---- Straw Warden (Ch.1 boss): stands in the Far corridor to the Well; Near boulder blocks the same corridor
     wd_cond = {'nsw': 'warden_done'}
     for wy in (22, 23, 24):
         m.event(10, wy, [page(cond=wd_cond, trigger='touch', through=True, list=[
             IF({'sw': 'warden_seen'}, [], [say(None, None, 'A scarecrow stands in the corridor — but on the Far Shore its straw shivers, and two hollow eyes open.'), sw('warden_seen')]),
+            IF({'nsw': 'flame_seen'}, [say(None, None, 'In its chest, one small flame burns perfectly still. No flicker, no wind. It is the only steady fire in Ashiro tonight.'), sw('flame_seen')]),
             IF({'nlvl': 3}, [say('kaze', 'Kaze', 'Hm. That’s a Warden. I’d feel better if we were Level 3 first. Those wisps in the fields would make good practice — and the Post by the Well road is a safe place to rest.')]),
             choice(['Face the Warden', 'Not yet'], [[
                 {'c': 'checkpoint', 'boss': True},
                 say('kaze', 'Kaze', 'It’s guarding something it has forgotten. Hit it where its straw is weak. When the Veil slips it will be open to a Send.'),
                 {'c': 'battle', 'troop': 'boss_straw_warden', 'boss': True, 'noEscape': True,
-                 'win': [say('mio', 'Mio', 'Rest now. Whatever you were guarding, it’s over.'), sw('warden_done'), quest('main', 3, quiet=True)], 'lose': [{'c': 'abort'}]}],
+                 'win': [say('mio', 'Mio', 'Rest now. Whatever you were guarding, it’s over.'),
+                         say(None, None, 'The scarecrow settles into a farmer’s name — “Gen” — and Mio says it, and it goes. The still flame goes out last, by itself.'),
+                         say(None, None, 'On the straw chest hangs a neat paper seal, tied with a careful knot. Someone wrote a name on it in tidy brushstrokes, and it was not Gen’s.'),
+                         say('kaze', 'Kaze', 'Mio. Nobody ties a knot like that by accident.'), sw('seal_seen_1'),
+                         {'c': 'wait', 'ms': 600}, narr('Dusk. Mio sits on the rim of the Old Well, the Lantern in her lap.', 'Far Ashiro glows below, ghost-lit and gentle. No one speaks.'),
+                         say(None, 'Sachi (a voice)', 'You are holding the lantern like a rope.'), {'c': 'wait', 'ms': 500},
+                         sw('warden_done'), quest('main', 3, quiet=True), {'c': 'toast', 'text': 'Night 2: six nights to Lantern Night.'}], 'lose': [{'c': 'abort'}]}],
                 [{'c': 'move', 'route': ['left']}]])])], realm='far')
     m.event(10, 23, [page(cond=wd_cond, g=NPC('statue', 'down', step=False), trigger='action', list=[say(None, None, 'The straw figure watches you. It seems to be waiting.')])], realm='far')
     # Granny Sachi's Far-side friend: Zashiki Child (special spawn, parley only)

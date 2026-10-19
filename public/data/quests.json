@@ -22,7 +22,8 @@
    "Return to the Far Shore ghost with Hanzo’s answer."
   ],
   "reward": "Spirit Charm",
-  "doneText": "Two old friends finally spoke."
+  "doneText": "Two old friends finally spoke.",
+  "sq": "sq01"
  },
  "chime": {
   "name": "Kiku’s Wind-chime",
@@ -32,7 +33,8 @@
    "Bring the wind-chime back to Kiku."
   ],
   "reward": "Lucky Knot, 40 gold",
-  "doneText": "Kiku’s chime sings again."
+  "doneText": "Kiku’s chime sings again.",
+  "sq": "sq02"
  },
  "wisps": {
   "name": "Wisp Bounty",
@@ -42,5 +44,27 @@
   ],
   "reward": "Hush Bell ×2, 60 gold",
   "doneText": "The fields are quiet again."
+ },
+ "sq03": {
+  "name": "Hollow Roll Call",
+  "desc": "Sister Ume shows the register: five names are smudged out. She remembers each person only by their trade ('a lamp-oil seller', 'a boy who rang the bell wrong').",
+  "stages": [
+   "Sister Ume shows the register: five names are smudged out. She remembers each person only by their trade ('a lamp-oil seller', 'a boy who rang the bell wrong').",
+   "Five Hollow Villagers wander the shrine floors. Each is a different person. Using Remember on one makes it recite a single clue in battle ('smells of lamp oil')."
+  ],
+  "reward": "Hearty Plum, Name Fragment ×2",
+  "doneText": "The sixth blank is not a villager but a dedication 'to the fox who sat at the shrine gate'. Kaze goes quiet. Players will not understand until Ch6.",
+  "sq": "sq03"
+ },
+ "sq04": {
+  "name": "The Wrong Note",
+  "desc": "Bell Mouse says the shrine bells ring wrong every night. There are three bells on different floors.",
+  "stages": [
+   "Bell Mouse says the shrine bells ring wrong every night. There are three bells on different floors.",
+   "Stand at each bell, Shift, and listen: each bell's pitch is different in the two realms (the Far pitch is the 'true' one the dead remember). Note the order from low to high."
+  ],
+  "reward": "Bell Charm, Offerings ×3",
+  "doneText": "The 'wrong' notes are the Near bells; the Far bells are right. The puzzle makes Shift a listening tool, using audio as information.",
+  "sq": "sq04"
  }
 }

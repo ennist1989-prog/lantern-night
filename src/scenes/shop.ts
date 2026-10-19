@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { Audio } from '../core/audio';
 import { $ } from '../core/state';
-import { DB } from '../core/db';
+import { DB, iconOf } from '../core/db';
+import { RARITY_COL, traitText } from '../core/gear';
 import { W, H, Win, Selectable, COL, FONT, tickWindows } from '../ui/windows';
 export class ShopScene extends Phaser.Scene {
   d: any; wins: Win[] = [];
@@ -14,11 +15,12 @@ export class ShopScene extends Phaser.Scene {
     const talk = mk(new Win(this, 236, 8, 340, 150, tone)); talk.txt((this.d.name ? this.d.name + ': ' : '') + 'Take a look, take your time.', 16, 12, { size: 20, wrap: 300 });
     let mode: 'buy' | 'sell' = 'buy';
     const drawGold = () => { gold.clear(); gold.txt('Gold', 14, 14, { size: 20, color: COL.sys }); gold.txt(String($.gold), 200, 14, { size: 24, color: COL.gold, align: 'right' }); };
-    const sideInfo = (id: string | null) => { side.clear(); if (!id) return; const it = DB.items[id]; side.txt(it.name, 14, 10, { size: 22, color: COL.gold }); side.txt('Owned: ' + ($.items[id] || 0), 14, 44, { size: 19 }); let y = 80;
+    const sideInfo = (id: string | null) => { side.clear(); if (!id) return; const it = DB.items[id]; side.txt(it.name, 14, 10, { size: 22, color: RARITY_COL(it.rarity) }); side.txt('Owned: ' + ($.items[id] || 0), 14, 44, { size: 19 }); let y = 80;
       if (it.params) { for (const [k, v] of Object.entries(it.params)) { side.txt(`${k.toUpperCase()} +${v}`, 14, y, { size: 19, color: COL.green }); y += 26; } }
-      if (['weapon', 'armor', 'acc'].includes(it.type)) { for (const pid of $.party) { const a = $.actors[pid]; const cur = a.equips[it.slot || it.type]; const curP = cur ? DB.items[cur].params || {} : {}; let diff = ''; for (const k of Object.keys(it.params || {})) diff += `${k.toUpperCase()}${(it.params[k] - (curP[k] || 0)) >= 0 ? '+' : ''}${it.params[k] - (curP[k] || 0)} `; side.txt(`${DB.actors[pid].name}: ${diff}`, 14, y, { size: 16, color: COL.sys }); y += 22; } } };
-    const showList = () => { const ids: string[] = mode === 'buy' ? this.d.items : Object.keys($.items).filter((k) => DB.items[k].type !== 'key' && DB.items[k].price);
-      list.setItems(ids.map((id) => ({ label: DB.items[id].name, icon: DB.items[id].icon, value: mode === 'buy' ? String(DB.items[id].price) + ' G' : (Math.floor(DB.items[id].price / 2)) + ' G ×' + $.items[id], enabled: mode === 'buy' ? $.gold >= DB.items[id].price : true, data: id })), true);
+      if (it.traits?.length) { side.txt(it.traits.map(traitText).filter(Boolean).join(', '), 14, y, { size: 14, color: COL.green, wrap: 262 }); y += 20 * Math.ceil(it.traits.map(traitText).join(', ').length / 30); }
+      if (['weapon', 'armor', 'acc'].includes(it.type)) { for (const pid of $.party.filter((q) => !it.who || it.who.includes(q))) { const a = $.actors[pid]; const cur = a.equips[it.slot || it.type]; const curP = cur ? DB.items[cur].params || {} : {}; let diff = ''; for (const k of Object.keys(it.params || {})) diff += `${k.toUpperCase()}${(it.params[k] - (curP[k] || 0)) >= 0 ? '+' : ''}${it.params[k] - (curP[k] || 0)} `; side.txt(`${DB.actors[pid].name}: ${diff}`, 14, y, { size: 16, color: COL.sys }); y += 22; } } };
+    const showList = () => { const ids: string[] = mode === 'buy' ? this.d.items : Object.keys($.items).filter((k) => DB.items[k] && DB.items[k].type !== 'key' && DB.items[k].price && $.items[k] > 0 && DB.items[k].rarity !== 'relic');
+      list.setItems(ids.map((id) => ({ label: DB.items[id].name, icon: iconOf(DB.items[id]), value: mode === 'buy' ? String(DB.items[id].price) + ' G' : (Math.floor(DB.items[id].price / 2)) + ' G ×' + $.items[id], enabled: mode === 'buy' ? $.gold >= DB.items[id].price : true, color: RARITY_COL(DB.items[id].rarity), data: id })), true);
       if (!ids.length) { list.clear(); list.txt('Nothing to sell.', 20, 20, { color: COL.dim }); } };
     list.onSelect = (it) => { desc.clear(); if (it) { desc.txt(DB.items[it.data].desc, 16, 8, { size: 19, wrap: 760 }); sideInfo(it.data); } else sideInfo(null); };
     cmd.setItems([{ label: 'Buy' }, { label: 'Sell' }, { label: 'Leave' }]); cmd.rowH = 38; cmd.pad = 14; cmd.active = true; list.rowH = 38; list.pad = 14; list.fontSize = 21;

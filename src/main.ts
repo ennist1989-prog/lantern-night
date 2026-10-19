@@ -5,6 +5,11 @@ import { Settings } from './core/settings';
 import { W, H } from './ui/windows';
 import { $ } from './core/state';
 import { DB } from './core/db';
+import * as Field from './core/fielduse';
+import * as Gear from './core/gear';
+import * as Locks from './core/locks';
+import { migrateGame } from './core/migrate';
+import { SPEC } from './battle/spec';
 import { SaveManager } from './core/save';
 import { BootScene } from './scenes/boot';
 import { TitleScene } from './scenes/title';
@@ -24,7 +29,7 @@ async function start() {
     audio: { disableWebAudio: false },
     scene: [BootScene, TitleScene, MapScene, BattleScene, MenuScene, ShopScene, SaveLoadScene, CreditsScene],
   });
-  (window as any).__game = game; (window as any).__S = { $, DB, Input, SaveManager, Settings };
+  (window as any).__game = game; (window as any).__S = { $, DB, Input, SaveManager, Settings, Field, Gear, Locks, migrateGame, SPEC };
   Audio.init(game); Input.init();
   game.events.on('prestep', () => Input.update());
   // resume audio on first gesture

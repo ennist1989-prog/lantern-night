@@ -1,3 +1,4 @@
+import { payField } from '../core/fielduse';
 import Phaser from 'phaser';
 import { Input } from '../core/input';
 import { Audio } from '../core/audio';
@@ -92,7 +93,8 @@ export class MapScene extends Phaser.Scene {
       this.evs.push({ id: d.id, data: d, char: ch, page: null, pageIdx: -1, wander: Math.random() * 60, erased: false, aggro: false, stun: 0, marker: null, home: { x: d.x, y: d.y }, running: false });
     }
   }
-  rollSteps(first = false, n = 26) { return Math.max(18, Math.round(0.75 * n) + Math.floor(Math.random() * Math.round(0.6 * n))) + (first ? 10 : 0); }
+  /** Encounter counter: RPG Maker's rand(n)+rand(n)+1 (mean ≈ n), with our fairness floor (no back-to-back fights) and first-step grace. */
+  rollSteps(first = false, n = 26) { const r = () => Math.floor(Math.random() * n); return Math.max(Math.min(18, Math.round(0.7 * n)), r() + r() + 1) + (first ? 10 : 0); }
   refreshFollowers() {
     this.followers.forEach((f) => f.destroy()); this.followers = [];
     for (let i = 1; i < $.party.length && i < 4; i++) { const f = new Char(this, this.player.tx, this.player.ty); f.setSheet($.party[i], false, this.player.dir); f.through = true; this.world.add(f.spr); this.followers.push(f); }
@@ -110,7 +112,7 @@ export class MapScene extends Phaser.Scene {
     this.evs.forEach((e) => this.applyPageGraphic(e));
   }
   // ------------------------------------------------------------ events
-  eventRealmOK(e: GEvent) { const r = e.data.realm || 'both'; return r === 'both' || r === $.realm; }
+  eventRealmOK(e: GEvent) { const r = e.data.realm || 'both'; return r === 'both' || r === $.realm || (r === 'far' && $.buffs.peek > 0 && e.data.peek !== false); }
   selectPage(e: GEvent) {
     if (!this.eventRealmOK(e)) return -1; const ctx = { ev: e.id, map: this.mapData.id };
     if ($.selfSwitches[$.selfKey(ctx.map, e.id, 'X')]) return -1;
@@ -119,7 +121,7 @@ export class MapScene extends Phaser.Scene {
   }
   refreshEvents() { if (!this.mapData) return; for (const e of this.evs) { const i = this.selectPage(e); if (i !== e.pageIdx) { e.pageIdx = i; e.page = i >= 0 ? e.data.pages[i] : null; this.applyPageGraphic(e); } else if (!e.page) this.applyPageGraphic(e); } }
   applyPageGraphic(e: GEvent) {
-    const p = e.page, c = e.char; const far = $.realm === 'far';
+    const p = e.page, c = e.char; const far = $.realm === 'far' || (e.data.realm === 'far' && $.buffs.peek > 0);
     if (!p || !p.g) { c.spr.setVisible(false); c.visible = false; return; }
     c.tint = p.g.tint ?? 0xffffff; c.opacity = p.g.alpha ?? 1; c.walkAnim = p.g.anim !== false; c.stepAnim = !!p.g.step; c.through = !!p.through;
     if (p.g.obj) c.setObject(p.g.obj, far && !p.g.nofar, !!p.g.flat); else c.setSheet(p.g.sheet, far && !p.g.nofar, p.g.dir || c.dir);
@@ -128,7 +130,8 @@ export class MapScene extends Phaser.Scene {
   eventsAt(tx: number, ty: number, solidOnly = false) { return this.evs.filter((e) => e.page && (e.char.visible || !e.page.g) && (e.char.tx === tx && e.char.ty === ty) && (!solidOnly || (!e.char.through && !e.page.through))); }
   ctxOf(e: GEvent) { return { ev: e.id, map: this.mapData.id }; }
   async triggerEvent(e: GEvent) {
-    if (!e.page || e.running) return; e.running = true; const p = e.page;
+    if (!e.page || e.running) return;
+    if (e.data.realm === 'far' && $.realm === 'near') { Audio.se('cursor'); this.msg.toast('You can only glimpse it from here. Shift to reach it.', 2000, 14, COL.dim); return; } e.running = true; const p = e.page;
     try {
       if (p.enemy) { await this.enemyTouch(e, false); }
       else await this.interp.run(p.list || [], this.ctxOf(e));
@@ -149,7 +152,8 @@ export class MapScene extends Phaser.Scene {
     if (!isPlayer && this.player.tx === nx && this.player.ty === ny) return false;
     return true;
   }
-  moveDur(dash: boolean) { return dash ? 98 : 150; }
+  /** Default 'classic' pace is RPG Maker-like: 16 frames/tile walking (~267 ms), 8 dashing (~133 ms); 'brisk' is the old faster pace (Options). */
+  moveDur(dash: boolean) { return Settings.data.walkSpeed === 'brisk' ? (dash ? 98 : 150) : (dash ? 133 : 267); }
   // ------------------------------------------------------------ main loop
   isFree() { return this.ready && !this.interp.busy && !this.overlay && !this.transitioning && !this.msg.busy && !this.shifting && !this.fadingNow; }
   update(time: number, dtRaw: number) {
@@ -162,7 +166,7 @@ export class MapScene extends Phaser.Scene {
     this.followers.forEach((f) => f.update(dt));
     this.updateEvents(dt, free);
     this.world.sort('depth');
-    this.updateLumen(dt, free);
+    this.updateLumen(dt, free); this.tickBuffs(dt, free);
     this.updateCamera(); this.updateFx(dt); this.updateHud();
     if (this.shiftCool > 0) this.shiftCool -= dt;
     if (free) this.checkAutoRun();
@@ -240,7 +244,7 @@ export class MapScene extends Phaser.Scene {
   enemyAI(e: GEvent, dt: number) {
     const c = e.char, P = this.player, p = e.page.enemy; if (c.moving || e.stun > 0) return;
     const dx = P.tx - c.tx, dy = P.ty - c.ty, dist = Math.abs(dx) + Math.abs(dy);
-    if (!this.inSafeZone(c.tx, c.ty) && !this.inSafeZone(P.tx, P.ty) && dist <= (p.aggro ?? 5) && ((p.chase ?? true))) {
+    if (!this.inSafeZone(c.tx, c.ty) && !this.inSafeZone(P.tx, P.ty) && dist <= (p.aggro ?? 5) && ((p.chase ?? true)) && !($.buffs.stealth > 0)) {
       if (!e.aggro) { e.aggro = true; this.balloonAt(e, '!'); }
       const opts: Dir[] = Math.abs(dx) >= Math.abs(dy) ? [dx > 0 ? 'right' : 'left', dy > 0 ? 'down' : 'up'] : [dy > 0 ? 'down' : 'up', dx > 0 ? 'right' : 'left'];
       for (const d of opts) { if ((d === 'right' || d === 'left') && dx === 0) continue; if ((d === 'up' || d === 'down') && dy === 0) continue; c.face(d); if (this.canMoveEnemy(c, d)) { c.start(d, p.spd ?? 240); break; } }
@@ -263,11 +267,16 @@ export class MapScene extends Phaser.Scene {
     } finally { this.interp.running--; e.running = false; this.refreshEvents(); Input.clear(); }
   }
   async balloonAt(e: GEvent, icon: string) { const t = this.add.text(e.char.px, e.char.py - 20, icon, { fontFamily: FONT, fontSize: '12px', color: '#fff', stroke: '#c00', strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999); this.world.add(t); Audio.se('encounter', 0.35); await sleep(this, 450); t.destroy(); }
+  tickBuffs(dt: number, free: boolean) {
+    if (!free) return; const B = $.buffs; if (B.stealth > 0) B.stealth = Math.max(0, B.stealth - dt / 1000);
+    if (B.light > 0) B.light = Math.max(0, B.light - dt / 1000);
+    if (B.peek > 0) { B.peek = Math.max(0, B.peek - dt / 1000); if (B.peek === 0) { this.refreshEvents(); this.applyRealmVisuals(); this.msg.toast('The other Shore fades from view.', 1800, 14, COL.dim); } }
+  }
   // ------------------------------------------------------------ Lumen / realm
   updateLumen(dt: number, free: boolean) {
     if (!free && !this.interp.busy) return; if (this.interp.busy && this.msg.busy) return;
     const P = this.player; const safe = this.inSafeZone(P.tx, P.ty);
-    if ($.realm === 'far') { if (!safe && !this.interp.busy) $.lumen -= (0.5 * dt) / 1000 * (Settings.data.difficulty === 'tough' ? 1.4 : Settings.data.difficulty === 'gentle' ? 0.6 : 1); if ($.lumen <= 0 && !this.fadingNow && !this.interp.busy) { this.fadeOutOfFar(); } if ($.lumen < 12 && !this.lowWarned) { this.lowWarned = true; Audio.se('strange', 0.7); this.msg.toast('The Lantern flickers… Lumen is low!', 2500, 14, COL.warn); } }
+    if ($.realm === 'far') { if (!safe && !this.interp.busy) $.lumen -= (0.5 * dt * ($.buffs.light > 0 ? 0.5 : 1) * (1 - 0.2 * Settings.data.warmth)) / 1000 * (Settings.data.difficulty === 'tough' ? 1.4 : Settings.data.difficulty === 'gentle' ? 0.6 : 1); if ($.lumen <= 0 && !this.fadingNow && !this.interp.busy) { this.fadeOutOfFar(); } if ($.lumen < 12 && !this.lowWarned) { this.lowWarned = true; Audio.se('strange', 0.7); this.msg.toast('The Lantern flickers… Lumen is low!', 2500, 14, COL.warn); } }
     else { if ($.lumen < $.lumenMax) $.lumen = Math.min($.lumenMax, $.lumen + dt / 1000); if ($.lumen > 20) this.lowWarned = false; }
   }
   async fadeOutOfFar() {
@@ -303,15 +312,16 @@ export class MapScene extends Phaser.Scene {
   }
   async forceShift(to: 'near' | 'far', c: any = {}) { const t = this.findShiftTarget(this.player.tx, this.player.ty, to) || { x: this.player.tx, y: this.player.ty }; await this.doShift(to, t.x, t.y, true); }
   async doShift(target: 'near' | 'far', tx: number, ty: number, forced = false) {
-    this.shifting = true; Audio.se('shift'); const P = this.player;
+    this.shifting = true; Audio.se('shift'); const P = this.player; const jx = Settings.data.juice !== 'off'; const firstFx = !$.tutorialsShown.shift_fx_first; $.tutorialsShown.shift_fx_first = true; const dm = firstFx ? 1.6 : 1; if (jx) Audio.muffle(true, 240 * dm);
     const sx = (P.px - this.scrollX) * 3 + this.world.x - this.world.x, sy = (P.py - 8 - this.scrollY) * 3;
     const g = this.add.graphics().setDepth(80); this.fxLayer.add(g); const cx = sx + (this.mapOffset().x), cy = sy + this.mapOffset().y;
     const obj = { r: 0 }; const col = target === 'far' ? 0xcff6ff : 0xffe9b0;
-    await new Promise<void>((res) => this.tweens.add({ targets: obj, r: 760, duration: 240, ease: 'Cubic.easeIn', onUpdate: () => { g.clear(); g.fillStyle(col, 0.92); g.fillCircle(cx, cy, obj.r); }, onComplete: () => res() }));
+    await new Promise<void>((res) => this.tweens.add({ targets: obj, r: 760, duration: 240 * dm, ease: 'Cubic.easeIn', onUpdate: () => { g.clear(); g.fillStyle(col, 0.92); g.fillCircle(cx, cy, obj.r); }, onComplete: () => res() }));
     $.realm = target; if (tx !== P.tx || ty !== P.ty) { P.place(tx, ty); } this.trail = [{ x: P.tx, y: P.ty }]; this.followers.forEach((f) => f.place(P.tx, P.ty));
     $.map.x = P.tx; $.map.y = P.ty; this.applyRealmVisuals(); this.refreshEvents(); Audio.bgm(this.mapBgm(), { fade: 0.9 });
     this.updateCamera(true);
-    await new Promise<void>((res) => this.tweens.add({ targets: obj, r: 0, duration: 340, ease: 'Cubic.easeOut', onUpdate: () => { g.clear(); g.fillStyle(col, 0.85 * Math.min(1, obj.r / 300)); g.fillCircle(cx, cy, obj.r); }, onComplete: () => res() }));
+    if (jx) { const tr = this.add.rectangle(W / 2, H / 2, W, H, target === 'far' ? 0x9fe0ff : 0xffd9a0, 0.4).setDepth(79).setScrollFactor(0); this.tweens.add({ targets: tr, alpha: 0, duration: 900 * dm, onComplete: () => tr.destroy() }); Audio.muffle(false, 600 * dm); }
+    await new Promise<void>((res) => this.tweens.add({ targets: obj, r: 0, duration: 340 * dm, ease: 'Cubic.easeOut', onUpdate: () => { g.clear(); g.fillStyle(col, 0.85 * Math.min(1, obj.r / 300)); g.fillCircle(cx, cy, obj.r); if (jx) { g.lineStyle(5, 0xffffff, 0.7 * Math.min(1, obj.r / 400)); g.strokeCircle(cx, cy, obj.r + 8); } }, onComplete: () => res() }));
     g.destroy(); this.shifting = false;
     if (target === 'far' && !$.tutorialsShown.shiftfar && !forced) { $.tutorialsShown.shiftfar = true; this.msg.toast('Far Shore: Lumen drains here. Press Q again to return (free).', 5200, 14, '#bff6ff'); }
     if ($.realm === 'near') this.lowWarned = false;
@@ -345,7 +355,7 @@ export class MapScene extends Phaser.Scene {
   async showBanner(name: string) { this.banner?.destroy(); const w = Math.max(220, name.length * 14 + 60); const b = new Win(this, (W - w) / 2, 112, w, 52, $.realm === 'far' ? 'far' : 'near'); b.txt(name, w / 2, 8, { size: 24, align: 'center', color: $.realm === 'far' ? COL.teal : COL.gold }); this.ui.add(b); b.setAlpha(0); this.banner = b; this.tweens.add({ targets: b, alpha: 1, duration: 300, yoyo: false }); await sleep(this, 1800); this.tweens.add({ targets: b, alpha: 0, duration: 500, onComplete: () => b.destroy() }); }
   setTint(color: number, a: number, ms: number) { this.tintRect.setFillStyle(color, this.tintRect.fillAlpha); this.tweens.add({ targets: this.tintRect, fillAlpha: a, duration: ms }); }
   wait(ms: number) { return sleep(this, ms); }
-  async shake(power: number, ms: number) { this.shake_ = power; Audio.se('hit2', 0.5); await sleep(this, ms); this.shake_ = 0; }
+  async shake(power: number, ms: number) { if (Settings.data.juice === 'off') return; this.shake_ = power * (Settings.data.juice === 'reduced' ? 0.4 : 1); Audio.se('hit2', 0.5); await sleep(this, ms); this.shake_ = 0; }
   async flash(color: number, ms: number) { const r = this.add.rectangle(0, 0, W, H, color, 0.9).setOrigin(0, 0).setDepth(90); this.fxLayer.add(r); await new Promise<void>((res) => this.tweens.add({ targets: r, alpha: 0, duration: ms, onComplete: () => { r.destroy(); res(); } })); }
   async cameraPan(x: number, y: number, ms: number) { if (x < 0) { this.camOverride = null; return; } this.camOverride = { x: x * TS + 8, y: y * TS + 8 }; await sleep(this, ms); }
   // ------------------------------------------------------------ event helpers for interpreter
@@ -387,7 +397,28 @@ export class MapScene extends Phaser.Scene {
       this.scene.pause(); this.scene.launch(key, { ...data, onClose: (r: any) => { this.scene.stop(key); this.scene.resume(); this.overlay = false; Input.clear(); this.refreshEvents(); this.applyRealmVisuals(); resolve(r); } });
     });
   }
-  async openMenu() { Audio.se('ok'); await this.runOverlay('Menu', { mapScene: true }); if ($.__reloadRequest) { const rq = $.__reloadRequest; delete $.__reloadRequest; await this.hardReload(rq); } if ($.__titleRequest) { delete $.__titleRequest; this.toTitle(); } }
+  async openMenu() { Audio.se('ok'); const mr = await this.runOverlay('Menu', { mapScene: true }); if (mr?.action) await this.fieldAction(mr.action); if ($.__reloadRequest) { const rq = $.__reloadRequest; delete $.__reloadRequest; await this.hardReload(rq); } if ($.__titleRequest) { delete $.__titleRequest; this.toTitle(); } }
+  /** Map-side effects of field items and spells chosen in the menu. */
+  async fieldAction(a: any) {
+    this.interp.running++;
+    try {
+      switch (a.kind) {
+        case 'warp': { const L = $.litPost; if (!L) break; await this.fader.out(this, 300, 0xcff6ff); this.interp.running--; await this.transfer(L.map, L.x, L.y, L.dir as Dir, { se: 'powerup', fast: true, realm: 'near' }); this.interp.running++; this.msg.toast('The Lantern carries you back.', 2000, 14, COL.lumen); break; }
+        case 'escapeDungeon': { const X = DB.system.dungeonExit?.[$.map.id]; if (!X) break; await this.fader.out(this, 250, 0xffffff); this.interp.running--; await this.transfer(X.map, X.x, X.y, X.dir as Dir, { se: 'powerup', fast: true, realm: 'near' }); this.interp.running++; this.msg.toast('The paper crane folds you out of the dark.', 2200, 14, '#ffe9a0'); break; }
+        case 'peek': this.refreshEvents(); this.applyRealmVisuals(); break;
+        case 'tile': await this.fieldTile(a); break;
+      }
+    } finally { this.interp.running--; Input.clear(); this.refreshEvents(); }
+  }
+  /** A tile spell (Foxfire Torch, Hammer Knock...) hits a matching event within range: the event's `fieldList` runs. */
+  async fieldTile(a: any) {
+    const P = this.player; const sp = SPEC.skills[a.spell];
+    if (a.realm !== 'both' && a.realm !== $.realm) { Audio.se('buzzer'); this.msg.toast(`${sp.name} only works on the ${a.realm === 'far' ? 'Far' : 'Near'} Shore.`, 2200, 14, COL.warn); return; }
+    const hit = this.evs.filter((e) => e.page && e.page.ft === a.tile && e.page.fieldList && Math.abs(e.char.tx - P.tx) + Math.abs(e.char.ty - P.ty) <= a.range).sort((x, y) => Math.abs(x.char.tx - P.tx) + Math.abs(x.char.ty - P.ty) - (Math.abs(y.char.tx - P.tx) + Math.abs(y.char.ty - P.ty)))[0];
+    if (!hit) { Audio.se('buzzer'); this.msg.toast(`${sp.name}: nothing here responds.`, 2000, 14, COL.dim); return; }
+    payField(a.actor, a.pay); Audio.se('powerup'); this.flash(0xffe0a0, 250); hit.running = true;
+    try { await this.interp.exec(hit.page.fieldList, this.ctxOf(hit)); } finally { hit.running = false; }
+  }
   async hardReload(rq: any) { this.interp.running++; this.transitioning = true; await this.fader.out(this, 300); this.msg.busy = false; const sv = $.map; await this.loadMap(sv.id, sv.x, sv.y, sv.dir as Dir); await this.fader.in(this, 300); this.transitioning = false; this.interp.running--; void rq; }
   toTitle() { Audio.stopBgm(); this.fader.out(this, 400).then(() => { this.scene.stop('Map'); this.scene.start('Title'); }); }
   async openShop(c: any) { await this.runOverlay('Shop', { items: c.items, name: c.name, face: c.face }); }
@@ -404,6 +435,7 @@ export class MapScene extends Phaser.Scene {
   async usePost(ctx: any) {
     const i = await this.msg.choice(['Rest (restore all)', 'Save game', 'Leave'], 2, null);
     if (i === 0) { $.healAll(); $.lumen = $.lumenMax; Audio.se('heal'); this.flash(0xcff6ff, 500); this.msg.toast('The Lantern Post glows. HP, SP and Lumen restored.', 2400, 14, COL.lumen); }
+    $.litPost = { map: this.mapData.id, x: this.player.tx, y: this.player.ty, dir: this.player.dir };
     if (i !== 2) $.respawn = { map: this.mapData.id, x: this.player.tx, y: this.player.ty + (this.player.dir === 'up' ? 0 : 0), dir: this.player.dir };
     if (i === 1) { await this.openSave(); }
     if (i === 0) this.autosave('post');

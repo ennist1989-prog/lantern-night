@@ -3,7 +3,8 @@ import { Input } from '../core/input';
 import { Audio } from '../core/audio';
 import { Settings } from '../core/settings';
 import { $ } from '../core/state';
-import { DB, ELEMENT_COLORS, ELEMENT_NAMES } from '../core/db';
+import { playSummonFx } from './summonfx';
+import { DB, ELEMENT_COLORS, ELEMENT_NAMES, iconOf } from '../core/db';
 import { W, H, Win, Selectable, COL, FONT, Fader, sleep, tickWindows } from '../ui/windows';
 import { farTexture } from '../game/recolor';
 import { SPEC } from './spec';
@@ -18,7 +19,7 @@ const DOT_NAMES: Record<string, string> = { burn: 'Burn', chill: 'Chill', wilt: 
 export class BattleScene extends Phaser.Scene {
   d: any; B!: Battle; wins: Win[] = []; fader!: Fader; cmdWin!: Selectable; subWin!: Selectable; descWin!: Win; statusWin!: Win; logWin!: Win; orderWin!: Win; echoWin!: Win; realmWin!: Win; targetWin!: Win;
   bgImgs: Record<string, Phaser.GameObjects.Image> = {}; spr: Map<number, Phaser.GameObjects.Sprite> = new Map(); lab: Map<number, Phaser.GameObjects.Text> = new Map(); barG!: Phaser.GameObjects.Graphics; orderIcons: Phaser.GameObjects.GameObject[] = [];
-  curActor: Battler | null = null; cursorTxt!: Phaser.GameObjects.Text; ended = false; fxMeta: any; bossMeta: any; tellIcons: Map<number, Phaser.GameObjects.Text> = new Map(); tellNames = false; wonResult: any = null;
+  trauma = 0; weakChain = 0; warmBoost = 0; echoPrimer = false; curActor: Battler | null = null; cursorTxt!: Phaser.GameObjects.Text; ended = false; fxMeta: any; bossMeta: any; tellIcons: Map<number, Phaser.GameObjects.Text> = new Map(); tellNames = false; wonResult: any = null;
   constructor() { super('Battle'); }
   init(d: any) { this.d = d; this.ended = false; this.wins = []; this.spr = new Map(); this.lab = new Map(); this.tellIcons = new Map(); this.orderIcons = []; this.bgImgs = {}; }
   speed() { return Settings.data.battleSpeed; }
@@ -26,15 +27,25 @@ export class BattleScene extends Phaser.Scene {
   create() {
     this.fxMeta = this.cache.json.get('fxmeta'); this.bossMeta = this.cache.json.get('bossmeta');
     const zone = this.d.zone ? SPEC.zones[this.d.zone] : null;
-    const items = $.items; const ctx: any = { realm: this.d.realm, lumen: $.lumen, lumenMax: $.lumenMax, difficulty: Settings.data.difficulty, items, itemDB: DB.items, pity: $.pity, flags: {}, recLevel: this.d.recLevel ?? zone?.recLevel, ward: $.party.some((id) => hasWard($.actors[id])) };
-    const party = $.party.slice(0, 4).map((id) => partyBattler($.actors[id], DB.actors[id], DB.items, $.bonds));
+    const items = $.items; const ctx: any = { realm: this.d.realm, lumen: $.lumen, lumenMax: $.lumenMax, difficulty: Settings.data.difficulty, warmth: Settings.data.warmth, items, itemDB: DB.items, pity: $.pity, flags: { fragments: $.fragments }, recLevel: this.d.recLevel ?? zone?.recLevel, ward: $.party.some((id) => hasWard($.actors[id])) };
+    const party = $.party.slice(0, 4).map((id) => partyBattler($.actors[id], DB.actors[id], DB.items, $.bonds, $.forged));
     this.B = new Battle(ctx, party, this.d.troop); if (this.d.noEscape) this.B.noEscape = true;
+    // invisible Echo tutorial: the Straw Warden is never the player's first look at Echo (they normally earn it in the earlier Far fights)
+    this.echoPrimer = !$.tutorialsShown.b_echo_first && String(this.d.troop).includes('straw_warden'); if (this.echoPrimer) { this.B.echo = Math.max(this.B.echo, 1); }
     for (const f of this.B.foes) { const b = $.bst(f.id); f.revealed = new Set(b.weak || []); b.seen = true; }
     this.fader = new Fader(this, 9999); this.fader.rect.setAlpha(1); this.fader.rect.fillAlpha = 1;
     this.buildBackground(); this.barG = this.add.graphics().setDepth(40); this.tellNames = party.some((p) => p.bondTraits.some((t: any) => t.tellNames)) || true;
     this.layoutFoes(true); this.buildPartySprites(); this.buildUI(); this.run();
   }
-  update() { tickWindows(this.wins); this.drawBars(); }
+  update(_t?: number, dt = 16) {
+    tickWindows(this.wins); this.drawBars();
+    const cam = this.cameras.main;
+    if (this.trauma > 0) { const m = this.trauma * this.trauma * 14; cam.setScroll((Math.random() * 2 - 1) * m, (Math.random() * 2 - 1) * m); this.trauma = Math.max(0, this.trauma - (dt / 1000) * 1.6); if (this.trauma === 0) cam.setScroll(0, 0); }
+  }
+  /** Decaying 'trauma' camera shake: offset ∝ trauma², trauma bleeds off over ~0.6 s. Honors the Screen Juice setting. */
+  addTrauma(t: number) { const j = Settings.data.juice; if (j === 'off') return; this.trauma = Math.min(1, this.trauma + t * (j === 'reduced' ? 0.4 : 1)); }
+  /** Hit-pause: freezes tweens for a few frames on impact (skipped when Screen Juice is Off, halved when Reduced). */
+  async hitStop(ms: number) { const j = Settings.data.juice; if (j === 'off' || ms <= 0) return; this.tweens.timeScale = 0.02; await new Promise<void>((r) => setTimeout(r, (j === 'reduced' ? ms * 0.5 : ms) / this.speed())); this.tweens.timeScale = 1; }
   // ---------------------------------------------------------------- visuals
   makeBack(realm: 'near' | 'far') {
     const key = 'bb_' + realm; if (this.textures.exists(key)) return key; const c = this.textures.createCanvas(key, W, 420)!; const x = c.getContext();
@@ -136,7 +147,8 @@ export class BattleScene extends Phaser.Scene {
     const B = this.B; const troop = B.troop;
     Audio.bgm(this.d.bgm || troop.bgm || (B.bossDef ? B.bossDef.bgm || 'boss' : 'battle'), { fade: 0.2 });
     await this.fader.in(this, 300); this.fader.rect.fillAlpha = 0;
-    if (troop.intro) await this.log(troop.intro, 1100); else if (B.bossDef) await this.log(B.foes[0].name + ' blocks the way!', 1100);
+    if (B.bossDef) { await this.bossIntro(); if (troop.intro) await this.log(troop.intro, 1100); await this.assistOffer(); }
+    else if (troop.intro) await this.log(troop.intro, 1100);
     if (this.d.preempt) await this.log('You strike first! The enemy hesitates…', 800);
     let first = true;
     while (!this.ended) {
@@ -148,6 +160,36 @@ export class BattleScene extends Phaser.Scene {
       this.refreshStatus(); this.drawOrder();
     }
   }
+  /** Boss intro: letterbox bars (tinted per boss) + epithet nameplate + a bell sting whose pitch is per-boss. Full version first time; later 0.8 s. Any OK/Cancel press skips. */
+  async bossIntro() {
+    const B = this.B; const boss = B.foes.find((f) => f.boss); if (!boss) return; const id = boss.id; const first = !$.bossSeen[id]; $.bossSeen[id] = true;
+    const tint = boss.tint ? parseInt(boss.tint.replace('#', ''), 16) : 0x101030; const dark = Phaser.Display.Color.ValueToColor(tint).darken(70).color;
+    const bh = 64; const top = this.add.rectangle(W / 2, -bh / 2, W, bh, dark).setDepth(300), bot = this.add.rectangle(W / 2, H + bh / 2, W, bh, dark).setDepth(300);
+    const ep = (SPEC.bosses?.[id]?.epithet) || ''; let hue = 0; for (const ch of id) hue = (hue * 31 + ch.charCodeAt(0)) % 7;
+    const name = this.add.text(W / 2, H - 60, boss.name, { fontFamily: FONT, fontSize: '30px', color: '#ffe9a0', stroke: '#101030', strokeThickness: 5 }).setOrigin(0.5).setDepth(301).setAlpha(0);
+    const epi = this.add.text(W / 2, H - 28, ep, { fontFamily: FONT, fontSize: '19px', color: '#cfe2ff', stroke: '#101030', strokeThickness: 4 }).setOrigin(0.5).setDepth(301).setAlpha(0);
+    const skip = this.add.text(W - 10, 8, 'Z skip', { fontFamily: FONT, fontSize: '14px', color: '#8890b8' }).setOrigin(1, 0).setDepth(301);
+    const dur = first ? 2300 : 800; const inMs = first ? 380 : 180;
+    this.tweens.add({ targets: top, y: bh / 2, duration: inMs }); this.tweens.add({ targets: bot, y: H - bh / 2, duration: inMs });
+    this.tweens.add({ targets: [name, epi], alpha: 1, duration: first ? 600 : 200, delay: inMs });
+    Audio.se('bell', 0.9, 0.7 + hue * 0.07); if (first) { this.addTrauma(0.25); }
+    await new Promise<void>((r) => { let el = 0; const tm = this.time.addEvent({ delay: 16, loop: true, callback: () => { el += 16; if (el > dur || Input.isTriggered('ok') || Input.isTriggered('cancel')) { tm.remove(); r(); } } }); });
+    await new Promise<void>((r) => { this.tweens.add({ targets: [top, bot, name, epi, skip], alpha: 0, duration: 220, onComplete: () => r() }); });
+    [top, bot, name, epi, skip].forEach((o) => o.destroy());
+  }
+  /** After two losses to the same boss: an optional hint + Lantern Warmth offer (never forced). */
+  async assistOffer() {
+    const tid = String(this.d.troop); const n = $.bossLosses[tid] || 0; if (n < 2) return;
+    const boss = this.B.foes.find((f) => f.boss)!; const hint = this.bossHint(boss);
+    const pick: string = await new Promise((resolve) => {
+      this.log('The Lantern flickers… it has failed here twice. Would you like a little help?', 99999);
+      this.setCmd([{ label: 'A hint', data: 'hint' }, { label: 'Warm the Lantern', data: 'warm' }, { label: 'Hint + Warmth', data: 'both' }, { label: 'No thanks', data: 'no' }], (it) => { this.cmdWin.active = false; this.cmdWin.setVisible(false); resolve(it.data); }, () => { this.cmdWin.active = false; this.cmdWin.setVisible(false); resolve('no'); });
+    });
+    if (pick === 'warm' || pick === 'both') { (this.B as any).ctx.warmth = Math.max((this.B as any).ctx.warmth || 0, 2); this.warmBoost = 2; }
+    if (pick === 'hint' || pick === 'both') await this.log(hint, 3200); else this.hideLog();
+    if (pick === 'warm' || pick === 'both') await this.log('The Lantern glows warm: the party recovers a little each round.', 1500);
+  }
+  bossHint(f: Battler): string { const h: Record<string, string> = { straw_warden: 'Its straw is weak to fire. Shift to the Far Shore to cancel its stare, and keep an Echo pip to chain a second hit.', bell_keeper: 'Hit the bell’s weakness to break the Veil, then Parley. Guard when the ⚠ warning appears.' }; return h[f.id] || `${f.name} has a weak point. Watch which element makes WEAK! appear, break its Veil ◆, then Soothe or Send.`; }
   endCheck() { const r = this.B.checkEnd(); if (r === 'win') { this.victory(); return true; } if (r === 'lose') { this.defeat(); return true; } if (this.B.ended === 'escape') { this.finish('escape'); return true; } return false; }
   // ---------------------------------------------------------------- command phase
   setCmd(items: any[], onOk: (it: any) => void, onCancel: (() => void) | null) { const c = this.cmdWin; c.rowH = 27; c.pad = 10; c.fontSize = 20; c.setItems(items); c.onOk = onOk; c.onCancel = onCancel; c.active = true; c.setVisible(true); }
@@ -176,7 +218,7 @@ export class BattleScene extends Phaser.Scene {
   autoPlan() { for (const a of this.B.party) if (a.hp > 0) a.action = this.B.autoAction(a); this.cmdWin.active = false; }
   skillLists(a: Battler) {
     const sk = (id: string) => SPEC.skills[id]; const ids = a.skills.filter((id) => sk(id));
-    const skill = ids.filter((id) => { const s = sk(id); return !s.tags?.includes('parley') && !s.tags?.includes('bondSkill') && !s.tags?.includes('shift') && s.type !== 'parley' && id !== 'p_attack' && id !== 'p_guard' && !(s.effects || []).some((e: any) => e.op === 'shift' || e.op === 'send' || e.op === 'invite'); });
+    const skill = ids.filter((id) => { const s = sk(id); return s.type !== 'field' && !s.tags?.includes('summon') && !s.tags?.includes('parley') && !s.tags?.includes('bondSkill') && !s.tags?.includes('shift') && s.type !== 'parley' && id !== 'p_attack' && id !== 'p_guard' && !(s.effects || []).some((e: any) => e.op === 'shift' || e.op === 'send' || e.op === 'invite'); });
     const parley = ids.filter((id) => { const s = sk(id); return s.type === 'parley' || s.tags?.includes('parley'); });
     const bond = ids.filter((id) => sk(id).tags?.includes('bondSkill'));
     return { skill, parley, bond };
@@ -190,6 +232,7 @@ export class BattleScene extends Phaser.Scene {
       const items: any[] = [{ label: 'Attack', data: 'attack' }, { label: 'Skill', data: 'skill', enabled: L.skill.length > 0 }];
       if (!echo) items.push({ label: 'Parley', data: 'parley' });
       items.push({ label: 'Bond', data: 'bond', enabled: !!a.bond || a.gauge >= 50 });
+      if (!echo && a.keepsake) { const cs = B.canSummon(a, a.keepsake); items.push({ label: 'Keepsake', data: 'keep', enabled: cs.ok, sub: cs.why }); }
       if (!echo) { items.push({ label: 'Guard', data: 'guard' }, { label: 'Item', data: 'item' }); if (isMio) { const cu = B.canUse(a, 'mio_shift'); items.push({ label: 'Shift', data: 'shift', enabled: cu.ok, value: B.realm === 'near' ? '10◈' : '', sub: cu.why }); } }
       this.cmdWin.keepIndexOnSet = false;
       this.setCmd(items, async (it) => {
@@ -197,7 +240,7 @@ export class BattleScene extends Phaser.Scene {
         const back = () => { this.subWin.setVisible(false); this.descWin.setVisible(false); this.statusWin.setVisible(true); this.cmdWin.active = true; this.hideTarget(); this.refreshStatus(a); };
         const done = (act: any) => { this.refreshStatus(); resolve(act); };
         const pickSkill = async (list: string[], extra: any[] = []) => {
-          const entries = list.map((id) => { const s = SPEC.skills[id]; const cu = B.canUse(a, id); return { label: s.name, value: s.cost.bond ? s.cost.bond + ' BG' : s.cost.sp ? s.cost.sp + ' SP' : '', enabled: cu.ok, data: { id, s } }; }).concat(extra);
+          const entries = list.map((id) => { const s = SPEC.skills[id]; const cu = B.canUse(a, id); return { label: s.name, value: [s.cost.bond ? s.cost.bond + ' BG' : s.cost.sp ? s.cost.sp + ' SP' : '', s.cost.echo ? s.cost.echo + '◆' : '', s.cost.lumen ? s.cost.lumen + '◈' : ''].filter(Boolean).join(' '), enabled: cu.ok, data: { id, s } }; }).concat(extra);
           if (!entries.length) { Audio.se('buzzer'); return back(); }
           const r = await this.pickFromList(entries, (d: any) => (d.desc ?? d.s?.desc ?? '')); if (!r) return back();
           return r;
@@ -205,22 +248,23 @@ export class BattleScene extends Phaser.Scene {
         const target = async (scope: string, id?: string) => this.pickTarget(scope, a, id);
         if (it.data === 'attack') { const t = await target('one_enemy'); if (!t) return back(); done({ type: 'skill', skill: 'p_attack', targets: t }); }
         else if (it.data === 'guard') done({ type: 'guard' });
+        else if (it.data === 'keep') { const sd = SPEC.summons.summons[a.keepsake!]; const r = await this.pickFromList([{ label: sd.name, value: sd.cost.sp + ' SP ' + sd.cost.lumen + '◈' + (sd.cost.echo ? ' ' + sd.cost.echo + '◆' : ''), enabled: B.canSummon(a, a.keepsake!).ok, data: { id: sd.id, desc: sd.desc + '  (Tier ' + sd.tier + ' · once per battle)' } }], (d: any) => d.desc); if (!r) return back(); done({ type: 'summon', summon: r.id }); }
         else if (it.data === 'shift') done({ type: 'shift' });
         else if (it.data === 'skill') { const r = await pickSkill(L.skill); if (!r) return; const t = await target(r.s.scope, r.id); if (!t) return back(); done({ type: 'skill', skill: r.id, targets: t }); }
         else if (it.data === 'parley') {
           const base = [{ label: 'Offer', value: '', enabled: Object.keys($.items).some((k) => DB.items[k]?.offer && $.items[k] > 0), data: { offer: true, desc: 'Give an Offering. Liked items raise Mood a lot; disliked ones lower it.' } }, { label: 'Stand', value: '', data: { id: 'parley_stand', s: SPEC.skills.parley_stand } }, { label: 'Mock', value: '', data: { id: 'parley_mock', s: SPEC.skills.parley_mock } }];
           const r = await pickSkill(L.parley, base); if (!r) return;
-          if (r.offer) { const its = Object.keys($.items).filter((k) => DB.items[k]?.offer && $.items[k] > 0).map((k) => ({ label: DB.items[k].name, value: '×' + $.items[k], icon: DB.items[k].icon, data: { ...DB.items[k], id: k } })); const ir = await this.pickFromList(its, (d: any) => d.desc); if (!ir) return back(); const t = await target('one_enemy'); if (!t) return back(); done({ type: 'offer', item: ir.id, targets: t }); }
+          if (r.offer) { const its = Object.keys($.items).filter((k) => DB.items[k]?.offer && $.items[k] > 0).map((k) => ({ label: DB.items[k].name, value: '×' + $.items[k], icon: iconOf(DB.items[k]), data: { ...DB.items[k], id: k } })); const ir = await this.pickFromList(its, (d: any) => d.desc); if (!ir) return back(); const t = await target('one_enemy'); if (!t) return back(); done({ type: 'offer', item: ir.id, targets: t }); }
           else { const t = await target(r.s.scope, r.id); if (!t) return back(); done({ type: 'skill', skill: r.id, targets: t }); }
         } else if (it.data === 'bond') {
           const extra: any[] = []; if (a.bond) extra.push({ label: 'Possess', value: '50 BG', enabled: a.gauge >= 50 && !a.states.possessed, data: { possess: true, desc: SPEC.skills.bond_possess.desc } });
           const r = await pickSkill(L.bond, extra); if (!r) return; if (r.possess) return done({ type: 'possess' }); const t = await target(r.s.scope, r.id); if (!t) return back(); done({ type: 'skill', skill: r.id, targets: t });
         } else if (it.data === 'item') {
-          const its = Object.keys($.items).filter((k) => { const d = DB.items[k]; return d && (d.usable === true || d.usable === 'battle') && d.type === 'item' && $.items[k] > 0; }).map((k) => ({ label: DB.items[k].name, value: '×' + $.items[k], icon: DB.items[k].icon, data: { ...DB.items[k], id: k } }));
+          const its = Object.keys($.items).filter((k) => { const d = DB.items[k]; return d && (d.usable === true || d.usable === 'battle') && d.type === 'item' && $.items[k] > 0; }).map((k) => ({ label: DB.items[k].name, value: '×' + $.items[k], icon: iconOf(DB.items[k]), data: { ...DB.items[k], id: k } }));
           if (!its.length) { Audio.se('buzzer'); return back(); }
           const r = await this.pickFromList(its, (d: any) => d.desc); if (!r) return back();
           if (r.effect?.escape) { const t = await this.doSmoke(); if (t) return done({ type: 'escape' }); return back(); }
-          const t = await target(r.scope === 'dead' ? 'one_dead_ally' : r.scope === 'self' ? 'one_ally' : 'one_ally'); if (!t) return back(); done({ type: 'item', item: r.id, targets: t });
+          const ef = r.effect || {}; const sc = r.scope === 'dead' ? 'one_dead_ally' : r.scope === 'enemies' ? 'all_enemies' : r.scope === 'one_enemy' || ef.vp ? 'one_enemy' : r.scope === 'allies' ? 'all_allies' : (ef.echo || ef.states) && !ef.hp && !ef.cure ? 'self' : 'one_ally'; const t = await target(sc); if (!t) return back(); done({ type: 'item', item: r.id, targets: t });
         }
       }, echo ? () => resolve(null) : prev);
     });
@@ -291,6 +335,7 @@ export class BattleScene extends Phaser.Scene {
     const B = this.B; const T = (id: number) => this.by(id);
     switch (e.t) {
       case 'turn': break;
+      case 'summon': { Audio.se('powerup'); await this.log(`${this.by(e.actor).name} calls ${e.name}!`, 500); await playSummonFx(this, e); $.usedSummons[e.id] = ($.usedSummons[e.id] || 0) + 1; break; }
       case 'phase': { this.B.foes.forEach((f) => this.applyForm(f)); this.drawOrder(); await this.t(150); break; }
       case 'use': {
         const a = T(e.actor); const spr = this.spr.get(a.uid); Audio.se(e.se || 'magic'); this.log(`${a.name} ${e.item ? 'uses' : e.skill === 'p_attack' ? 'attacks!' : 'uses'}${e.skill === 'p_attack' ? '' : ' ' + e.name + '!'}`.replace('uses Attack!', 'attacks!'), 420);
@@ -300,7 +345,9 @@ export class BattleScene extends Phaser.Scene {
         break; }
       case 'hit': { const t = T(e.target); const p = this.posOf(t); const s = this.spr.get(t.uid)!; t.dispHp = e.hp; this.refreshStatus();
         if (e.immune) { this.popup(p.x, p.y - 50, 'Immune', '#a8b0d0', 26); await this.t(250); break; }
-        Audio.se(e.crit ? 'crit' : e.weak ? 'hit2' : 'hit'); this.flashSprite(s); if (t.side === 'party') this.cameras.main.shake(120 / this.speed(), 0.004); this.tweens.add({ targets: s, x: p.x + (t.side === 'party' ? -6 : 6), duration: 50 / this.speed(), yoyo: true, repeat: 1 });
+        if (t.side === 'foe') { if (e.weak) this.weakChain = Math.min(this.weakChain + 1, 7); else this.weakChain = 0; }
+        Audio.se(e.crit ? 'crit' : e.weak ? 'hit2' : 'hit', 1, e.weak && t.side === 'foe' ? Math.pow(2, (this.weakChain - 1) / 12) : e.resist ? 0.84 : 1);
+        this.flashSprite(s); this.addTrauma(t.side === 'party' ? (e.crit ? 0.55 : 0.32) : e.crit ? 0.5 : e.weak ? 0.28 : e.resist ? 0 : 0.14); if (!e.resist) await this.hitStop(e.crit ? 110 : e.weak ? 70 : 40); this.tweens.add({ targets: s, x: p.x + (t.side === 'party' ? -6 : 6), duration: 50 / this.speed(), yoyo: true, repeat: 1 });
         this.popup(p.x, p.y - 56, String(e.dmg), e.weak ? '#ffd866' : e.resist ? '#9aa4c8' : t.side === 'party' ? '#ff9a9a' : '#ffffff', e.crit ? 40 : 30);
         if (e.weak) { this.popup(p.x, p.y - 92, 'WEAK!', '#ffb36b', 22); } else if (e.resist) this.popup(p.x, p.y - 84, 'resist', '#9aa4c8', 18); if (e.crit) this.popup(p.x, p.y - 112, 'CRITICAL', '#ffe08a', 18);
         if (e.weak && t.side === 'foe') { $.bst(t.id).weak = [...t.revealed]; }
@@ -313,7 +360,7 @@ export class BattleScene extends Phaser.Scene {
       case 'stage': { const t = T(e.target); const p = this.posOf(t); this.popup(p.x, p.y - 70, e.param.toUpperCase() + (e.stage > 0 ? '↑' : '↓'), e.stage > 0 ? '#9ee6ff' : '#ff9a9a', 20); await this.t(160); break; }
       case 'down': { const t = T(e.target); const s = this.spr.get(t.uid)!; (s as any).glow?.setVisible(false); this.refreshStatus(); if (t.side === 'foe') { Audio.se('explosion'); this.fx('explosion', (s as any).bx, (s as any).by - s.displayHeight / 2, 4); await new Promise<void>((r) => this.tweens.add({ targets: s, alpha: 0, scaleX: s.scaleX * 1.2, scaleY: 0.1, duration: 360 / this.speed(), onComplete: () => r() })); this.lab.get(t.uid)?.setVisible(false); this.clearTell(t); } else { this.tweens.add({ targets: s, angle: 80, alpha: 0.6, duration: 300 }); s.setTint(0x666677); await this.log(`${t.name} is down!`, 500); } break; }
       case 'revive': { const t = T(e.target); const s = this.spr.get(t.uid)!; t.dispHp = e.hp; s.clearTint(); s.setAngle(0); s.setAlpha(1); this.refreshStatus(); break; }
-      case 'echo': { this.drawEcho(); if (e.spent) break; Audio.se('powerup'); const x = 408; this.popup(x, 190, 'ECHO ' + '◆'.repeat(e.n), '#c9a0ff', 32); if (e.why === 'flip') this.popup(x, 230, 'Flip bonus!', '#c9a0ff', 20); if (e.why === 'adds') this.popup(x, 230, 'Adds cleared!', '#c9a0ff', 20); await this.t(300); break; }
+      case 'echo': { this.drawEcho(); if (e.spent) break; if (!$.tutorialsShown.b_echo_first) { $.tutorialsShown.b_echo_first = true; this.log('Echo ◆ — a pip lets the same hero act again at once. Look for the Echo option when it is their turn.', 3200); } Audio.se('powerup'); const x = 408; this.popup(x, 190, 'ECHO ' + '◆'.repeat(e.n), '#c9a0ff', 32); if (e.why === 'flip') this.popup(x, 230, 'Flip bonus!', '#c9a0ff', 20); if (e.why === 'adds') this.popup(x, 230, 'Adds cleared!', '#c9a0ff', 20); await this.t(300); break; }
       case 'vp': { Audio.se('tick'); const t = T(e.target); const p = this.posOf(t); if (!e.refill) this.popup(p.x, p.y - 100, 'VEIL ◆' + e.vp, '#9fe8ff', 20); await this.t(120); break; }
       case 'unveil': { const t = T(e.target); const p = this.posOf(t); Audio.se('strange'); await this.flashAll(0x9fe8ff); this.popup(p.x, p.y - 110, 'UNVEILED!', '#9fe8ff', 34); await this.log(`${t.name} is Unveiled! It can't act, takes more damage — Send is open.`, 1100); break; }
       case 'tell': { const a = T(e.actor); const p = this.posOf(a); Audio.se('strange'); this.showTell(a, e.name); await this.log(`⚠ ${a.name} is gathering power: ${e.name}!`, 900); break; }
@@ -335,7 +382,7 @@ export class BattleScene extends Phaser.Scene {
         else { Audio.se('buzzer'); s.setAlpha(1); await this.log(`${t.name} hesitates and pulls back… (it's no longer Calm)`, 1000); } break; }
       case 'say': { await this.log(e.text, 1400); break; }
       case 'tutorial': { if (!$.tutorialsShown['b_' + e.id] && TUT[e.id]) { $.tutorialsShown['b_' + e.id] = true; await this.log(TUT[e.id], 2600); } break; }
-      case 'summon': { Audio.se('bell'); const src = T(e.src); this.cameras.main.shake(200, 0.006); this.layoutFoes(); await this.log(`${src.name}'s bell calls more spirits!`, 900); this.drawOrder(); break; }
+      case 'summon': { Audio.se('bell'); const src = T(e.src); this.addTrauma(0.5); this.layoutFoes(); await this.log(`${src.name}'s bell calls more spirits!`, 900); this.drawOrder(); break; }
       case 'realm': { Audio.se('shift'); await this.flashAll(e.realm === 'far' ? 0xcff6ff : 0xffe9b0); this.refreshRealmVisuals(); this.popup(W / 2, 200, e.realm === 'far' ? 'Far Shore' : 'Near Shore', e.realm === 'far' ? '#7fe9ff' : '#ffe08a', 40); this.drawOrder(); await this.t(400); break; }
       case 'forcedShift': { await this.log('The Lantern gutters… the Far Shore lets go of you.', 900); this.refreshRealmVisuals(); await this.flashAll(0xffffff); break; }
       case 'lumen': this.drawRealm(); break;
@@ -348,19 +395,26 @@ export class BattleScene extends Phaser.Scene {
   showTell(a: Battler, name: string) { this.clearTell(a); const s = this.spr.get(a.uid)!; const t = this.add.text((s as any).bx, (s as any).by - s.displayHeight - 8, '⚠ ' + name, { fontFamily: FONT, fontSize: '22px', color: '#ff7a7a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5, 1).setDepth(90); this.tweens.add({ targets: t, alpha: 0.4, duration: 260, yoyo: true, repeat: -1 }); this.tellIcons.set(a.uid, t); }
   clearTell(a: Battler) { this.tellIcons.get(a.uid)?.destroy(); this.tellIcons.delete(a.uid); }
   // ---------------------------------------------------------------- end
-  async victory() {
+  async victory() { delete $.bossLosses[String(this.d.troop)];
     this.ended = true; this.tellIcons.forEach((t) => t.destroy()); this.hideLog(); this.cmdWin.setVisible(false); this.subWin.setVisible(false); this.descWin.setVisible(false); this.cursorTxt.setVisible(false); this.targetWin.setVisible(false);
-    Audio.bgm(null); Audio.me('victory'); const B = this.B; const avg = B.party.reduce((s, p) => s + p.level, 0) / B.party.length; const res = B.rewards(avg);
+    Audio.bgm(null); Audio.me('victory'); const B = this.B; const avg = B.party.reduce((s, p) => s + p.level, 0) / B.party.length; const res: any = B.rewards(avg);
     this.syncBack(); B.party.forEach((a) => { if (a.hp <= 0) { $.actors[a.id].hp = 1; } });
+    // Parley pays Lumen: a Far fight that ends in Calm/Send refunds +2 (+1 if only Hollowed were sent)
+    if (this.d.realm === 'far') { const peace = B.foes.filter((f: any) => f.calm || f.gone === 'sent' || f.gone === 'invited'); if (peace.length) { const gain = 2; $.lumen = Math.min($.lumenMax, $.lumen + gain); res.lumenGain = gain; } }
     const lv: any[] = []; for (const id of $.party) { const a = $.actors[id]; const r = $.gainExp(a, res.exp); if (r.leveled) lv.push({ id, ...r }); }
     $.gold += res.gold; $.fragments += B.fragments; for (const d of res.drops) if (DB.items[d]) $.gain(d, 1);
     for (const k of Object.keys($.items)) if (!$.items[k]) delete $.items[k];
     const newBonds: string[] = []; for (const r of B.recruits) { if ($.addBond(r.id)) newBonds.push(r.id); }
     for (const f of B.foes) { const b = $.bst(f.id); if (!f.gone && f.hp <= 0) b.defeated++; b.weak = [...new Set([...(b.weak || []), ...f.revealed])]; if (f.id === 'dust_wisp' && (f.hp <= 0 || f.gone === 'sent')) $.setV('wisp_count', $.v('wisp_count') + 1); }
+    if (B.sentList.length || B.recruits.length) $.setSw('first_send', true);
+    const songs: string[] = []; for (const p of B.party) { const sp = $.actors[p.id]?.equips.bond; if (!sp || !$.bonds[sp]) continue; for (const [sid, r] of Object.entries<any>(SPEC.learn.bond)) { if (r.spirit !== sp || $.bonds[sp].lv < r.level || $.songs.includes(sid)) continue; $.lessons[sid] = ($.lessons[sid] || 0) + 1; if ($.lessons[sid] >= r.battles && $.learnSong(sid)) songs.push(sid); } }
+    for (const id of $.party) $.refreshSkills($.actors[id]);
     this.wonResult = { res, lv };
     const names: Record<string, number> = {}; for (const d of res.drops) names[DB.items[d]?.name || d] = (names[DB.items[d]?.name || d] || 0) + 1; const dn = Object.entries(names).map(([k, v]) => k + (v > 1 ? ' ×' + v : ''));
     const rows: { t: string; c?: string; sz?: number; x?: number; gap?: number }[] = [];
     if (dn.length) rows.push({ t: 'Found: ' + dn.join(', '), c: COL.green, sz: 18, gap: dn.join(', ').length > 46 ? 52 : 30 });
+    if (res.lumenGain) rows.push({ t: `The Lantern warms: +${res.lumenGain} Lumen (a peaceful end)`, c: COL.lumen, sz: 18, gap: 30 });
+    for (const sg of songs) rows.push({ t: `♪ Bond Song learned: ${SPEC.skills[sg]?.name || sg}`, c: COL.violet, sz: 19, gap: 30 });
     for (const b of newBonds) rows.push({ t: `★ ${SPEC.enemies[b]?.name || b} is now a Bond!`, c: COL.violet, sz: 20, gap: 30 });
     for (const l of lv) { const t = `${DB.actors[l.id].name} → Lv ${l.to}!` + (l.learned.length ? '  New: ' + l.learned.map((x: string) => SPEC.skills[x]?.name || x).join(', ') : ''); rows.push({ t, c: '#ffe9a0', sz: 18, gap: t.length > 46 ? 52 : 30 }); }
     const hgt = 130 + rows.reduce((q, r) => q + (r.gap || 30), 0); const win = new Win(this, 128, Math.max(70, 380 - hgt / 2 - 60), 560, hgt, B.realm); win.setDepth(120); this.wins.push(win); let y = 12;
@@ -372,7 +426,7 @@ export class BattleScene extends Phaser.Scene {
     await this.t(600); await new Promise<void>((r) => { const tm = this.time.addEvent({ delay: 16, loop: true, callback: () => { if (Input.isTriggered('ok') || Input.isTriggered('cancel') || Input.isDown('dash')) { Input.consume('ok'); Input.consume('cancel'); tm.remove(); r(); } } }); });
     this.finish('win');
   }
-  async defeat() { this.ended = true; this.tellIcons.forEach((t) => t.destroy()); Audio.bgm(null); Audio.me('gameover'); await this.log('Everyone’s light gutters out…', 1400); this.syncBack(); this.finish('lose'); }
+  async defeat() { this.ended = true; if (this.B.bossDef) { const k = String(this.d.troop); $.bossLosses[k] = ($.bossLosses[k] || 0) + 1; } this.tellIcons.forEach((t) => t.destroy()); Audio.bgm(null); Audio.me('gameover'); await this.log('Everyone’s light gutters out…', 1400); this.syncBack(); this.finish('lose'); }
   syncBack() { for (const a of this.B.party) { const ac = $.actors[a.id]; ac.hp = a.hp; ac.sp = a.sp; } $.lumen = this.B.lumen; $.realm = this.B.realm; for (const k of Object.keys($.items)) if (!$.items[k]) delete $.items[k]; }
   async finish(r: 'win' | 'escape' | 'lose') {
     this.ended = true; this.hideLog(); if (r !== 'win') this.syncBack(); this.B.party.forEach((a) => { const ac = $.actors[a.id]; ac.states = []; });

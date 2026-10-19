@@ -15,7 +15,7 @@ export class BootScene extends Phaser.Scene {
     this.load.on('progress', (p: number) => { bar.width = 400 * p; });
     const L = this.load; L.setPath('assets/'); const dataPath = (u: string) => u; void dataPath;
     ['floor', 'ifloor', 'wallsimple'].forEach((n) => L.image('tile_' + n, `tiles/${n}.png`));
-    L.image('objects', 'objects.png'); L.json('objectsmeta', 'objects.json'); L.json('iconsmeta', 'icons.json'); L.spritesheet('icons', 'icons.png', { frameWidth: 24, frameHeight: 24 });
+    L.image('objects', 'objects.png'); L.json('objectsmeta', 'objects.json'); L.json('iconsmeta', 'icons.json'); L.json('icons2meta', 'icons2.json'); L.spritesheet('icons2', 'icons2.png', { frameWidth: 34, frameHeight: 34 }); L.spritesheet('icons', 'icons.png', { frameWidth: 24, frameHeight: 24 });
     L.image('windowskin', 'ui/windowskin.png');
     CHARS.forEach((c) => L.spritesheet('char_' + c, `chars/${c}.png`, { frameWidth: 16, frameHeight: 16 }));
     FACES.forEach((c) => L.image('face_' + c, `faces/${c}.png`));
@@ -23,13 +23,13 @@ export class BootScene extends Phaser.Scene {
     L.json('spec_enemies', '../data/spec/enemies.json'); L.json('spec_bosses', '../data/spec/bosses.json');
     L.on('filecomplete-json-spec_enemies', (_k: string, _t: string, d: any) => { for (const id of Object.keys(d)) L.image('mon_' + id, `mon/${id}.png`); });
     L.on('filecomplete-json-spec_bosses', (_k: string, _t: string, d: any) => { for (const id of Object.keys(d)) L.image('boss_' + id, `boss/${id}.png`); });
-    FX.forEach((c) => L.image('fx_' + c, `fx/${c}.png`)); L.json('fxmeta', 'fx/meta.json');
+    FX.forEach((c) => L.image('fx_' + c, `fx/${c}.png`)); L.json('fxmeta', 'fx/meta.json'); L.spritesheet('fx_p_Leaf', 'fx/p_Leaf.png', { frameWidth: 9, frameHeight: 7 }); L.spritesheet('fx_p_LeafPink', 'fx/p_LeafPink.png', { frameWidth: 9, frameHeight: 7 }); L.image('fx_p_Clouds', 'fx/p_Clouds.png');
     BGM.forEach((n) => L.audio('bgm_' + n, `bgm/${n}.ogg`)); SE.forEach((n) => L.audio('se_' + n, `se/${n}.ogg`)); ME.forEach((n) => L.audio('me_' + n, `me/${n}.ogg`));
   }
   async create() {
     const tex = this.textures.get('objects'); const m = this.cache.json.get('objectsmeta');
     for (const [name, r] of Object.entries(m) as any) tex.add(name, 0, r[0], r[1], r[2], r[3]);
-    this.registry.set('iconIdx', this.cache.json.get('iconsmeta'));
+    this.registry.set('iconIdx', this.cache.json.get('iconsmeta')); this.registry.set('icon2Idx', this.cache.json.get('icons2meta'));
     try { await loadDatabase(); } catch (e) { this.add.text(20, 20, 'Failed to load data: ' + e, { color: '#f88' }); return; }
     document.getElementById('boot')?.remove();
     this.scene.start('Title');

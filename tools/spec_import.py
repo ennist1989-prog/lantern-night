@@ -98,7 +98,7 @@ dump(os.path.join(PUB, 'data/items.json'), items)
 # ---------------- actors (spec anchors + learn levels)
 ACTORS = json.load(open(os.path.join(PUB, 'data/actors.json')))
 anch = {'mio': dict(mhp=[90, 420], msp=[30, 150], atk=[8, 30], def_=[6, 22], mat=[10, 36], mdf=[8, 28], agi=[10, 24]),
-        'kaze': dict(mhp=[70, 330], msp=[35, 160], atk=[9, 34], def_=[4, 16], mat=[9, 30], mdf=[6, 20], agi=[14, 40]),
+        'kaze': dict(mhp=[70, 330], msp=[35, 160], atk=[9, 34], def_=[5, 19], mat=[9, 30], mdf=[6, 20], agi=[14, 40]),
         'daigo': dict(mhp=[130, 560], msp=[10, 50], atk=[11, 42], def_=[9, 34], mat=[3, 10], mdf=[4, 14], agi=[6, 14])}
 learn = {'mio': [[1, 'mio_flare'], [2, 'mio_soothe'], [2, 'mio_mend'], [3, 'mio_glow'], [3, 'mio_remember'], [3, 'mio_send'], [4, 'mio_invite'], [5, 'mio_name_call'], [6, 'mio_warm_glow'], [7, 'mio_radiance']],
          'kaze': [[1, 'kaze_foxfire'], [2, 'kaze_pounce_mark'], [3, 'kaze_fade_step'], [4, 'kaze_shadow_bite'], [5, 'kaze_hum'], [6, 'kaze_gale_cut']],
@@ -119,6 +119,11 @@ for sid, lv in (('zashiki_child', 3), ('kodama_echo', 7)):
 RECL = {'z01': 2, 'z02': 3, 'z03': 4, 'z04': 5, 'z05': 6}
 for k, z in zones.items():
     z['recLevel'] = RECL.get(k, (z.get('levelRange') or [1, 1])[-1])
-dump(os.path.join(OUT, 'troops.json'), troops); dump(os.path.join(OUT, 'bosses.json'), bosses); dump(os.path.join(OUT, 'zones.json'), zones)
+dump(os.path.join(OUT, 'troops.json'), troops); EPITHET = {'straw_warden': 'The Scarecrow Who Forgot Its Field', 'bell_keeper': 'He Who Holds the Silence', 'willow_mother': 'Mother of the Drowned Grove',
+           'kappa_toll': 'Keeper of the Ford', 'gonbei': 'Master of the Borrowed Lanterns', 'hundred_year_anvil': 'First Anvil, Last Left Cold',
+           'tsubaki_forge': 'The Hollow Regent', 'archive_echo': 'The Echo That Eats Names', 'garden_guardian': 'Warden of the Still Garden',
+           'tsubaki_final': 'Keeper of Every Name', 'tengu_master': 'Judge of the Hundred Steps'}
+for _bid, _b in bosses.items(): _b['epithet'] = EPITHET.get(_bid, '')
+dump(os.path.join(OUT, 'bosses.json'), bosses); dump(os.path.join(OUT, 'zones.json'), zones)
 dump(os.path.join(OUT, 'parley.json'), parley); dump(os.path.join(OUT, 'bonds.json'), bonds); dump(os.path.join(OUT, 'elements.json'), elements); dump(os.path.join(OUT, 'progression.json'), prog)
 print('spec import ok:', len(enemies), 'enemies', len(skills), 'skills', len(troops), 'troops', len(items), 'items')

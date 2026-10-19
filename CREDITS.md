@@ -7,6 +7,7 @@ Game design, story, code, map/event/data scripts: original work for this project
 | Asset | Author | Licence |
 |---|---|---|
 | **Ninja Adventure Asset Pack** — character/monster/boss sprites, faces, tilesets, objects, FX, icons, UI window-skin pieces, music (`bgm/*.ogg`), jingles (`me/*`) and sound effects (`se/*`) | Pixel-boy & AAA — https://pixel-boy.itch.io/ninja-adventure-asset-pack | **CC0 1.0 Universal** (public-domain dedication; commercial use allowed, attribution not required but given here). Full text: `public/assets/fonts/CC0-NinjaAdventure-LICENSE.txt` / `LICENSES.md`. |
+| **496 Pixel Art Icons for medieval/fantasy RPG** (item, equipment, spell and key-item icons, `public/assets/icons2.png`) | Henrique Lazarini ("7Soul1"); repacked by gnola14 — https://opengameart.org/content/496-pixel-art-icons-for-medievalfantasy-rpg | **CC0 1.0 Universal** (public domain; attribution not required but given here). |
 | **Pixelify Sans** (UI font, `PixelifySans.ttf`) | The Pixelify Sans Project Authors — https://github.com/eifetx/Pixelify-Sans | **SIL Open Font License 1.1**. Full text: `public/assets/fonts/OFL-PixelifySans.txt`. |
 | **Phaser 4** (game engine) | Phaser Studio Ltd — https://phaser.io | MIT |
 | **Vite**, **TypeScript** (build tooling, not shipped as assets) | Vite contributors / Microsoft | MIT / Apache-2.0 |

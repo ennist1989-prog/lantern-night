@@ -60,18 +60,26 @@ class InputClass {
     this.prev = this.down; this.down = new Set<Key>();
     for (const s of [this.kb, this.pad, this.touch]) s.forEach((k) => this.down.add(k));
     if (this.touchDashToggle) this.down.add('dash');
+    this.updateDir4();
     this.trig.clear();
     for (const k of this.down) { if (!this.prev.has(k)) this.trig.add(k); this.hold[k] = (this.hold[k] || 0) + 1; }
     for (const k of Object.keys(this.hold)) if (!this.down.has(k as Key)) this.hold[k] = 0;
   }
   isDown(k: Key) { return this.down.has(k); }
   isTriggered(k: Key) { return this.trig.has(k); }
-  isRepeated(k: Key) { if (!this.down.has(k)) return false; const h = this.hold[k] || 0; return h === 1 || (h >= 20 && (h - 20) % 5 === 0); }
+  isRepeated(k: Key) { if (!this.down.has(k)) return false; const h = this.hold[k] || 0; return h === 1 || (h >= 24 && (h - 24) % 6 === 0); }
   /** consume a trigger so lower layers don't also react in same frame */
   consume(k: Key) { this.trig.delete(k); }
   anyTriggered() { return this.trig.size > 0; }
   clear() { this.trig.clear(); }
-  dir4(): Key | null { for (const k of ['down', 'left', 'right', 'up'] as Key[]) if (this.down.has(k)) return k; return null; }
+  private prefAxis: 'x' | 'y' = 'y'; private d4: Key | null = null;
+  /** 4-way direction: opposite keys cancel; on a diagonal the axis pressed most recently wins (re-implementation of RM-style feel). */
+  private updateDir4() {
+    const dn = (k: Key) => this.down.has(k); let x = (dn('right') ? 1 : 0) - (dn('left') ? 1 : 0), y = (dn('down') ? 1 : 0) - (dn('up') ? 1 : 0);
+    if (x !== 0 && y !== 0) { if (this.prefAxis === 'x') y = 0; else x = 0; } else if (x !== 0) this.prefAxis = 'y'; else if (y !== 0) this.prefAxis = 'x';
+    this.d4 = x > 0 ? 'right' : x < 0 ? 'left' : y > 0 ? 'down' : y < 0 ? 'up' : null;
+  }
+  dir4(): Key | null { return this.d4; }
 }
 export const Input = new InputClass();
 export function pulse(k: Key) { (Input as any).kb.add(k); setTimeout(() => (Input as any).kb.delete(k), 70); }

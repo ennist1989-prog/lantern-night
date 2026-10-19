@@ -3,6 +3,8 @@ import { Input } from '../core/input';
 import { Audio } from '../core/audio';
 export const FONT = 'Pixelify, "Pixelify Sans", monospace';
 export const W = 816, H = 624;
+/** Central window metrics (RPG Maker MZ-like): padding 12, line height 36, font 26, item padding 8, selectable item height 44. */
+export const WIN = { pad: 12, lineH: 36, font: 26, itemPad: 8, itemH: 44, msgLines: 4, fittingHeight: (n: number, itemH = 44) => n * itemH + 24 };
 export const COL = { white: '#ffffff', sys: '#9ec4ff', gold: '#ffd866', red: '#ff7a7a', green: '#8ff0a4', teal: '#6fe3d6', dim: '#8a93b8', hp: '#7de08a', sp: '#6aa8ff', lumen: '#bff6ff', warn: '#ffb36b', violet: '#c9a0ff' };
 let _skin: HTMLCanvasElement | null = null;
 export type Tone = 'near' | 'far';
@@ -40,6 +42,7 @@ export class Win extends Phaser.GameObjects.Container {
     const ax = o.align === 'right' ? 1 : o.align === 'center' ? 0.5 : 0; t.setOrigin(ax, 0); this.content.add(t); return t;
   }
   icon(name: string, x: number, y: number, scale = 1.5) {
+    if (name && name.startsWith('v2:')) { const i2 = (this.scene.registry.get('icon2Idx') as any)[name.slice(3)]; if (i2 === undefined) return null; const im2 = this.scene.add.image(x, y, 'icons2', i2).setOrigin(0, 0).setScale(scale * 24 / 34); this.content.add(im2); return im2; }
     const idx = (this.scene.registry.get('iconIdx') as any)[name]; if (idx === undefined) return null;
     const im = this.scene.add.image(x, y, 'icons', idx).setOrigin(0, 0).setScale(scale); this.content.add(im); return im;
   }
@@ -58,7 +61,7 @@ export class Win extends Phaser.GameObjects.Container {
 }
 export interface Item { label: string; value?: string; icon?: string; enabled?: boolean; data?: any; color?: string; sub?: string; idx?: number; }
 export class Selectable extends Win {
-  items: Item[] = []; index = 0; scroll = 0; cols = 1; rowH = 32; pad = 18; active = false; cursorG: Phaser.GameObjects.Graphics;
+  items: Item[] = []; index = 0; scroll = 0; cols = 1; rowH = WIN.itemH; pad = WIN.pad + 2; active = false; cursorG: Phaser.GameObjects.Graphics;
   onOk: (it: Item, i: number) => void = () => {}; onCancel: (() => void) | null = null; onSelect: (it: Item | undefined, i: number) => void = () => {}; onPage: (d: number) => void = () => {};
   drawItem: ((w: Selectable, it: Item, x: number, y: number, cw: number, i: number) => void) | null = null;
   fontSize = 22; hitZone: Phaser.GameObjects.Zone; keepIndexOnSet = false; noCancelSound = false; align: 'left' | 'center' = 'left';

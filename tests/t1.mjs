@@ -4,7 +4,7 @@ const { browser, page, errors } = await launch();
 try {
   await newGame(page);
   await mashUntil(page, () => window.__S.$.sw('intro_done'), null, 80);
-  await page.evaluate(() => { const $ = window.__S.$; $.setSw('post_lit', true); $.setSw('kaze_joined', true); $.setSw('elder_told', true); $.addActor('kaze'); for (const id of $.party) { const a = $.actors[id]; while (a.level < 3) $.gainExp(a, 20 * a.level); a.hp = $.param(a, 'mhp'); a.sp = $.param(a, 'msp'); } $.realm = 'far'; });
+  await page.evaluate(() => { const $ = window.__S.$; $.setSw('post_lit', true); $.setSw('kaze_joined', true); $.setSw('elder_told', true); $.addActor('kaze'); for (const id of $.party) { const a = $.actors[id]; while (a.level < 7) $.gainExp(a, 20 * a.level); a.hp = $.param(a, 'mhp'); a.sp = $.param(a, 'msp'); } $.realm = 'far'; });
   await teleport(page, 1, 13, 23, 'left'); await sleep(500);
   await page.screenshot({ path: SS + '/60-warden-far.png' });
   await hold(page, 'ArrowLeft', 900); await sleep(500);

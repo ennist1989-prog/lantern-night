@@ -19,6 +19,16 @@ class AudioClass {
     else (s as any).volume = target;
     if (old) { const sc2 = this.game.scene.scenes[0]; if (sc2) sc2.tweens.add({ targets: old, volume: 0, duration: dur, onComplete: () => { old.stop(); old.destroy(); } }); else { old.stop(); old.destroy(); } }
   }
+  private lp: BiquadFilterNode | null = null;
+  /** Realm-shift muffle: a low-pass sweep on everything (WebAudio only; silently skipped elsewhere). on=true closes to ~600 Hz, false reopens. */
+  muffle(on: boolean, ms = 300) {
+    try {
+      const m: any = this.mgr(); const ctx: AudioContext | undefined = m.context; if (!ctx || !m.masterVolumeNode) return;
+      if (!this.lp) { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 22000; m.masterVolumeNode.disconnect(); m.masterVolumeNode.connect(f); f.connect(ctx.destination); this.lp = f; }
+      const t = ctx.currentTime; this.lp.frequency.cancelScheduledValues(t); this.lp.frequency.setValueAtTime(this.lp.frequency.value, t);
+      this.lp.frequency.exponentialRampToValueAtTime(on ? 600 : 22000, t + ms / 1000);
+    } catch (e) { /* ignore */ }
+  }
   applyVol() { if (this.cur) (this.cur as any).volume = Settings.data.bgm; }
   stopBgm(fade = 0.5) { const o = this.cur; this.cur = null; this.curName = ''; if (!o) return; const sc = this.game.scene.scenes[0]; if (sc) sc.tweens.add({ targets: o, volume: 0, duration: fade * 1000, onComplete: () => { o.stop(); o.destroy(); } }); else { o.stop(); o.destroy(); } }
   se(name: string, vol = 1, rate = 1) {

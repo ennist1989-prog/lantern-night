@@ -1,11 +1,11 @@
-import { $ } from './state';
+import { $, SAVE_VERSION } from './state';
 import { DB } from './db';
 const PFX = 'lotfs.save.';
 export interface SaveMeta { slot: number; ts: number; playtime: number; label: string; level: number; members: string[]; chapter: number; realm: string; }
 const MAPNAMES = () => DB.system.mapNames || {};
 export function mapName(id: number) { return (MAPNAMES() as any)[id] || 'Unknown'; }
 function snapshot(): any {
-  return { v: 1, ts: Date.now(), playtime: $.playtime, game: JSON.parse(JSON.stringify($.toJSON())) };
+  return { v: SAVE_VERSION, ts: Date.now(), playtime: $.playtime, game: JSON.parse(JSON.stringify($.toJSON())) };
 }
 export function metaFor(slot: number, d: any): SaveMeta {
   const g = d.game; const lv = Math.max(...g.party.map((p: string) => g.actors[p].level));

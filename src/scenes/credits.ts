@@ -8,6 +8,7 @@ const LINES = (d: any) => [
   '@LANTERN NIGHT: THE FAR SHORE', '',
   '@Design, code & writing', 'Grok Bot (built with Phaser 4 + TypeScript + Vite)', '',
   '@Art, music & sound effects', 'The Ninja Adventure Asset Pack', 'by Pixel-Boy and AAA', 'Licence: CC0 1.0 Universal (public domain)', 'https://pixel-boy.itch.io/ninja-adventure-asset-pack', '',
+  '@Item & spell icons', '496 Pixel Art Icons by Henrique Lazarini (7Soul1)', 'repacked by gnola14 — Licence: CC0 1.0', 'https://opengameart.org/content/496-pixel-art-icons-for-medievalfantasy-rpg', '',
   '@Font', 'Pixelify Sans — © The Pixelify Sans Project Authors', 'SIL Open Font License 1.1', '',
   '@Engine & tools', 'Phaser 4 — MIT licence (Phaser Studio Inc.)', 'Vite — MIT licence', '',
   '@Special thanks', 'The RPG Maker MV / MZ community for the genre’s grammar,', 'and to everyone who has ever lit a lantern for someone else.', '',

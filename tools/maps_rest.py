@@ -1,16 +1,17 @@
 from mapkit import *
+from sidequests_maps import *
 def fill_walls(m, g=None):
     for y in range(m.h):
         for x in range(m.w):
             m.tile('both', x, y, DARKBRICK if y % 2 == 0 else DARKBRICK2); 
 def foe(m, x, y, troop, sheet, realm='far', **kw):
     e = dict(troop=troop, aggro=kw.get('aggro', 4), chase=True, range=kw.get('range', 3), spd=kw.get('spd', 260)); m.event(x, y, [page(g=NPC(sheet), enemy=e)], realm)
-def chest(m, x, y, items, text=None):
+def chest(m, x, y, items, text=None, realm='both'):
     got = []
     for it_, n in items: got.append(item(it_, n))
-    m.obj('both', 'chest', x, y, fw=1, block=False)
+    m.obj(realm, 'chest', x, y, fw=1, block=False)
     m.event(x, y, [page(cond={'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}] + got + [self_sw('A')]),
-                   page(cond={'self': 'A'}, g=dict(obj='chest'), list=[say(None, None, 'The chest is empty.')])])
+                   page(cond={'self': 'A'}, g=dict(obj='chest'), list=[say(None, None, 'The chest is empty.')])], realm)
 def build_sachi():
     m = Map(2, 'Sachi’s House', 12, 10, 'home', 'home', seed=2); fill_walls(m)
     m.fill('both', 1, 2, 10, 8, INT_FLOOR); m.fill('both', 6, 9, 6, 9, INT_FLOOR)
@@ -18,6 +19,9 @@ def build_sachi():
     m.obj('both', 'bookshelf_w', 1, 1, fw=4, block=False); m.obj('both', 'dresser', 6, 1, fw=3, block=False); m.obj('both', 'cupboard', 9, 1, fw=1, block=False)
     m.obj('both', 'table3', 3, 3, fw=3); m.obj('both', 'stool', 2, 3, fw=1, block=False); m.obj('both', 'stool', 6, 3, fw=1, block=False)
     m.obj('both', 'rug_red', 5, 6, fw=2, block=False, flat=True); m.obj('both', 'pot_big', 9, 3, fw=1); m.obj('both', 'plant_pot', 1, 7, fw=1); m.obj('both', 'jar', 10, 7, fw=1)
+    # ---- wall calendar: nights to Lantern Night (changes after the Straw Warden falls)
+    m.event(5, 1, [page(cond={'nsw': 'warden_done'}, trigger='action', list=[say(None, None, 'A paper calendar by the door. Seven days are crossed out in Sachi’s hand, and the last is circled: LANTERN NIGHT. Seven nights left.')]),
+                   page(cond={'sw': 'warden_done'}, trigger='action', list=[say(None, None, 'The wall calendar. Night 2 is crossed out. Six nights to Lantern Night, circled in red. Mio’s wick drawer is half open beneath it.')])])
     m.light(9, 4, 4); m.light(3, 3, 3)
     m.door_touch(6, 9, 1, 7, 15, 'down', se='door')
     # intro (autorun)
@@ -34,6 +38,7 @@ def build_sachi():
         tut('controls', 'Move: Arrows/WASD · Talk/OK: Z/Enter · Menu: X/Esc · Dash: hold Shift · Shift realms: Q/Tab', 9000)]
     m.event(6, 7, [page(cond={'nsw': 'intro_done'}, trigger='auto', list=intro)])
     sachi_talk = [choice(['Talk', 'Rest (free)', 'Save', 'Never mind'], [[
+            IF({'anysw': ['first_send', 'warden_done'], 'noitem': 'collectors_book'}, [say('sachi', 'Granny Sachi', 'Ah, you have begun to meet them properly. Here, child: my old ledger. Spirits you meet write themselves in it, and the bonds you keep.'), item('collectors_book'), tut('ledger', 'Keeper’s Ledger: Menu now shows Bonds (equip, give Offerings) and the Bestiary. Check Key Items for everything else you carry.', 8000)]),
             IF({'sw': 'warden_done'}, [IF({'nsw': 'parley_taught'}, [
                 say('sachi', 'Granny Sachi', 'You faced the Warden and came back whole. Good. Listen, child — not every spirit on the Far Shore wants to fight.'),
                 say('sachi', 'Granny Sachi', 'Parley lets you talk: Soothe, Hum, Remember, Offer something they love. Fill their Mood and they turn Calm. Then you may Send them onward — or Invite one to walk beside you as a Bond.'),
@@ -61,7 +66,7 @@ def build_tea():
     m.obj('both', 'barrel', 1, 3, fw=1); m.obj('both', 'barrel2', 1, 4, fw=1); m.obj('both', 'plant_pot', 12, 3, fw=1); m.obj('both', 'rug_red', 5, 7, fw=2, block=False, flat=True)
     m.light(4, 3, 4); m.light(9, 4, 4)
     m.door_touch(7, 9, 1, 25, 15, 'down')
-    shop_items = ['rice_ball', 'herbal_tea', 'lantern_oil', 'antidote_salt', 'smoke_ball', 'hush_bell', 'honey', 'mochi', 'incense_stick', 'paper_charm', 'mio_w2', 'kaze_w2', 'garb2', 'charm3', 'lucky_knot']
+    shop_items = ['rice_ball', 'herbal_tea', 'honey', 'mochi', 'lantern_oil', 'antidote_salt', 'wick_trim', 'kuzu_tonic', 'hush_bell', 'smoke_ball', 'firecracker', 'origami_crane', 'incense_stick', 'paper_charm', 'chime_offering', 'mio_w2', 'kaze_w2', 'daigo_w2', 'garb2', 'charm3', 'lucky_knot']
     m.event(4, 3, [page(g=NPC('woman', 'down'), list=[
         say('woman', 'Tama', 'Welcome, welcome! Tea’s hot and the road’s long. What can I do for you?'),
         choice(['Shop', 'Rest (15 G)', 'Chat', 'Leave'], [[{'c': 'shop', 'items': shop_items, 'name': 'Tama', 'face': 'woman'}], [{'c': 'inn', 'price': 15, 'name': 'Tama', 'face': 'woman', 'ask': 'A bed and a bowl of miso is 15 gold. Stay the night?'}],
@@ -71,7 +76,7 @@ def build_tea():
         IF({'sw': 'shiro_asked'}, [IF({'nsw': 'hanzo_told'}, [
             say('mio', 'Mio', 'Excuse me, Hanzo? There’s someone on the Far Shore. Old Shiro. He says the net is finally mended, and he forgives you for the storm.'),
             say('villager1', 'Hanzo', '…Shiro. After forty years.'), say('villager1', 'Hanzo', 'Tell him, if you can, that the boat’s still tied at the third post. And that I never stopped looking.'),
-            sw('hanzo_told'), quest('hanzo', 1, False)],
+            item('hanzo_note', -1, True), sw('hanzo_told'), quest('hanzo', 1, False)],
            [say('villager1', 'Hanzo', 'Please carry it to him. It’s all I have.')])],
            [say('villager1', 'Hanzo', 'Forty years since my friend Shiro’s boat went down. I still sit here, watching the door. Habit.')])])], realm='near')
     m.event(11, 3, [page(g=dict(obj='post_banner'), list=[say(None, None, 'TAMA’S: Tea 5, Rice 12, Good Advice free.')])], realm='near')
@@ -100,6 +105,11 @@ def build_well():
     # chests
     chest(m, 3, 8, [('charm3', 1)]); chest(m, 28, 14, [('honey', 2)]); chest(m, 8, 7, [('rice_ball', 2), ('herbal_tea', 1)])
     m.walk('both', 8, 7, True)
+    # field-spell nook (Fox-fire Torch, Kaze Lv4): a hay bale blocks a cache in the NE room
+    m.obj('both', 'chest', 27, 3, fw=1, block=False)
+    m.event(27, 3, [page(cond={'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}, item('kuzu_tonic', 2), item('wick_trim', 1), self_sw('A')]), page(cond={'self': 'A'}, g=dict(obj='chest'), list=[say(None, None, 'The chest is empty.')])])
+    for (hx, hy) in [(26, 3), (27, 4)]:
+        m.event(hx, hy, [page(cond={'nsw': 'hay_burnt'}, g=dict(obj='hay'), ft='burnable', list=[say(None, None, 'A bale of dry hay is wedged into the corner. Something glints behind it. A little flame would clear the way.')], fieldList=[{'c': 'se', 'name': 'fire'}, {'c': 'flash', 'color': 0xffa060, 'ms': 300}, say(None, None, 'The hay catches in a rush of orange and is gone in moments.'), sw('hay_burnt')])])
     # Daigo (Near only)
     m.event(26, 6, [page(cond={'nsw': 'daigo_joined'}, g=NPC('smith', 'down'), list=[
         say('smith', 'Daigo', 'Whoa! A Lantern? You’re Sachi’s girl, aren’t you? Mio! You — how did you get across? The ledge crumbled behind me. I’ve been stuck here two days!'),
@@ -147,7 +157,10 @@ def build_shrine1():
         for y in (10, 11, 12):
             m.walk('near', x, y, False)
             m.event(x, y, [page(g=dict(obj='block_stone'), trigger='action', marker=False, list=[say(None, None, 'A sealed stone, humming faintly. It seems to exist only on this shore.'), tut('seal', 'Sealed stones block this shore only. Shift past them on the Far Shore.', 5500)])], realm='near')
-    chest(m, 2, 10, [('garb2', 1)]); chest(m, 21, 10, [('honey', 2), ('lucky_knot', 1), ('smoke_ball', 1)])
+    chest(m, 2, 10, [('dew_lens', 1)], realm='far'); foe(m, 3, 12, 'tr_gloam_bat_ofuda_moth', 'kettle', aggro=3, range=2)
+    # L08: hidden alcove chest, only seen through the Dew Lens (Far)
+    m.event(1, 13, [page(cond={'item': 'dew_lens', 'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}, item('hearty_plum', 1), item('charm2', 1), self_sw('A')]), page(cond={'self': 'A'}, g=dict(obj='chest'), list=[say(None, None, 'The chest is empty.')])], realm='far')
+    chest(m, 21, 10, [('honey', 2), ('lucky_knot', 1), ('smoke_ball', 1)])
     # pedestals (order: white -> red -> blue)
     peds = [(8, 11, 'pedestal_red', 'red'), (11, 11, 'pedestal_w', 'white'), (14, 11, 'pedestal_blue', 'blue')]
     order = ['white', 'red', 'blue']
@@ -172,6 +185,7 @@ def build_shrine1():
     m.event(12, 6, [page(cond={'sw': 'ped_solved'}, trigger='touch', through=True, list=[{'c': 'transfer', 'map': 6, 'x': 8, 'y': 11, 'dir': 'up', 'se': 'door'}])])
     m.door_touch(11, 23, 1, 18, 6, 'down', se='door'); m.door_touch(12, 23, 1, 18, 6, 'down', se='door')
     foe(m, 9, 9, 'tr_hollow_villager_candle_spirit', 'skeleton'); foe(m, 14, 14, 'tr_candle_spirit_bell_mouse', 'lantern2'); foe(m, 8, 14, 'tr_ofuda_moth', 'kettle'); foe(m, 16, 9, 'tr_gloam_bat_gloam_bat', 'mouse2'); foe(m, 12, 13, 'tr_bell_mouse_ofuda_moth', 'mouse')
+    sq03_shrine(m); sq04_shrine(m)
     return m
 def build_summit():
     m = Map(6, 'Bell Shrine — Summit', 18, 14, 'shrine', 'shrine_far', seed=6); fill_walls(m)
@@ -182,8 +196,24 @@ def build_summit():
     for x, y in [(4, 11), (13, 11)]: m.obj('both', 'pot_big', x, y, fw=1)
     for x, y in [(5, 4), (12, 4), (8, 7), (4, 8), (13, 8)]: m.light(x, y, 5)
     m.door_touch(8, 13, 5, 11, 7, 'down', se='door'); m.door_touch(9, 13, 5, 12, 7, 'down', se='door')
-    m.event(8, 5, [page(g=NPC('keeper', 'down', nofar=True), trigger='action', list=[
+    # ---- ma (quiet scene, optional): Mio and Kaze rest under the silent bell
+    m.event(8, 9, [page(cond={'nself': 'A'}, g=dict(obj='lantern_post', nofar=True) if False else None, trigger='action', marker=True, list=[
+        narr('Under the great silent bell, Mio sits down. Kaze sits near, not close, the way he does.'),
+        say('kaze', 'Kaze', 'What’s it like? Being missed.'),
+        say('mio', 'Mio', 'Like a drawer full of burnt wicks you can’t throw away.'),
+        say('kaze', 'Kaze', '…That’s a good answer. I think I’d like a drawer.'), {'c': 'wait', 'ms': 700}, self_sw('A')]),
+        page(cond={'self': 'A'}, trigger='action', marker=False, list=[say(None, None, 'The bell hangs silent over the two of them. For a moment it is enough.')])])
+    # L07: the Bell's clapper lies in a Far-only chest; the Keeper's arena answers only once you carry it
+    chest(m, 13, 12, [('shrine_bell_clapper', 1)], realm='far')
+    # field-spell nook (Clearing Gust, Kaze Lv6): drifted sand hides a cache
+    m.obj('both', 'chest', 3, 3, fw=1, block=False)
+    m.event(3, 3, [page(cond={'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}, item('honey', 2), item('lantern_oil', 2), self_sw('A')]), page(cond={'self': 'A'}, g=dict(obj='chest'), list=[say(None, None, 'The chest is empty.')])])
+    for (sx, sy) in [(4, 3), (3, 4)]:
+        m.event(sx, sy, [page(cond={'nsw': 'drift_gone'}, g=dict(obj='block_sand'), ft='wind_object', list=[say(None, None, 'Sand has drifted against the wall in a smooth heap, hiding something that glints. A good gust would clear it.')], fieldList=[{'c': 'se', 'name': 'strange'}, {'c': 'shake', 'power': 1, 'ms': 400}, say(None, None, 'A gust sweeps the sand away!'), sw('drift_gone')])])
+    m.event(8, 5, [page(cond={'nlock': 'L07'}, g=NPC('keeper', 'down', nofar=True), trigger='action', list=[say(None, None, 'Under the great bell, a robed figure kneels. The great bell hangs silent and strangely light.'), say('kaze', 'Kaze', 'Look, Mio — the clapper’s gone. The Keeper won’t even look up. It must be somewhere on the Far Shore. Shift and search this hall.')]),
+        page(cond={'lock': 'L07'}, g=NPC('keeper', 'down', nofar=True), trigger='action', list=[
         say(None, None, 'Under the great bell, a robed figure kneels. Bronze armor weighs on his shoulders like grief.'),
+        say(None, None, 'A neat paper name-seal is tied to the bell’s clapper-rope. The knot and the brushstrokes look just like the one on the scarecrow.'),
         IF({'nlvl': 6}, [say('kaze', 'Kaze', 'Mio… I can feel how strong he is. Level 6 would be safer. The Post here will heal us — and the shrine below has spirits to practise on.')]),
         choice(['Face the Bell-Keeper', 'Wait — prepare first'], [[
             {'c': 'checkpoint', 'boss': True},
@@ -198,12 +228,16 @@ def build_summit():
              'win': [say(None, None, 'The bronze armor falls away piece by piece, like autumn leaves. A tired priest remains, kneeling.'),
                      say('keeper', 'Priest Ren', 'I could not… let her go. I did not want to be alone in the quiet.'),
                      say('mio', 'Mio', 'You aren’t alone. You never were. Hana waited, too. Let us ring it together.'),
-                     {'c': 'me', 'name': 'fanfare'}, {'c': 'shake', 'power': 2, 'ms': 800}, sw('boss_done'), quest('main', 6, True)],
+                     {'c': 'me', 'name': 'fanfare'}, {'c': 'shake', 'power': 2, 'ms': 800}, sw('boss_done'), item('wellkeeper_pebble'), quest('main', 6, True)],
              'lose': [{'c': 'abort'}]},
             {'c': 'flash', 'color': 0xffffff, 'ms': 800}, {'c': 'se', 'name': 'bell'}, {'c': 'wait', 'ms': 900}, {'c': 'se', 'name': 'bell'},
             narr('The Bell rang once, and the valley breathed out.', 'Across Ashiro, every lantern caught fire at once, and every spirit that had waited too long was finally able to go home.', 'Priest Ren lit the last lantern himself, for the daughter who had never really left.'),
+            say(None, None, 'Then the paper seal on the clapper-rope tightens itself, knot by knot, and the bell goes silent again.'),
+            say('kaze', 'Kaze', 'That isn’t a broken bell, Mio. That’s a hand.'),
+            narr('Night 3. Six nights have become five, and the calendar by Sachi’s door has one more day crossed out.'),
             narr('Mio, Kaze and Daigo had only reached the first shore.', 'But the Bell was ringing again, and that was enough to begin.'),
             {'c': 'end'}], []])])], realm='near')
     m.event(8, 4, [page(g=NPC('keeper', 'down', nofar=True), trigger='action', list=[say('keeper', 'Bell-Keeper', 'You… are not the ones I wait for. Go. Shift. See what I cannot.')])], realm='far') if False else None
     foe(m, 6, 10, 'tr_candle_spirit_candle_spirit_bell_mouse', 'lantern2', aggro=3, range=1); foe(m, 13, 9, 'tr_gloam_bat_ofuda_moth', 'kettle', aggro=3, range=1)
+    sq03_summit(m); sq04_summit(m)
     return m
