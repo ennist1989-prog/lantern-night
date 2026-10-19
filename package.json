@@ -12,6 +12,7 @@
     "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {
+    "@sentry/browser": "^11.8.0",
     "phaser": "^4.2.1"
   },
   "devDependencies": {

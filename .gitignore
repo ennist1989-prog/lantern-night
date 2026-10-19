@@ -3,3 +3,5 @@ dist/
 _dl/
 live/
 *.zip
+.env
+.env.local
