@@ -37,6 +37,8 @@ export class Win extends Phaser.GameObjects.Container {
     this.add([this.bg, this.content]); scene.add.existing(this);
   }
   setTone(t: Tone) { if (t === this.tone) return; this.tone = t; this.bg.setTexture(winTexture(this.scene, this.w, this.h, t)); }
+  /** Change the window size (re-skins the background; content is untouched). */
+  resize(w: number, h: number) { if (w === this.w && h === this.h) return; this.w = w; this.h = h; this.bg.setTexture(winTexture(this.scene, w, h, this.tone)); }
   txt(s: string, x: number, y: number, o: { size?: number; color?: string; align?: 'left' | 'center' | 'right'; wrap?: number; ox?: number; ls?: number } = {}) {
     const t = this.scene.add.text(x, y, s, { fontFamily: FONT, fontSize: (o.size ?? 22) + 'px', color: o.color ?? COL.white, wordWrap: o.wrap ? { width: o.wrap } : undefined, lineSpacing: o.ls ?? 2, stroke: '#0a0d20', strokeThickness: 3 });
     t.setResolution(1);
@@ -59,6 +61,20 @@ export class Win extends Phaser.GameObjects.Container {
   clear() { this.content.list.slice().forEach((c: any) => { if (c !== this.gfx && !c.__keep) c.destroy(); }); this.gfx.clear(); }
   open(ms = 110) { this.setVisible(true); this.setAlpha(0.2); this.scene.tweens.add({ targets: this, alpha: 1, duration: ms }); }
   tick() { /* override */ }
+}
+/** Fit a single-line text into maxW px: step the font down through `sizes`, then truncate with an ellipsis (Ember style guide v1 §3.3). */
+export function fitLine(t: Phaser.GameObjects.Text, maxW: number, sizes: number[] = []) {
+  for (const s of sizes) { if (t.width <= maxW) break; t.setFontSize(s + 'px'); }
+  if (t.width > maxW) { const full = t.text; let n = full.length; while (n > 1 && t.width > maxW) { n--; t.setText(full.slice(0, n).trimEnd() + '…'); } }
+  return t;
+}
+/** Fit a text block into a maxW × maxH box: measured word wrap (over-long words are broken), step the font down through `sizes`
+ *  until the wrapped block fits the height, and ellipsize as a last resort. Shared by the battle log and map toasts. */
+export function fitBlock(t: Phaser.GameObjects.Text, maxW: number, maxH: number, sizes: number[] = []) {
+  t.setWordWrapWidth(maxW, true);
+  for (const s of sizes) { if (t.height <= maxH && t.width <= maxW) break; t.setFontSize(s + 'px'); }
+  if (t.height > maxH) { const full = t.text; let n = full.length; while (n > 1 && t.height > maxH) { n--; t.setText(full.slice(0, n).trimEnd() + '…'); } }
+  return t;
 }
 /** Heartbeat pulse (lub-dub, ~1 beat/s): strong beat, a smaller second beat, then rest. Returns 0..1. */
 export function heartbeat(tms: number, period = 1000) { const p = (tms % period) / period; const bump = (c: number, w: number) => Math.exp(-(((p - c) / w) ** 2)); return Math.min(1, bump(0.07, 0.045) + 0.55 * bump(0.27, 0.045)); }

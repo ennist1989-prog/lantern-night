@@ -5,7 +5,7 @@ import { $, SLOTS as ALLSLOTS, SLOT_NAMES } from '../core/state';
 const SLOTS = ALLSLOTS.filter((x) => x !== 'bond');
 import { DB, PARAM_NAMES, ELEMENT_NAMES, ELEMENT_COLORS, iconOf } from '../core/db';
 import { mapName, fmtTime } from '../core/save';
-import { W, H, Win, Selectable, COL, FONT, tickWindows, Tone } from '../ui/windows';
+import { W, H, Win, Selectable, COL, FONT, tickWindows, Tone, fitLine } from '../ui/windows';
 import { openOptions } from '../ui/options';
 import { SPEC } from '../battle/spec';
 import * as M2 from './menu2';
@@ -28,7 +28,7 @@ export class MenuScene extends Phaser.Scene {
     L.push({ label: 'Notes' }, { label: 'Options' }, { label: 'Save' }, { label: 'Game End' }); return L;
   }
   mk<T extends Win>(w: T) { this.wins.push(w); return w; }
-  rm(w: Win) { w.destroy(); this.wins = this.wins.filter((x) => x !== w); }
+  rm(w: Win) { w.destroy(); this.wins = this.wins.filter((x) => x !== w); if ((w as any).__panel && !this.wins.some((x) => (x as any).__panel)) this.party.setVisible(true); }
   update() { tickWindows(this.wins); }
   close(r?: any) { this.d.onClose?.(r); }
   refresh() {
@@ -65,7 +65,12 @@ export class MenuScene extends Phaser.Scene {
     if (res?.action) { this.close(res); return; }
     this.refresh(); this.cmd.active = true;
   }
-  panel() { return this.mk(new Win(this, 248, 8, 560, 608, this.tone)); }
+  /** Full-height sub-screen panel over the party window. It is opaque (solid backdrop under the 0.93-alpha skin) and the party window
+   *  is hidden while any panel is open, so nothing ghosts through (Ember style guide v1 §3.2 #2). rm() restores the party window. */
+  panel() {
+    const p = this.mk(new Win(this, 248, 8, 560, 608, this.tone)); const g = this.add.graphics(); g.fillStyle(0x0e163a, 1); g.fillRoundedRect(3, 3, p.w - 6, p.h - 6, 12); p.addAt(g, 0);
+    (p as any).__panel = true; this.party.setVisible(false); return p;
+  }
   statLines(a: any, over?: { slot: string; item: string | null }) {
     const out: { k: string; cur: number; nw: number }[] = []; const copy = { ...a, equips: { ...a.equips } }; if (over) copy.equips[over.slot] = over.item;
     for (const k of ['mhp', 'msp', 'atk', 'def', 'mat', 'mdf', 'agi']) out.push({ k, cur: $.param(a, k), nw: $.param(copy, k) }); return out;
@@ -75,7 +80,8 @@ export class MenuScene extends Phaser.Scene {
     const draw = () => { panel.clear(); const a = $.actors[cur], d = DB.actors[cur]; this.drawActor(panel, cur, 20, 18, 520);
       panel.txt('◀ Q / E ▶', 470, 570, { size: 15, color: COL.dim });
       panel.txt('Parameters', 20, 156, { size: 20, color: COL.sys }); ['mhp', 'msp', 'atk', 'def', 'mat', 'mdf', 'agi'].forEach((k, i) => { panel.txt(PARAM_NAMES[k], 30, 190 + i * 28, { size: 19 }); panel.txt(String($.param(a, k)), 250, 190 + i * 28, { size: 19, align: 'right' }); });
-      panel.txt('Equipment', 290, 156, { size: 20, color: COL.sys }); M2.equipSlots().forEach((s, i) => { panel.txt(SLOT_NAMES[s], 290, 190 + i * 30, { size: 17, color: COL.dim }); const e = a.equips[s]; const sm = s === 'keepsake' && e ? Object.values<any>(SPEC.summons.summons).find((x) => x.keepsake === e)?.name : null; panel.txt(e ? (sm || DB.items[e].name + ($.forged[e] ? ' +' + $.forged[e] : '')) : '—', 370, 190 + i * 30, { size: 17, wrap: 170 }); });
+      // Equipment column (Ember §3.3): labels x=272 @15px, names x=348 single-line ≤200px (inner edge 548), 17→15→13px then "…"; ≤5 rows end at y=332
+      panel.txt('Equipment', 272, 156, { size: 20, color: COL.sys }); M2.equipSlots().forEach((s, i) => { const y = 190 + i * 30; panel.txt(SLOT_NAMES[s], 272, y + 2, { size: 15, color: COL.dim }); const e = a.equips[s]; const sm = s === 'keepsake' && e ? Object.values<any>(SPEC.summons.summons).find((x) => x.keepsake === e)?.name : null; fitLine(panel.txt(e ? (sm || DB.items[e].name + ($.forged[e] ? ' +' + $.forged[e] : '')) : '—', 348, y, { size: 17 }), 200, [15, 13]); });
       panel.txt('Skills', 20, 410, { size: 20, color: COL.sys }); a.skills.filter((k) => DB.skills[k] && !['p_attack', 'p_guard'].includes(k)).slice(-12).forEach((s, i) => panel.txt(DB.skills[s].name, 30 + (i % 3) * 176, 442 + Math.floor(i / 3) * 24, { size: 18, color: ELEMENT_COLORS[DB.skills[s].element || 'phys'] }));
       panel.txt(d.desc || '', 20, 540, { size: 16, color: COL.dim, wrap: 430 }); };
     draw();
