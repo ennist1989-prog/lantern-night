@@ -66,7 +66,7 @@ def build_tea():
     m.obj('both', 'barrel', 1, 3, fw=1); m.obj('both', 'barrel2', 1, 4, fw=1); m.obj('both', 'plant_pot', 12, 3, fw=1); m.obj('both', 'rug_red', 5, 7, fw=2, block=False, flat=True)
     m.light(4, 3, 4); m.light(9, 4, 4)
     m.door_touch(7, 9, 1, 25, 15, 'down')
-    shop_items = ['rice_ball', 'herbal_tea', 'honey', 'mochi', 'lantern_oil', 'antidote_salt', 'wick_trim', 'kuzu_tonic', 'hush_bell', 'smoke_ball', 'firecracker', 'origami_crane', 'incense_stick', 'paper_charm', 'chime_offering', 'mio_w2', 'kaze_w2', 'daigo_w2', 'garb2', 'charm3', 'lucky_knot']
+    shop_items = ['rice_ball', 'herbal_tea', 'honey', 'mochi', 'lantern_oil', 'antidote_salt', 'wick_trim', 'kuzu_tonic', 'hush_bell', 'smoke_ball', 'firecracker', 'origami_crane', 'incense_stick', 'paper_charm', 'chime_offering', 'mio_w2', 'kaze_w2', 'daigo_w2', 'garb2', 'charm3', 'lucky_knot']  # shop.ts filters by shopChapter + Daigo party
     m.event(4, 3, [page(g=NPC('woman', 'down'), list=[
         say('woman', 'Tama', 'Welcome, welcome! Tea’s hot and the road’s long. What can I do for you?'),
         choice(['Shop', 'Rest (15 G)', 'Chat', 'Leave'], [[{'c': 'shop', 'items': shop_items, 'name': 'Tama', 'face': 'woman'}], [{'c': 'inn', 'price': 15, 'name': 'Tama', 'face': 'woman', 'ask': 'A bed and a bowl of miso is 15 gold. Stay the night?'}],
@@ -145,7 +145,7 @@ def build_well():
         {'c': 'flash', 'color': 0xcff6ff, 'ms': 500}, {'c': 'se', 'name': 'magic2'},
         say(None, None, 'Mio hums the old lantern song. The Lantern warms in her hands, and the dark water stills.'),
         say(None, 'Ido-no-Kami', 'The old lantern… still burns somewhere. Thank you. Take the key. Ring the Bell for me.'),
-        {'c': 'me', 'name': 'fanfare'}, {'c': 'item', 'id': 'shrine_key'}, sw('key_got'), quest('main', 5),
+        {'c': 'me', 'name': 'fanfare'}, {'c': 'item', 'id': 'shrine_key'}, {'c': 'exp', 'n': 25}, sw('key_got'), quest('main', 5),
         IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Gentle beats loud. Remember that when we meet the Bell-Keeper.')],
            [say('mio', 'Mio', 'Gentle… Remember that, for whatever waits at the Bell.')]),
         tut('exit', 'Stairs near the south chamber lead back up to the village.', 5000)])])

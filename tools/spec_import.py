@@ -101,7 +101,7 @@ anch = {'mio': dict(mhp=[90, 420], msp=[30, 150], atk=[8, 30], def_=[6, 22], mat
         'kaze': dict(mhp=[70, 330], msp=[35, 160], atk=[9, 34], def_=[5, 19], mat=[9, 30], mdf=[6, 20], agi=[14, 40]),
         'daigo': dict(mhp=[130, 560], msp=[10, 50], atk=[11, 42], def_=[9, 34], mat=[3, 10], mdf=[4, 14], agi=[6, 14])}
 learn = {'mio': [[1, 'mio_flare'], [2, 'mio_soothe'], [2, 'mio_mend'], [3, 'mio_glow'], [3, 'mio_remember'], [3, 'mio_send'], [4, 'mio_invite'], [5, 'mio_name_call'], [6, 'mio_warm_glow'], [7, 'mio_radiance']],
-         'kaze': [[1, 'kaze_foxfire'], [2, 'kaze_pounce_mark'], [3, 'kaze_fade_step'], [4, 'kaze_shadow_bite'], [5, 'kaze_hum'], [6, 'kaze_gale_cut']],
+         'kaze': [[1, 'kaze_foxfire'], [2, 'kaze_pounce_mark'], [3, 'kaze_fade_step'], [4, 'kaze_shadow_bite'], [5, 'kaze_hum'], [5, 'kaze_gale_cut']],
          'daigo': [[1, 'daigo_guard_stance'], [1, 'daigo_rap'], [3, 'daigo_cleave'], [5, 'daigo_ward_strike'], [7, 'daigo_bulwark']]}
 equip = {'mio': {'weapon': 'mio_w1', 'armor': 'garb1', 'acc': None}, 'kaze': {'weapon': 'kaze_w1', 'armor': 'garb1', 'acc': None}, 'daigo': {'weapon': 'daigo_w1', 'armor': 'garb1', 'acc': None}}
 gear_ids = {g['id'] for g in items_spec['gear']}
@@ -124,6 +124,8 @@ dump(os.path.join(OUT, 'troops.json'), troops); EPITHET = {'straw_warden': 'The 
            'tsubaki_forge': 'The Hollow Regent', 'archive_echo': 'The Echo That Eats Names', 'garden_guardian': 'Warden of the Still Garden',
            'tsubaki_final': 'Keeper of Every Name', 'tengu_master': 'Judge of the Hundred Steps'}
 for _bid, _b in bosses.items(): _b['epithet'] = EPITHET.get(_bid, '')
+# Balance: Ch1 boss should pay a level (was 16; L1→L2 needs 20)
+if 'straw_warden' in bosses: bosses['straw_warden']['exp'] = max(bosses['straw_warden'].get('exp', 0), 40)
 dump(os.path.join(OUT, 'bosses.json'), bosses); dump(os.path.join(OUT, 'zones.json'), zones)
 dump(os.path.join(OUT, 'parley.json'), parley); dump(os.path.join(OUT, 'bonds.json'), bonds); dump(os.path.join(OUT, 'elements.json'), elements); dump(os.path.join(OUT, 'progression.json'), prog)
 print('spec import ok:', len(enemies), 'enemies', len(skills), 'skills', len(troops), 'troops', len(items), 'items')

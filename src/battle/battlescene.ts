@@ -199,6 +199,7 @@ export class BattleScene extends Phaser.Scene {
     return new Promise((resolve) => {
       const party = () => {
         this.statusWin.setVisible(true); this.subWin.setVisible(false); this.descWin.setVisible(false); this.cmdWin.keepIndexOnSet = true; this.hideTarget(); this.refreshStatus(); this.drawOrder();
+        if (Settings.data.autoBattle && this.B.bossDef) { Settings.data.autoBattle = false; Settings.save(); }
         if (Settings.data.autoBattle) { if (Input.isTriggered('cancel')) { Settings.data.autoBattle = false; Settings.save(); } else { this.autoPlan(); resolve('ok'); return; } }
         this.setCmd([{ label: 'Fight', data: 'fight' }, { label: 'Flee', data: 'escape', enabled: !B.noEscape || $.items.smoke_ball > 0 }, { label: 'Auto: ' + (Settings.data.autoBattle ? 'ON' : 'OFF'), data: 'auto' }, { label: 'Speed: ×' + this.speed(), data: 'speed' }], (it) => {
           if (it.data === 'fight') { this.cmdWin.active = false; actorCmd(0); }
