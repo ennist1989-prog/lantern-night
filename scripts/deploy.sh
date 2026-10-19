@@ -4,6 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 REPO_URL="$(git remote get-url origin)"
+# Vite loads VITE_* from .env automatically. For Sentry on Pages, set VITE_SENTRY_DSN
+# in .env (gitignored) or export it before deploy. Without it, Sentry is disabled.
 npm run build
 TMP="$(mktemp -d)"
 cp -r dist/. "$TMP/"
