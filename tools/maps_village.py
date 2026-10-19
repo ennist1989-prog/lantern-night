@@ -54,10 +54,14 @@ def build_village():
     m.walk('both', 17, 13); m.walk('both', 18, 13)
     # corridor forest walls (north & south of boulder corridor)
     for x in range(3, 17, 3):
-        m.obj('both', 'tree_big', x, 20, fw=3, block=True, blockrect=(x, 19, x + 2, 20)); m.obj('both', 'tree_pink' if x % 2 else 'tree_white', x, 26 if x > 9 else 27, fw=3, block=True, blockrect=(x, 25, x + 2, 27 if x <= 9 else 26)) if False else None
+        m.obj('both', 'tree_big', x, 20, fw=3, block=True, blockrect=(x, 19, x + 2, 20))
+        m.obj('both', 'tree_pink' if x % 2 else 'tree_white', x, 26 if x > 9 else 27, fw=3, block=True, blockrect=(x, 25, x + 2, 27 if x <= 9 else 26))
     for x in range(10, 17, 3):
         m.obj('both', 'tree_big', x, 26, fw=3, block=True, blockrect=(x, 25, x + 2, 26))
-    for x in range(3, 10, 3): pass
+    # Seal the far-left column and bottom-row walkaround past the boulder corridor
+    m.walkrect('both', 2, 19, 2, 27, False)
+    for x in range(3, 10):
+        m.walk('both', x, 27, False)
     # ---- posts (Lantern Posts)
     m.post(17, 16 - 0 if False else 16, 3) if False else None
     m.walk('both', 17, 16, True)
@@ -71,7 +75,10 @@ def build_village():
     m.obj('both', 'well_hole', 5, 23, fw=1)
     m.event(5, 23, [page(g=dict(obj='well_hole'), trigger='action', marker=True, list=[
         IF({'nsw': 'well_seen'}, [say('mio', 'Mio', 'Ashiro Well. Cold air breathes up from below, and a rope ladder trails into the dark.'), sw('well_seen')]),
-        choice(['Climb down', 'Not yet'], [[{'c': 'transfer', 'map': 4, 'x': 3, 'y': 4, 'dir': 'down', 'se': 'grass'}], []])])])
+        IF({'nsw': 'warden_done'}, [
+            say('mio', 'Mio', 'The path past the boulder still feels watched. I should clear the Far Shore corridor first.'),
+            {'c': 'move', 'route': ['up']}],
+           [choice(['Climb down', 'Not yet'], [[{'c': 'transfer', 'map': 4, 'x': 3, 'y': 4, 'dir': 'down', 'se': 'grass'}], []])])])])
     # ---- boulder wall (Near only) + paths clear in Far
     for y in (22, 23, 24):
         m.walk('near', 11, y, False)
@@ -99,8 +106,11 @@ def build_village():
               [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['down']}])])])])], realm='near')
     # Far Shore: no guard stands here (lock L02 alternative route)
     m.event(18, 4, [page(trigger='touch', through=True, list=[
-        IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [{'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
-           [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['down']}])])])], realm='far')
+        IF({'nsw': 'kaze_joined'}, [
+            say('mio', 'Mio', '(I shouldn’t climb alone. That fox on the Far Shore by the square post… I should find him first.)'),
+            {'c': 'move', 'route': ['down']}],
+           [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [{'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
+              [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['down']}])])])])], realm='far')
     # Gate Guard (Near only): his post by the gate
     m.event(19, 4, [page(g=NPC('villager3', 'left'), list=[say('villager3', 'Gate Guard', 'Up to the Shrine? Not without the Elder’s seal, miss. Not after dusk. Though the wind says the other shore has no guards…'), IF({'lock': 'L02'}, [say('villager3', 'Gate Guard', 'Ah, the seal. All in order. Go on.')])])], realm='near')
     m.event(17, 4, [page(trigger='touch', through=True, list=[{'c': 'balloon', 'icon': '…'}])]) if False else None
@@ -125,7 +135,7 @@ def build_village():
                say(None, None, 'The Well. The one place Granny Sachi said, her whole life, never to go.'),
                choice(['Go to the Well', 'Wait. Sit with Granny a moment first'], [[say('mio', 'Mio', 'Then I’ll go now, before I think about it.')],
                    [say(None, None, 'Mio goes back to the little house and sits by the bed. Sachi’s breath is slow and even, and the hearth is cold.'),
-                    say('mio', 'Mio', 'I’m scared, Granny. …But you’d tell me to go.'), say(None, None, 'Sachi doesn’t answer. Mio closes her fingers around the Lantern, and walks back out into the dusk.'), sw('mio_sat_first')]]), sw('elder_told'), sw('boulder_known'), quest('main', 3), say('kaze', 'Kaze', 'Boulder, Well, key. Sounds like a morning stroll. Let’s go.')],
+                    say('mio', 'Mio', 'I’m scared, Granny. …But you’d tell me to go.'), say(None, None, 'Sachi doesn’t answer. Mio closes her fingers around the Lantern, and walks back out into the dusk.'), sw('mio_sat_first')]]), sw('elder_told'), sw('boulder_known'), quest('main', 3), IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Boulder, Well, key. Sounds like a morning stroll. Let’s go.')])],
               [IF({'nsw': 'daigo_joined'}, [say('elder', 'Elder Matsu', 'The Well lies past the boulder, south-west. Mind your Lumen on the Far Shore.')],
                   [IF({'nsw': 'key_got'}, [say('elder', 'Elder Matsu', 'Daigo is with you? Good lad. Find that key.')],
                      [say('elder', 'Elder Matsu', 'The key! Then climb, children. The Bell has waited long enough.')])])])])])])
@@ -182,15 +192,17 @@ def build_village():
         m.event(10, wy, [page(cond=wd_cond, trigger='touch', through=True, list=[
             IF({'sw': 'warden_seen'}, [], [say(None, None, 'A scarecrow stands in the corridor — but on the Far Shore its straw shivers, and two hollow eyes open.'), sw('warden_seen')]),
             IF({'nsw': 'flame_seen'}, [say(None, None, 'In its chest, one small flame burns perfectly still. No flicker, no wind. It is the only steady fire in Ashiro tonight.'), sw('flame_seen')]),
-            IF({'nlvl': 3}, [say('kaze', 'Kaze', 'Hm. That’s a Warden. I’d feel better if we were Level 3 first. Those wisps in the fields would make good practice — and the Post by the Well road is a safe place to rest.')]),
+            IF({'nlvl': 3}, [IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Hm. That’s a Warden. I’d feel better if we were Level 3 first. Those wisps in the fields would make good practice — and the Post by the Well road is a safe place to rest.')],
+                [say('mio', 'Mio', 'That scarecrow feels wrong. I should be stronger before I face it — Level 3, maybe. The wisps in the fields… and a Post nearby to rest.')])]),
             choice(['Face the Warden', 'Not yet'], [[
                 {'c': 'checkpoint', 'boss': True},
-                say('kaze', 'Kaze', 'It’s guarding something it has forgotten. Hit it where its straw is weak. When the Veil slips it will be open to a Send.'),
+                IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'It’s guarding something it has forgotten. Hit it where its straw is weak. When the Veil slips it will be open to a Send.')],
+                   [say('mio', 'Mio', 'It’s guarding something it has forgotten. Hit where the straw is weak. When the Veil slips, I can try to Send it.')]),
                 {'c': 'battle', 'troop': 'boss_straw_warden', 'boss': True, 'noEscape': True,
                  'win': [say('mio', 'Mio', 'Rest now. Whatever you were guarding, it’s over.'),
                          say(None, None, 'The scarecrow settles into a farmer’s name — “Gen” — and Mio says it, and it goes. The still flame goes out last, by itself.'),
                          say(None, None, 'On the straw chest hangs a neat paper seal, tied with a careful knot. Someone wrote a name on it in tidy brushstrokes, and it was not Gen’s.'),
-                         say('kaze', 'Kaze', 'Mio. Nobody ties a knot like that by accident.'), sw('seal_seen_1'),
+                         IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Mio. Nobody ties a knot like that by accident.')], [say('mio', 'Mio', 'Nobody ties a knot like that by accident…')]), sw('seal_seen_1'),
                          {'c': 'wait', 'ms': 600}, narr('Dusk. Mio sits on the rim of the Old Well, the Lantern in her lap.', 'Far Ashiro glows below, ghost-lit and gentle. No one speaks.'),
                          say(None, 'Sachi (a voice)', 'You are holding the lantern like a rope.'), {'c': 'wait', 'ms': 500},
                          sw('warden_done'), quest('main', 3, quiet=True), {'c': 'toast', 'text': 'Night 2: six nights to Lantern Night.'}], 'lose': [{'c': 'abort'}]}],
