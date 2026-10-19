@@ -56,6 +56,6 @@ try {
   await teleport(page, 5, 11, 20, 'up');
   await page.evaluate(() => { const r = window.__S.Field.castField('mio', 'sp_lantern_return'); window.__fd = mapScene().fieldAction(r.action); });
   await mash(() => window.__S.$.map.id === 1, null, 40); ok(await page.evaluate(() => window.__S.$.map.id === 1), 'Lantern Return warps to the lit Post');
-  ok(errors.filter((e) => !/willReadFrequently/.test(e)).length === 0, 'no console errors ' + JSON.stringify(errors.filter((e) => !/willReadFrequently/.test(e)).slice(0, 3)));
+  ok(errors.filter((e) => !/willReadFrequently/.test(e)).length === 0, 'no console errors ' + JSON.stringify(errors.filter((e) => !/willReadFrequently/.test(e)).slice(0, 3), null, 1));
 } catch (e) { console.log('EXC', e.message); fails++; await page.screenshot({ path: SS + '/n3-fail.png' }); console.log(errors.filter((e) => !/willReadFrequently/.test(e)).slice(0, 5)); }
 console.log(fails ? 'N3 FAILURES: ' + fails : 'N3 ALL PASS'); await browser.close();

@@ -28,8 +28,8 @@ export class OptWin extends Selectable {
     this.setItems(rows, true); Settings.save(); }
 }
 export function openOptions(scene: Phaser.Scene, tone: Tone, wins: any[], x = 108, y = 70, onDone: () => void) {
-  const w = new OptWin(scene, x, y, 600, 520, tone); w.setDepth(200); wins.push(w); w.rowH = 36; w.pad = 18; w.fontSize = 23; w.keepIndexOnSet = true; w.build(); w.active = true;
-  const hint = w.scene.add.text(x + 300, y + 528, '◀ ▶ change    X back', { fontFamily: 'Pixelify, monospace', fontSize: '18px', color: COL.dim }).setOrigin(0.5, 0).setDepth(201);
+  const OH = 500; y = Math.max(8, Math.min(y, 624 - OH - 30)); const w = new OptWin(scene, x, y, 600, OH, tone); w.setDepth(200); wins.push(w); w.rowH = 33; w.pad = 18; w.fontSize = 23; w.keepIndexOnSet = true; w.build(); w.active = true;
+  const hint = w.scene.add.text(x + 300, y + OH + 4, '◀ ▶ change    X back', { fontFamily: 'Pixelify, monospace', fontSize: '18px', color: COL.dim }).setOrigin(0.5, 0).setDepth(201);
   const close = () => { w.active = false; Settings.save(); w.destroy(); hint.destroy(); const i = wins.indexOf(w); if (i >= 0) wins.splice(i, 1); onDone(); };
   w.onOk = (it) => { if (!it.data) close(); else (w as any).change(1); }; w.onCancel = close;
   return w;

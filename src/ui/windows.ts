@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Input } from '../core/input';
 import { Audio } from '../core/audio';
+import { Settings } from '../core/settings';
 export const FONT = 'Pixelify, "Pixelify Sans", monospace';
 export const W = 816, H = 624;
 /** Central window metrics (RPG Maker MZ-like): padding 12, line height 36, font 26, item padding 8, selectable item height 44. */
@@ -55,19 +56,31 @@ export class Win extends Phaser.GameObjects.Container {
     const g = this.gfx; g.fillStyle(0x0a0d20, 1); g.fillRect(x - 1, y - 1, w + 2, h + 2); g.fillStyle(0x2a3050, 1); g.fillRect(x, y, w, h);
     const rw = Math.max(0, Math.min(1, ratio)) * w; g.fillStyle(c1, 1); g.fillRect(x, y, rw, h); g.fillStyle(c2, 1); g.fillRect(x, y, rw, Math.max(1, h / 3)); g.fillStyle(0xffffff, 0.25); g.fillRect(x, y, rw, 1);
   }
-  clear() { this.content.list.slice().forEach((c) => { if (c !== this.gfx) c.destroy(); }); this.gfx.clear(); }
+  clear() { this.content.list.slice().forEach((c: any) => { if (c !== this.gfx && !c.__keep) c.destroy(); }); this.gfx.clear(); }
   open(ms = 110) { this.setVisible(true); this.setAlpha(0.2); this.scene.tweens.add({ targets: this, alpha: 1, duration: ms }); }
   tick() { /* override */ }
 }
+/** Heartbeat pulse (lub-dub, ~1 beat/s): strong beat, a smaller second beat, then rest. Returns 0..1. */
+export function heartbeat(tms: number, period = 1000) { const p = (tms % period) / period; const bump = (c: number, w: number) => Math.exp(-(((p - c) / w) ** 2)); return Math.min(1, bump(0.07, 0.045) + 0.55 * bump(0.27, 0.045)); }
+/** Pulse amplitude by the Screen Juice option: Full 1, Reduced 0.4, Off 0 (static highlight). */
+export function pulseAmp() { const j = (Settings.data as any).juice; return j === 'off' ? 0 : j === 'reduced' ? 0.4 : 1; }
+/** Shared RPG-Maker-style cursor: rectangle behind the row with a heartbeat pulse (brighten + slight grow), gold frame. */
+export function drawCursor(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, active: boolean, tms: number) {
+  if (!active) { g.fillStyle(0xbcd4ff, 0.16); g.fillRoundedRect(x, y, w, h, 5); g.lineStyle(1, 0xbcd4ff, 0.45); g.strokeRoundedRect(x, y, w, h, 5); return; }
+  const b = heartbeat(tms) * pulseAmp(); const grow = 2.5 * b;
+  g.fillStyle(0xffe9a8, 0.30 + 0.22 * b); g.fillRoundedRect(x - grow, y - grow, w + grow * 2, h + grow * 2, 6);
+  g.fillStyle(0xffffff, 0.10 + 0.18 * b); g.fillRoundedRect(x - grow + 3, y - grow + 2, w + grow * 2 - 6, Math.max(2, (h + grow * 2) * 0.38), 4);
+  g.lineStyle(2, 0xffd36a, 0.95); g.strokeRoundedRect(x - grow, y - grow, w + grow * 2, h + grow * 2, 6);
+}
 export interface Item { label: string; value?: string; icon?: string; enabled?: boolean; data?: any; color?: string; sub?: string; idx?: number; }
 export class Selectable extends Win {
-  items: Item[] = []; index = 0; scroll = 0; cols = 1; rowH = WIN.itemH; pad = WIN.pad + 2; active = false; cursorG: Phaser.GameObjects.Graphics;
+  items: Item[] = []; index = 0; scroll = 0; cols = 1; rowH = WIN.itemH; pad = WIN.pad + 2; active = false; cursorG: Phaser.GameObjects.Graphics; selTexts: Phaser.GameObjects.Text[] = []; selLit = -1;
   onOk: (it: Item, i: number) => void = () => {}; onCancel: (() => void) | null = null; onSelect: (it: Item | undefined, i: number) => void = () => {}; onPage: (d: number) => void = () => {};
   drawItem: ((w: Selectable, it: Item, x: number, y: number, cw: number, i: number) => void) | null = null;
   fontSize = 22; hitZone: Phaser.GameObjects.Zone; keepIndexOnSet = false; noCancelSound = false; align: 'left' | 'center' = 'left';
   constructor(scene: Phaser.Scene, x: number, y: number, w: number, h: number, tone: Tone = 'near') {
     super(scene, x, y, w, h, tone);
-    this.cursorG = scene.add.graphics(); this.content.addAt(this.cursorG, 0);
+    this.cursorG = scene.add.graphics(); (this.cursorG as any).__keep = true; this.content.addAt(this.cursorG, 0);
     this.hitZone = scene.add.zone(0, 0, w, h).setOrigin(0, 0).setInteractive(); this.add(this.hitZone);
     this.hitZone.on('pointerdown', (p: Phaser.Input.Pointer) => { if (!this.active || !this.visible) return; const lp = this.hitZone.getLocalPoint ? { x: p.x - this.getWorldX(), y: p.y - this.getWorldY() } : { x: 0, y: 0 }; this.pointerSelect(lp.x, lp.y); });
   }
@@ -85,11 +98,12 @@ export class Selectable extends Win {
   ok() { const it = this.items[this.index]; if (!it) return; if (it.enabled === false) { Audio.se('buzzer'); return; } Audio.se('ok'); this.onOk(it, this.index); }
   activate(on = true) { this.active = on; this.cursorG.setVisible(on || true); this.refresh(); }
   refresh() {
-    this.clear(); const { pad, rowH, cols } = this; const iw = this.itemW;
+    this.clear(); this.selTexts = []; const { pad, rowH, cols } = this; const iw = this.itemW;
     const first = this.scroll * cols, last = Math.min(this.items.length, first + this.rows * cols);
     for (let i = first; i < last; i++) {
       const it = this.items[i]; const r = Math.floor(i / cols) - this.scroll, c = i % cols; const x = pad + c * iw, y = pad + r * rowH;
-      if (this.drawItem) this.drawItem(this, it, x, y, iw, i); else this.defaultDraw(it, x, y, iw);
+      const n0 = this.content.list.length; if (this.drawItem) this.drawItem(this, it, x, y, iw, i); else this.defaultDraw(it, x, y, iw);
+      if (i === this.index) this.selTexts = this.content.list.slice(n0).filter((o: any) => o.type === 'Text') as Phaser.GameObjects.Text[];
     }
     if (this.items.length > this.rows * cols) { const tot = Math.ceil(this.items.length / cols); if (this.scroll > 0) this.txt('▲', this.w - 24, 4, { size: 14, color: COL.sys }); if (this.scroll + this.rows < tot) this.txt('▼', this.w - 24, this.h - 24, { size: 14, color: COL.sys }); }
   }
@@ -108,10 +122,13 @@ export class Selectable extends Win {
     Audio.se('cursor'); this.refresh(); this.onSelect(this.items[i], i);
   }
   tick() {
+    if (!this.scene || !this.cursorG?.active) return;
     const t = this.scene.time.now; const g = this.cursorG; g.clear();
     if (this.items.length && this.visible) {
       const r = Math.floor(this.index / this.cols) - this.scroll, c = this.index % this.cols;
-      if (r >= 0 && r < this.rows) { const a = this.active ? 0.22 + 0.14 * Math.sin(t / 130) : 0.12; g.fillStyle(0xbcd4ff, a); g.fillRoundedRect(this.pad + c * this.itemW - 2, this.pad + r * this.rowH - 1, this.itemW - 2, this.rowH - 2, 5); if (this.active) { g.lineStyle(2, 0xffe08a, 0.9); g.strokeRoundedRect(this.pad + c * this.itemW - 2, this.pad + r * this.rowH - 1, this.itemW - 2, this.rowH - 2, 5); } }
+      if (r >= 0 && r < this.rows) { drawCursor(g, this.pad + c * this.itemW - 2, this.pad + r * this.rowH - 1, this.itemW - 2, this.rowH - 2, this.active, t); }
+      const lit = this.active ? 1 : 0; const b = this.active ? heartbeat(t) * pulseAmp() : 0;
+      for (const tx of this.selTexts) { if (!tx.active) continue; if ((tx as any).__lit !== lit) { (tx as any).__lit = lit; if (lit) tx.setShadow(0, 0, '#ffe08a', 6, true, true); else tx.setShadow(0, 0, '#000', 0, false, false); } tx.setAlpha(0.9 + 0.1 * (1 - b)); }
     }
     if (!this.active || !this.visible) return;
     if (Input.isRepeated('up')) this.move(0, -1); else if (Input.isRepeated('down')) this.move(0, 1);
@@ -123,7 +140,7 @@ export class Selectable extends Win {
   get current() { return this.items[this.index]; }
 }
 /** Update all windows of a scene each frame. */
-export function tickWindows(list: Win[]) { for (const w of list) if (w.active !== false) w.tick(); }
+export function tickWindows(list: Win[]) { for (const w of list) if (w.active !== false || w instanceof Selectable) w.tick(); }
 export class Fader {
   rect: Phaser.GameObjects.Rectangle;
   constructor(scene: Phaser.Scene, depth = 9999) { this.rect = scene.add.rectangle(0, 0, W, H, 0x000000, 0).setOrigin(0, 0).setDepth(depth); this.rect.setScrollFactor(0); }

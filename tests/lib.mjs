@@ -5,7 +5,7 @@ export async function launch(url = 'http://127.0.0.1:8099/', opts = {}) {
   const page = await ctx.newPage();
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.type() + ': ' + m.text()); });
-  page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message + '\n' + (e.stack || '').split('\n').slice(0, 4).join('\n')));
+  page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message + '\n' + (e.stack || '').split('\n').slice(0, 14).join('\n')));
   await page.addInitScript(() => { try { if (!localStorage.getItem('lotfs.settings')) localStorage.setItem('lotfs.settings', JSON.stringify({ walkSpeed: 'brisk', textSpeed: 2 })); } catch (e) {} });   // tests were tuned for the brisk pace
   await page.goto(url);
   return { browser, ctx, page, errors };

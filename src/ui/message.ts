@@ -91,7 +91,7 @@ export class MessageSystem {
         for (let k = 0; k < ln.s.length; k++) { const gi = ln.start + k; if (P.icons.has(gi)) { this.measure.setText(ln.s.slice(0, k)); iconAt.push({ gi: g + k, name: P.icons.get(gi)!, x: tx + (k ? this.measure.width : 0), y: y + 1, done: false }); } if (P.waits.has(gi)) waitAt.set(g + k, P.waits.get(gi)!); }
         g += ln.s.length; });
       let shown = 0, acc = 0, done = false, holdWait = 0, pausedOK = false; const key = hash((name || '') + full); const seen = !!$.seen[key];
-      const draw = () => { for (const r of runs) { const n = Math.max(0, Math.min(r.s.length, shown - r.g0)); if (n !== r.shown) { r.shown = n; r.t.setText(r.s.slice(0, n)); } } for (const ic of iconAt) if (!ic.done && shown > ic.gi) { ic.done = true; win.icon(ic.name, ic.x, ic.y, 1.5); } };
+      const draw = () => { for (const r of runs) { const n = Math.max(0, Math.min(r.s.length, shown - r.g0)); if (n !== r.shown && r.t.active) { r.shown = n; r.t.setText(r.s.slice(0, n)); } } for (const ic of iconAt) if (!ic.done && shown > ic.gi) { ic.done = true; win.icon(ic.name, ic.x, ic.y, 1.5); } };
       this.arrow.setVisible(false);
       await new Promise<void>((resolve) => {
         const ev = this.scene.events.on('update', function upd(this: any) { });

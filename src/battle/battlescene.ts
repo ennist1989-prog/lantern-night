@@ -5,7 +5,7 @@ import { Settings } from '../core/settings';
 import { $ } from '../core/state';
 import { playSummonFx } from './summonfx';
 import { DB, ELEMENT_COLORS, ELEMENT_NAMES, iconOf } from '../core/db';
-import { W, H, Win, Selectable, COL, FONT, Fader, sleep, tickWindows } from '../ui/windows';
+import { W, H, Win, Selectable, COL, FONT, Fader, sleep, tickWindows, heartbeat, pulseAmp } from '../ui/windows';
 import { farTexture } from '../game/recolor';
 import { SPEC } from './spec';
 import { Battle, Battler, Ev, alive } from './engine';
@@ -39,6 +39,7 @@ export class BattleScene extends Phaser.Scene {
   }
   update(_t?: number, dt = 16) {
     tickWindows(this.wins); this.drawBars();
+    if (this.cursorTxt?.visible) { const hb = heartbeat(this.time.now) * pulseAmp(); this.cursorTxt.setScale(1 + 0.32 * hb); this.cursorTxt.setTint(hb > 0.3 ? 0xffffff : 0xffe08a); }
     const cam = this.cameras.main;
     if (this.trauma > 0) { const m = this.trauma * this.trauma * 14; cam.setScroll((Math.random() * 2 - 1) * m, (Math.random() * 2 - 1) * m); this.trauma = Math.max(0, this.trauma - (dt / 1000) * 1.6); if (this.trauma === 0) cam.setScroll(0, 0); }
   }
@@ -300,7 +301,7 @@ export class BattleScene extends Phaser.Scene {
           const known = [...b.revealed].filter((k) => k.startsWith(B.realm + ':')).map((k) => k.split(':')[1]); const eln = known.length ? known.map((k) => ELEMENT_NAMES[k] + '↑').join(' ') : (b.boss ? 'weakness: ?' : '? ? ?');
           this.targetWin.txt(eln, 12, 28, { size: 14, color: COL.violet }); this.targetWin.txt(`Mood ${Math.round(b.mood)}/${b.calmAt}${b.calm ? ' · Calm' : ''}${b.states.unveiled ? ' · Unveiled' : ''}`, 404, 28, { size: 14, color: b.calm ? COL.teal : '#ff9ed8', align: 'right' });
           const s = this.spr.get(b.uid)!; this.cursorTxt.setVisible(true).setPosition((s as any).bx, (s as any).by - s.displayHeight - 4);
-        } else if (enemyScope) { this.cursorTxt.setVisible(false); } else { this.cursorTxt.setVisible(false); this.refreshStatus(b); }
+        } else if (enemyScope) { this.cursorTxt.setVisible(false); } else { this.refreshStatus(b); if (!all) { const q = this.posOf(b); this.cursorTxt.setVisible(true).setPosition(q.x, q.y - 70); } else this.cursorTxt.setVisible(false); }
         void sk;
       };
       show();
