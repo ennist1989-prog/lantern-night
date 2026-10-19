@@ -8,6 +8,7 @@ gen_db.write()
 import subprocess; subprocess.check_call([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spec_import.py')], cwd=os.path.dirname(os.path.abspath(__file__)))
 subprocess.check_call([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'items_import.py')], cwd=os.path.dirname(os.path.abspath(__file__)))
 subprocess.check_call([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sq_import.py')], cwd=os.path.dirname(os.path.abspath(__file__)))
+subprocess.check_call([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'balance_patches.py')], cwd=os.path.dirname(os.path.abspath(__file__)))
 maps = [build_village(), build_sachi(), build_tea(), build_well(), build_shrine1(), build_summit()]
 os.makedirs(os.path.join(ROOT, 'screenshots', 'maps'), exist_ok=True)
 for m in maps:

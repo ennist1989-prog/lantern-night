@@ -143,7 +143,7 @@ def build_village():
     # notice board
     m.event(21, 11, [page(g=dict(obj='post_banner'), list=[
         say(None, None, 'NOTICE — Dust Wisps drift into the north fields. Calm or clear 4 of them. Reward: a Hush Bell pair and 60 gold.'),
-        IF({'nsw': 'wisps_taken'}, [choice(['Take the bounty', 'Leave it'], [[sw('wisps_taken'), {'c': 'var', 'name': 'wisp_count', 'op': '=', 'v': 0}, quest('wisps', 0), {'c': 'tutorial', 'id': 'parley', 'text': 'Tip: in battle, Parley → Soothe raises a spirit’s Mood. At full Mood, use Send for a kinder end.', 'ms': 7000}], []])],
+        IF({'nsw': 'wisps_taken'}, [choice(['Take the bounty', 'Leave it'], [[sw('wisps_taken'), quest('wisps', 0), {'c': 'tutorial', 'id': 'parley', 'text': 'Tip: in battle, Parley → Soothe raises a spirit’s Mood. At full Mood, use Send for a kinder end.', 'ms': 7000}], []])],
            [IF({'sw': 'wisps_done'}, [say(None, None, 'The bounty is complete.')], [IF({'v': ['wisp_count', '>=', 4]}, [say(None, None, 'Four wisps calmed or cleared. You hand in the notice.'), {'c': 'item', 'id': 'hush_bell', 'n': 2}, gold(60), {'c': 'exp', 'n': 20}, quest('wisps', 0, True), sw('wisps_done')], [say(None, None, 'Progress: wisps calmed or cleared — keep walking the north fields.')])])])])])
     # villagers
     m.event(14, 19, [page(g=NPC('villager2', 'down'), move=dict(type='random', r=2), list=[say('villager2', 'Villager', 'Tonight’s the Lantern Festival, and not one lantern will light! Granny Sachi’s girl just got hers, though. That’s a start.')])], realm='near')

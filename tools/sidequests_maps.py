@@ -31,7 +31,7 @@ def sq03_ume(m, x, y):
             sw('sq03_on'), quest('sq03', 0)]),
         page(cond={'sw': 'sq03_on', 'nsw': 'sq03_done'}, g=NPC('ghostgirl', 'down'), trigger='action', list=lines + [
             IF(allm, [say('ghostgirl', 'Sister Ume', 'All five. Every name is back in the register. Thank you, Mio; a name is the first thing to go and the last thing worth keeping.'),
-                      {'c': 'sqreward', 'id': 'sq03'},
+                      {'c': 'sqreward', 'id': 'sq03'}, {'c': 'exp', 'n': 20},
                       say('ghostgirl', 'Sister Ume', 'There is a sixth page, blank, with only a drawing: a little fox sitting at the shrine gate. “For the fox who sat at the gate.” Do you know it?'),
                       say('kaze', 'Kaze', '…No. I don’t. Let’s go.'), sw('sq03_done'), quest('sq03', 1, True)],
                [say('ghostgirl', 'Sister Ume', 'Still blank: ' + ', '.join(['%s' % n for n in names]) + '… whichever you have not matched yet. Ask them again; they murmur when you hold up the Lantern.')])]),
@@ -60,7 +60,7 @@ def sq04_mouse(m, x, y):
             say('mouse', 'Bell Mouse', 'Squeak. If you ring the true scale, I will come with you, I promise!'), sw('sq04_on'), quest('sq04', 0)]),
         page(cond={'sw': 'sq04_on', 'nsw': 'sq04_solved'}, g=NPC('mouse', 'down'), trigger='action', list=[say('mouse', 'Bell Mouse', 'Listen at each bell from the Far side. Ring them from the lowest note to the highest!')]),
         page(cond={'sw': 'sq04_solved', 'nsw': 'sq04_done'}, g=NPC('mouse', 'down'), trigger='action', list=[
-            say('mouse', 'Bell Mouse', 'That was it! That was the song! Squeak! Oh, thank you!'), {'c': 'sqreward', 'id': 'sq04'},
+            say('mouse', 'Bell Mouse', 'That was it! That was the song! Squeak! Oh, thank you!'), {'c': 'sqreward', 'id': 'sq04'}, {'c': 'exp', 'n': 20},
             say('mouse', 'Bell Mouse', 'I will be a neighbour to you now. Call on me, and I will ring for you.'), sw('sq04_done'), quest('sq04', 1, True)]),
         page(cond={'sw': 'sq04_done'}, g=NPC('mouse', 'down'), trigger='action', list=[say('mouse', 'Bell Mouse', 'Ding, ding! The bells are singing right now. Do you hear them?')])], realm='far')
 def sq04_shrine(m):

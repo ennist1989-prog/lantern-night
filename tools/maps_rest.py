@@ -233,6 +233,7 @@ def build_summit():
         say(None, None, 'A neat paper name-seal is tied to the bell’s clapper-rope. The knot and the brushstrokes look just like the one on the scarecrow.'),
         IF({'nlvl': 6}, [IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Mio… I can feel how strong he is. Level 6 would be safer. The Post here will heal us — and the shrine below has spirits to practise on.')],
             [say('mio', 'Mio', 'He’s strong. Level 6 would be safer. The Post here will heal me — and the shrine below has spirits to practise on.')])]),
+        say(None, None, '(This is the last fight of this chapter. Side quests, hidden caches and anyone still waiting for you will stay as they are. Finish them first if you want to.)'),
         choice(['Face the Bell-Keeper', 'Wait — prepare first'], [[
             {'c': 'checkpoint', 'boss': True},
             say('keeper', 'Bell-Keeper', 'None… shall ring… the Bell.'),
