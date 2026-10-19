@@ -1,8 +1,10 @@
 """Import the battle/creature/boss spec data (research/data/*.json) into the build.
 Run after gen_db.write(): python3 spec_import.py   (also called by gen_game.py)
 Everything is data: later chapters only need entries in these JSON files."""
-import json, os, shutil
+import json, os, shutil, sys
 from PIL import Image
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from art_custom import frame_meta, overlay as art_overlay, manifest as art_manifest
 SRC = '/workspace/rpg-research/data'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PUB = os.path.join(ROOT, 'public')
@@ -31,16 +33,32 @@ for eid, e in enemies.items():
     box = (cx * sz, cy * sz, min(w, cx * sz + sz), min(h, cy * sz + sz))
     im.crop(box).save(os.path.join(MON, eid + '.png'))
 # bosses: idle strips
+# Repo-side sprite overrides on top of the research spec (which lives outside the repo):
+#  - 'custom': path (from the repo root) of hand-made art in art/custom/ that replaces the pack image; if the file is missing
+#    the current placeholder is kept, so main stays shippable until the art lands.
+#  - keys set to None are removed (Tsubaki's '#503060' tint would multiply-darken the new art in the Near).
+#  - 'noFar': her map sheet is exempt from the Far recolour (see character.ts NO_FAR).
+SPRITE_OVERRIDES = {
+    'tsubaki_forge': {'custom': 'art/custom/boss/tsubaki_forge.png', 'frame': [64, 64], 'n': 6, 'tint': None, 'noFar': True},
+    'tsubaki_final': {'custom': 'art/custom/boss/tsubaki_final.png', 'frame': [64, 64], 'n': 6, 'tint': None, 'noFar': True},
+}
+for bid, ov in SPRITE_OVERRIDES.items():
+    if bid not in bosses: continue
+    sp = bosses[bid]['sprite']
+    for k, v in ov.items():
+        if v is None: sp.pop(k, None)
+        else: sp[k] = v
 BOSSD = os.path.join(PUB, 'assets/boss'); meta = json.load(open(os.path.join(BOSSD, 'meta.json')))
 for bid, b in bosses.items():
-    sp = b['sprite']; pack = sp['pack']; p = os.path.join(PACK, pack, sp.get('file', 'Idle.png'))
-    if not os.path.exists(p): missing.append((bid, p)); continue
+    sp = b['sprite']; custom = os.path.join(ROOT, sp['custom']) if sp.get('custom') else None
+    if custom and os.path.exists(custom): p = custom
+    else:
+        if custom: print(f'custom sprite for {bid} not delivered yet ({sp["custom"]}); keeping the pack/placeholder image')
+        p = os.path.join(PACK, sp['pack'], sp.get('file', 'Idle.png'))
+        if not os.path.exists(p): missing.append((bid, p)); continue
+        custom = None
     shutil.copy(p, os.path.join(BOSSD, bid + '.png'))
-    im = Image.open(p); fw, fh = sp.get('frame', [50, 50]); n = sp.get('n') or max(1, im.size[0] // fw)
-    W_, H_ = im.size
-    if W_ % H_ == 0 and W_ >= H_ * 2: fw = fh = H_; n = W_ // H_
-    elif W_ == H_ or W_ == 64: fw = fh = 16; n = 1
-    meta[bid] = {'fw': fw, 'fh': fh, 'n': n, 'sheet': bid, 'sc': 3.2 if fw == 16 else 1}
+    meta[bid] = {**frame_meta(p, sp, custom=bool(custom)), 'sheet': bid}
 json.dump(meta, open(os.path.join(BOSSD, 'meta.json'), 'w'))
 print('missing sprites:', missing)
 
@@ -128,4 +146,6 @@ for _bid, _b in bosses.items(): _b['epithet'] = EPITHET.get(_bid, '')
 if 'straw_warden' in bosses: bosses['straw_warden']['exp'] = max(bosses['straw_warden'].get('exp', 0), 40)
 dump(os.path.join(OUT, 'bosses.json'), bosses); dump(os.path.join(OUT, 'zones.json'), zones)
 dump(os.path.join(OUT, 'parley.json'), parley); dump(os.path.join(OUT, 'bonds.json'), bonds); dump(os.path.join(OUT, 'elements.json'), elements); dump(os.path.join(OUT, 'progression.json'), prog)
+# hand-made art in art/custom/ always wins and is copied last; then refresh the optional-asset manifest
+art_overlay(); art_manifest()
 print('spec import ok:', len(enemies), 'enemies', len(skills), 'skills', len(troops), 'troops', len(items), 'items')

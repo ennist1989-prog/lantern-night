@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { farTexture } from './recolor';
 export const TS = 16;
+/** Sheets that keep their true colours on the Far Shore (beings of the Far; Tsubaki asset pack §1.5 / §4.2 #5). Per-event `nofar` still works too. */
+export const NO_FAR = new Set<string>(['tsubaki']);
 export type Dir = 'down' | 'up' | 'left' | 'right';
 export const DIRCOL: Record<Dir, number> = { down: 0, up: 1, left: 2, right: 3 };
 export const DV: Record<Dir, [number, number]> = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] };
@@ -14,7 +16,7 @@ export class Char {
     this.far = far; this.dir = dir; if (!name) { this.spr.setVisible(false); this.sheet = ''; this.visible = false; return; }
     this.visible = true; this.spr.setVisible(true); this.sheet = name;
     let key = 'char_' + name; if (!this.scene.textures.exists(key)) key = 'char_villager1';
-    if (far) key = farTexture(this.scene, key);
+    if (far && !NO_FAR.has(name)) key = farTexture(this.scene, key);
     this.isObj = false; if (this.spr instanceof Phaser.GameObjects.Image && !(this.spr instanceof Phaser.GameObjects.Sprite)) { const old = this.spr; this.spr = this.scene.add.sprite(this.px, this.py, key, 0).setOrigin(0.5, 1); old.destroy(); }
     this.spr.setTexture(key, DIRCOL[dir]); this.updateFrame(); this.refreshPos();
   }
