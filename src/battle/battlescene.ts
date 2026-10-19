@@ -5,7 +5,7 @@ import { Settings } from '../core/settings';
 import { $ } from '../core/state';
 import { playSummonFx } from './summonfx';
 import { DB, ELEMENT_COLORS, ELEMENT_NAMES, iconOf } from '../core/db';
-import { W, H, Win, Selectable, COL, FONT, Fader, sleep, tickWindows, heartbeat, pulseAmp } from '../ui/windows';
+import { W, H, Win, Selectable, COL, FONT, Fader, sleep, tickWindows, heartbeat, pulseAmp, fitBlock, fitLine } from '../ui/windows';
 import { farTexture } from '../game/recolor';
 import { SPEC } from './spec';
 import { Battle, Battler, Ev, alive } from './engine';
@@ -91,7 +91,9 @@ export class BattleScene extends Phaser.Scene {
     const tone = this.B.realm; const mk = <T extends Win>(w: T) => { this.wins.push(w); w.setDepth(50); return w; };
     this.statusWin = mk(new Win(this, 248, 404, 560, 212, tone)); this.cmdWin = mk(new Selectable(this, 8, 404, 232, 212, tone));
     this.subWin = mk(new Selectable(this, 248, 404, 560, 166, tone)); this.descWin = mk(new Win(this, 248, 574, 560, 42, tone)); this.subWin.setVisible(false); this.descWin.setVisible(false);
-    this.logWin = mk(new Win(this, 68, 66, 680, 72, tone)); this.logWin.setVisible(false); this.orderWin = mk(new Win(this, 8, 8, 392, 52, tone)); this.echoWin = mk(new Win(this, 408, 8, 190, 52, tone)); this.realmWin = mk(new Win(this, 606, 8, 202, 52, tone));
+    this.logWin = mk(new Win(this, 68, 66, 680, 72, tone)); this.logWin.setVisible(false);
+    // top HUD row (Ember §3.4): Lumen/realm top-left like the map HUD (8,8,226), then turn order, then Echo
+    this.realmWin = mk(new Win(this, 8, 8, 226, 52, tone)); this.orderWin = mk(new Win(this, 242, 8, 374, 52, tone)); this.echoWin = mk(new Win(this, 624, 8, 184, 52, tone));
     this.targetWin = mk(new Win(this, 200, 118, 416, 52, tone)); this.targetWin.setVisible(false); this.cmdWin.active = false; this.subWin.active = false;
     this.cursorTxt = this.add.text(0, 0, '▼', { fontFamily: FONT, fontSize: '30px', color: '#ffe08a', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5, 1).setDepth(80).setVisible(false);
     this.refreshStatus(); this.drawRealm(); this.drawOrder(); this.drawEcho();
@@ -110,11 +112,11 @@ export class BattleScene extends Phaser.Scene {
       if (a.hp <= 0) w.txt('Down', 456, y + 4, { size: 16, color: COL.red });
     });
   }
-  drawRealm() { const w = this.realmWin; w.setTone(this.B.realm); w.clear(); const far = this.B.realm === 'far'; w.txt(far ? 'Far Shore' : 'Near Shore', 12, 4, { size: 17, color: far ? COL.teal : COL.gold }); w.gauge(12, 32, 130, this.B.lumen / $.lumenMax, 0x7fe9ff, 0xe8ffff, 10); w.txt(String(Math.ceil(this.B.lumen)), 150, 24, { size: 17, color: COL.lumen }); [this.statusWin, this.cmdWin, this.subWin, this.descWin, this.logWin, this.orderWin, this.echoWin, this.targetWin].forEach((x) => x.setTone(this.B.realm)); }
-  drawEcho() { const w = this.echoWin; w.clear(); const e = this.B.echo; w.txt('Echo', 12, 4, { size: 17, color: COL.violet }); for (let i = 0; i < 3; i++) { w.gfx.fillStyle(i < e ? 0xc9a0ff : 0x2a2f55, 1); w.gfx.fillRect(14 + i * 34, 30, 26, 14); w.gfx.lineStyle(1, 0xc9a0ff, 0.9); w.gfx.strokeRect(14 + i * 34, 30, 26, 14); } if (e) w.txt('act again!', 118, 26, { size: 13, color: COL.violet }); }
+  drawRealm() { const w = this.realmWin; w.setTone(this.B.realm); w.clear(); const far = this.B.realm === 'far'; w.txt(far ? 'Far Shore' : 'Near Shore', 16, 4, { size: 17, color: far ? COL.teal : COL.gold }); w.gauge(16, 32, 150, this.B.lumen / $.lumenMax, 0x7fe9ff, 0xe8ffff, 10); w.txt(String(Math.ceil(this.B.lumen)), 176, 24, { size: 17, color: COL.lumen }); [this.statusWin, this.cmdWin, this.subWin, this.descWin, this.logWin, this.orderWin, this.echoWin, this.targetWin].forEach((x) => x.setTone(this.B.realm)); }
+  drawEcho() { const w = this.echoWin; w.clear(); const e = this.B.echo; w.txt('Echo', 12, 4, { size: 17, color: COL.violet }); for (let i = 0; i < 3; i++) { w.gfx.fillStyle(i < e ? 0xc9a0ff : 0x2a2f55, 1); w.gfx.fillRect(14 + i * 30, 30, 24, 14); w.gfx.lineStyle(1, 0xc9a0ff, 0.9); w.gfx.strokeRect(14 + i * 30, 30, 24, 14); } if (e) fitLine(w.txt('act again!', 106, 26, { size: 13, color: COL.violet }), w.w - 12 - 106, [12, 11]); }
   drawOrder(cur: Battler | null = null) {
     const w = this.orderWin; w.clear(); this.orderIcons.forEach((o) => o.destroy()); this.orderIcons = []; w.txt('Order', 8, 4, { size: 13, color: COL.dim });
-    const list = this.B.previewOrder().slice(0, 9);
+    const list = this.B.previewOrder().slice(0, Math.max(1, Math.floor((w.w - 54 - 8 + 3) / 37)));   // as many 37px slots as fit the window
     list.forEach((b, i) => { const x = 54 + i * 37; const ring = b.side === 'party' ? 0x7fb4ff : 0xff8a7a; w.gfx.fillStyle(0x10163a, 1); w.gfx.fillRect(x, 8, 34, 34);
       if (b.side === 'party') { const im = w.face(b.face!, x, 8, 34); if (im && cur && cur !== b) im.setAlpha(0.65); }
       else { const k = this.textures.exists(b.boss ? 'boss_' + b.id : 'mon_' + b.id) ? (b.boss ? 'boss_' + b.id : 'mon_' + b.id) : null; if (k) { const im = this.add.image(0, 0, k, b.boss ? '0' : undefined as any).setOrigin(0.5, 0.5).setDepth(56); const sc = 30 / Math.max(im.width, im.height); im.setScale(sc); im.setPosition(w.x + x + 17, w.y + 25); this.orderIcons.push(im); if (!b.boss) { /* ok */ } } if (b.states.gathering) w.txt('!', x + 25, 6, { size: 16, color: '#ff6a6a' }); }
@@ -131,7 +133,14 @@ export class BattleScene extends Phaser.Scene {
       if (e.states.unveiled) { g.lineStyle(2, 0x9fe8ff, 0.8); g.strokeRect(x - 4, y - 6, w + 8, 40); }
     }
   }
-  async log(s: string, ms = 650) { const w = this.logWin; w.clear(); w.setVisible(true); const long = s.length > 52; w.txt(s, 340, long ? 6 : 20, { size: long ? 17 : 21, align: 'center', wrap: 640 }); await this.t(ms + (long ? s.length * 14 : 0)); }
+  /** Battle log / tutorial line. Measured fit (Ember §3.2 #3): one line at 21px if it fits, else wrapped to 656px (680 − 2×12) at 17px,
+   *  stepping down to 15/13px until it fits; the window grows 72→96px for 3+ lines. */
+  async log(s: string, ms = 650) {
+    const w = this.logWin; w.clear(); w.setVisible(true); const maxW = 680 - 24; const t = w.txt(s, 340, 0, { size: 21, align: 'center' });
+    t.setWordWrapWidth(maxW, true); if (t.height > 30) fitBlock(t, maxW, 96 - 14, [17, 15, 13]);
+    const h = t.height + 14 <= 72 ? 72 : 96; w.resize(680, h); t.setY(Math.round((h - t.height) / 2));
+    const long = s.length > 52; await this.t(ms + (long ? s.length * 14 : 0));
+  }
   hideLog() { this.logWin.setVisible(false); }
   popup(x: number, y: number, s: string, color = '#fff', size = 30) { const t = this.add.text(x, y, s, { fontFamily: FONT, fontSize: size + 'px', color, stroke: '#101030', strokeThickness: 5 }).setOrigin(0.5).setDepth(100); this.tweens.add({ targets: t, y: y - 40, duration: 700 / this.speed(), ease: 'Cubic.easeOut' }); this.tweens.add({ targets: t, alpha: 0, duration: 300, delay: 600 / this.speed(), onComplete: () => t.destroy() }); }
   fx(name: string | null | undefined, x: number, y: number, scale = 4, tint?: number): Promise<void> {

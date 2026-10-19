@@ -4,7 +4,7 @@ import { Audio } from '../core/audio';
 import { Settings } from '../core/settings';
 import { $ } from '../core/state';
 import { DB, iconOf } from '../core/db';
-import { Win, Selectable, COL, FONT, W, H, Tone, WIN } from './windows';
+import { Win, Selectable, COL, FONT, W, H, Tone, WIN, fitBlock } from './windows';
 // text speed options (chars/sec): slow, normal (~RPG Maker's 1 char per frame = 60), fast, instant
 const CPS = [30, 60, 120, 4000];
 const TCOL = ['#ffffff', '#9ec4ff', '#ffb36b', '#8ff0a4', '#6fe3d6', '#c9a0ff', '#ffd866', '#8a93b8', '#ff7a7a', '#bff6ff'];
@@ -136,8 +136,11 @@ export class MessageSystem {
   }
   toast(msg: string, ms = 2200, y = 14, color: string = COL.white) {
     this.toasts.forEach((t) => t.destroy()); this.toasts = []; y = Math.max(y, 76);
-    const lines = this.wrap(msg.replace(/\n/g, ' '), 640); const w0 = Math.min(W - 40, Math.max(...lines.map((l) => { this.measure.setText(l); return this.measure.width; })) + 44); const h = 24 + lines.length * 27;
-    const win = new Win(this.scene, (W - w0) / 2, y, w0, h, this.tone); win.txt(lines.join('\n'), w0 / 2, 10, { size: 20, color, align: 'center', ls: 4 }); this.layer.add(win);
+    // measured at the font it is drawn with (was: measured at the 26px message font); shared fitBlock bounds width and height (≤4 lines)
+    const t = this.scene.add.text(0, 0, msg.replace(/\n/g, ' '), { fontFamily: FONT, fontSize: '20px', color, align: 'center', lineSpacing: 4, stroke: '#0a0d20', strokeThickness: 3 }).setOrigin(0.5, 0); t.setResolution(1);
+    const maxW = Math.min(640, W - 40 - 44); fitBlock(t, maxW, 4 * 27, [18, 16]);
+    const w0 = Math.min(W - 40, Math.ceil(t.width) + 44); const h = 20 + Math.ceil(t.height);
+    const win = new Win(this.scene, Math.round((W - w0) / 2), y, w0, h, this.tone); t.setPosition(w0 / 2, 10); win.content.add(t); this.layer.add(win);
     this.toasts.forEach((t, i) => { void i; }); win.setAlpha(0); this.scene.tweens.add({ targets: win, alpha: 1, duration: 180 });
     this.toasts.push(win);
     this.scene.time.delayedCall(ms, () => { this.scene.tweens.add({ targets: win, alpha: 0, duration: 400, onComplete: () => { win.destroy(); this.toasts = this.toasts.filter((x) => x !== win); } }); });
