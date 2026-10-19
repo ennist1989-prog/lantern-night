@@ -85,10 +85,13 @@ def build_well():
     m = Map(4, 'Ashiro Well', 32, 26, 'well', 'well_far', seed=4)
     def floor(x0, y0, x1, y1, realm='both'): m.fill(realm, x0, y0, x1, y1, CAVE)
     floor(2, 3, 10, 9); floor(11, 6, 14, 7); floor(15, 3, 27, 11); floor(24, 12, 26, 14); floor(19, 15, 28, 23)
-    # pit: Near void, Far spirit bridge
-    for y in range(5, 10):
+    # pit: Near void (full north-south seal), Far spirit bridge on y=7 only
+    # Include y=3-4 and y=10-11 so Near cannot walk around the "ledge" without the Far bridge.
+    for y in range(3, 12):
         for x in range(17, 24):
-            m.tile('near', x, y, 0); m.walk('near', x, y, False); m.tile('far', x, y, 0); m.walk('far', x, y, False)
+            m.tile('near', x, y, 0); m.walk('near', x, y, False)
+            if 5 <= y <= 9:
+                m.tile('far', x, y, 0); m.walk('far', x, y, False)
     for x in range(16, 25):
         m.tile('far', x, 7, G(2, 12, 3)); m.walk('far', x, 7, True)
     m.region(2, 3, 10, 9, 3); m.region(15, 3, 23, 11, 3); m.region(19, 15, 28, 23, 3)
@@ -113,8 +116,10 @@ def build_well():
     # Daigo (Near only)
     m.event(26, 6, [page(cond={'nsw': 'daigo_joined'}, g=NPC('smith', 'down'), list=[
         say('smith', 'Daigo', 'Whoa! A Lantern? You’re Sachi’s girl, aren’t you? Mio! You — how did you get across? The ledge crumbled behind me. I’ve been stuck here two days!'),
-        say('mio', 'Mio', 'The Far Shore. There’s a spirit bridge. And Kaze, here, found a good snack. Kind of.'),
-        say('kaze', 'Kaze', 'Excuse me. I am not a snack.'),
+        IF({'sw': 'kaze_joined'}, [
+            say('mio', 'Mio', 'The Far Shore. There’s a spirit bridge. And Kaze, here, found a good snack. Kind of.'),
+            say('kaze', 'Kaze', 'Excuse me. I am not a snack.')],
+           [say('mio', 'Mio', 'The Far Shore. There’s a spirit bridge across the pit.')]),
         say('smith', 'Daigo', 'Is that a talking fox? Never mind. Listen: I came for the old bell clapper. The legend says the Well Spirit keeps the Shrine Key, and the key’s tied to the clapper.'),
         say('smith', 'Daigo', 'But the spirit’s just… sad. Really sad. I couldn’t fight it. Hammer doesn’t help when someone’s crying.'),
         say('mio', 'Mio', 'Then we won’t fight it. Not at first.'),
@@ -122,18 +127,28 @@ def build_well():
         say('daigo', 'Daigo', '(He picks up his hammer and scrambles up the rope ladder.)'),
         {'c': 'me', 'name': 'secret'}, sw('daigo_joined'), quest('main', 4), {'c': 'erase'}])], realm='near')
     # Well Spirit encounter trigger
-    m.event(25, 15, [page(cond={'nsw': 'key_got'}, trigger='touch', through=True, list=[
+    # Key only after Kaze + Daigo (story order); nsw:key_got prevents re-grant.
+    # Page order: soft-block first, grant last (runtime picks the last matching page).
+    m.event(25, 15, [
+        page(cond={'nsw': 'key_got'}, trigger='touch', through=True, list=[
+            IF({'nsw': 'kaze_joined'}, [say('mio', 'Mio', 'The mist thickens. I shouldn’t face whatever waits here alone — not without the fox who keeps the Far Shore.')],
+               [IF({'nsw': 'daigo_joined'}, [say('mio', 'Mio', 'Daigo said the Well Spirit keeps the key. I should find him on this ledge first.')],
+                  [say('mio', 'Mio', 'A cold mist… but something still feels unfinished down here.')])]),
+            {'c': 'move', 'route': ['left']}]),
+        page(cond={'nsw': 'key_got', 'sw': ['kaze_joined', 'daigo_joined']}, trigger='touch', through=True, list=[
         {'c': 'checkpoint', 'boss': True},
         say(None, None, 'A cold mist curls through the chamber. Dark water collects into a shape: a spirit with a lantern for a heart.'),
         say(None, 'Ido-no-Kami', '…It was here. I kept it. Nobody came. Nobody drew water. Nobody sang to me.'),
-        say('mio', 'Mio', 'It’s grieving. Kaze, Daigo, don’t strike unless I say. We can Parley with it. Soothe, Remember, and then Send it on.'),
-        say('kaze', 'Kaze', 'It isn’t angry, Mio. It’s just… waiting. Like I did.'),
+        say('mio', 'Mio', 'It’s grieving. Don’t strike unless I say. We can Parley with it. Soothe, Remember, and then Send it on.'),
+        IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'It isn’t angry, Mio. It’s just… waiting. Like I did.')]),
         say('mio', 'Mio', 'I’m sorry nobody came. I’m here now. Would you like to hear the festival song?'),
         {'c': 'flash', 'color': 0xcff6ff, 'ms': 500}, {'c': 'se', 'name': 'magic2'},
         say(None, None, 'Mio hums the old lantern song. The Lantern warms in her hands, and the dark water stills.'),
         say(None, 'Ido-no-Kami', 'The old lantern… still burns somewhere. Thank you. Take the key. Ring the Bell for me.'),
         {'c': 'me', 'name': 'fanfare'}, {'c': 'item', 'id': 'shrine_key'}, sw('key_got'), quest('main', 5),
-        say('kaze', 'Kaze', 'Gentle beats loud. Remember that when we meet the Bell-Keeper.'), tut('exit', 'Stairs near the south chamber lead back up to the village.', 5000)])])
+        IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Gentle beats loud. Remember that when we meet the Bell-Keeper.')],
+           [say('mio', 'Mio', 'Gentle… Remember that, for whatever waits at the Bell.')]),
+        tut('exit', 'Stairs near the south chamber lead back up to the village.', 5000)])])
     m.obj('both', 'stairs_up', 20, 15, fw=1, block=False)
     m.event(20, 15, [page(trigger='touch', through=True, list=[{'c': 'transfer', 'map': 1, 'x': 5, 'y': 24, 'dir': 'up', 'se': 'grass'}])])
     # Far enemies
@@ -210,18 +225,23 @@ def build_summit():
     m.event(3, 3, [page(cond={'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}, item('honey', 2), item('lantern_oil', 2), self_sw('A')]), page(cond={'self': 'A'}, g=dict(obj='chest'), list=[say(None, None, 'The chest is empty.')])])
     for (sx, sy) in [(4, 3), (3, 4)]:
         m.event(sx, sy, [page(cond={'nsw': 'drift_gone'}, g=dict(obj='block_sand'), ft='wind_object', list=[say(None, None, 'Sand has drifted against the wall in a smooth heap, hiding something that glints. A good gust would clear it.')], fieldList=[{'c': 'se', 'name': 'strange'}, {'c': 'shake', 'power': 1, 'ms': 400}, say(None, None, 'A gust sweeps the sand away!'), sw('drift_gone')])])
-    m.event(8, 5, [page(cond={'nlock': 'L07'}, g=NPC('keeper', 'down', nofar=True), trigger='action', list=[say(None, None, 'Under the great bell, a robed figure kneels. The great bell hangs silent and strangely light.'), say('kaze', 'Kaze', 'Look, Mio — the clapper’s gone. The Keeper won’t even look up. It must be somewhere on the Far Shore. Shift and search this hall.')]),
+    m.event(8, 5, [page(cond={'nlock': 'L07'}, g=NPC('keeper', 'down', nofar=True), trigger='action', list=[say(None, None, 'Under the great bell, a robed figure kneels. The great bell hangs silent and strangely light.'),
+        IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Look, Mio — the clapper’s gone. The Keeper won’t even look up. It must be somewhere on the Far Shore. Shift and search this hall.')],
+           [say('mio', 'Mio', 'The clapper’s gone. The Keeper won’t even look up. It must be somewhere on the Far Shore — Shift and search this hall.')])]),
         page(cond={'lock': 'L07'}, g=NPC('keeper', 'down', nofar=True), trigger='action', list=[
         say(None, None, 'Under the great bell, a robed figure kneels. Bronze armor weighs on his shoulders like grief.'),
         say(None, None, 'A neat paper name-seal is tied to the bell’s clapper-rope. The knot and the brushstrokes look just like the one on the scarecrow.'),
-        IF({'nlvl': 6}, [say('kaze', 'Kaze', 'Mio… I can feel how strong he is. Level 6 would be safer. The Post here will heal us — and the shrine below has spirits to practise on.')]),
+        IF({'nlvl': 6}, [IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Mio… I can feel how strong he is. Level 6 would be safer. The Post here will heal us — and the shrine below has spirits to practise on.')],
+            [say('mio', 'Mio', 'He’s strong. Level 6 would be safer. The Post here will heal me — and the shrine below has spirits to practise on.')])]),
         choice(['Face the Bell-Keeper', 'Wait — prepare first'], [[
             {'c': 'checkpoint', 'boss': True},
             say('keeper', 'Bell-Keeper', 'None… shall ring… the Bell.'),
             say('mio', 'Mio', 'Priest Ren? Is that you? The village needs the Bell. The lanterns won’t light.'),
             say('keeper', 'Bell-Keeper', 'If it rings, they all go. All of them. She goes. My Hana goes. I cannot… I will not send her.'),
-            say('kaze', 'Kaze', 'Oh no. He’s been holding the whole shore together out of grief.'),
-            say('kaze', 'Kaze', 'So we can’t just smash our way through, can we.'),
+            IF({'sw': 'kaze_joined'}, [
+                say('kaze', 'Kaze', 'Oh no. He’s been holding the whole shore together out of grief.'),
+                say('kaze', 'Kaze', 'So we can’t just smash our way through, can we.')],
+               [say('mio', 'Mio', 'He’s been holding the whole shore together out of grief. We can’t just smash through.')]),
             say('mio', 'Mio', 'No. We can’t. Not like that.'),
             tut('boss', 'Boss tip: hit its weakness to break the Veil — then Parley or Send. The ⚠ telegraph lands next round: Guard or break it with a Stun/Unveil.', 12000),
             {'c': 'battle', 'troop': 'boss_bell_keeper', 'boss': True, 'noEscape': True,
@@ -233,7 +253,8 @@ def build_summit():
             {'c': 'flash', 'color': 0xffffff, 'ms': 800}, {'c': 'se', 'name': 'bell'}, {'c': 'wait', 'ms': 900}, {'c': 'se', 'name': 'bell'},
             narr('The Bell rang once, and the valley breathed out.', 'Across Ashiro, every lantern caught fire at once, and every spirit that had waited too long was finally able to go home.', 'Priest Ren lit the last lantern himself, for the daughter who had never really left.'),
             say(None, None, 'Then the paper seal on the clapper-rope tightens itself, knot by knot, and the bell goes silent again.'),
-            say('kaze', 'Kaze', 'That isn’t a broken bell, Mio. That’s a hand.'),
+            IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'That isn’t a broken bell, Mio. That’s a hand.')],
+               [say('mio', 'Mio', 'That isn’t a broken bell… that’s a hand.')]),
             narr('Night 3. Six nights have become five, and the calendar by Sachi’s door has one more day crossed out.'),
             narr('Mio, Kaze and Daigo had only reached the first shore.', 'But the Bell was ringing again, and that was enough to begin.'),
             {'c': 'end'}], []])])], realm='near')
