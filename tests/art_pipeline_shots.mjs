@@ -17,11 +17,15 @@ try {
   res.optional = await page.evaluate(() => { const g = window.__game; const T = g.scene.getScene('Title').textures; const A = g.cache.audio; const m = g.cache.json.get('assetmanifest');
     return { manifest: !!m, charTsubaki: T.exists('char_tsubaki'), charTsubakiSrc: T.exists('char_tsubaki') ? T.get('char_tsubaki').getSourceImage().src?.split('/').pop() : null, faces: ['tsubaki', 'tsubaki_grief', 'tsubaki_anger', 'tsubaki_resolve'].map((f) => [f, T.exists('face_' + f)]), bgmFinal: A.exists('bgm_final'), bossMeta: { f: g.cache.json.get('bossmeta').tsubaki_final, g: g.cache.json.get('bossmeta').tsubaki_forge } }; });
   for (const tr of troops) {
-    await page.evaluate(() => { const $ = window.__S.$; $.party = ['mio']; $.actors.mio.hp = $.param($.actors.mio, 'mhp'); });
+    await page.evaluate(() => { const $ = window.__S.$; $.realm = 'near'; $.party = ['mio']; $.actors.mio.hp = $.param($.actors.mio, 'mhp'); });
     await page.evaluate((t) => { window.__game.scene.getScene('Map').startBattle(t, { boss: true, noEscape: true }); }, tr);
     await waitScene(page, 'Battle', 15000); await waitInput(page, 40000); await sleep(500);
-    res.bosses[tr] = await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); const f = b.B.foes.find((x) => x.boss); const s = b.spr.get(f.uid); return { scale: +s.scaleX.toFixed(3), h: Math.round(s.displayHeight), top: Math.round(s.y - s.displayHeight), frames: b.bossMeta[f.id], bgmKey: window.__game.sound.sounds.find((x) => x.isPlaying)?.key }; });
+    res.bosses[tr] = await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); const f = b.B.foes.find((x) => x.boss); const s = b.spr.get(f.uid); return { scale: +s.scaleX.toFixed(3), h: Math.round(s.displayHeight), top: Math.round(s.y - s.displayHeight), w: Math.round(s.displayWidth), left: Math.round(s.x - s.displayWidth / 2), frame: s.frame.name, tint: s.tintTopLeft?.toString(16), frames: b.bossMeta[f.id], bgmKey: window.__game.sound.sounds.find((x) => x.isPlaying)?.key }; });
     await page.screenshot({ path: `${out}-${tr}.png` }); console.log('shot', `${out}-${tr}.png`);
+    if (process.env.FAR) { // FAR=1: also shoot the Far form (engine multiplies boss sprites by #cfe8ff)
+      res.bosses[tr + '_far'] = await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); b.B.realm = 'far'; for (const f of b.B.foes) b.applyForm(f); b.drawRealm?.(); const f = b.B.foes.find((x) => x.boss); const s = b.spr.get(f.uid); return { tint: s.tintTopLeft?.toString(16) }; });
+      await sleep(400); await page.screenshot({ path: `${out}-${tr}-far.png` }); console.log('shot', `${out}-${tr}-far.png`);
+    }
     await page.evaluate(() => window.__game.scene.getScene('Battle').finish('escape')); await waitScene(page, 'Map', 15000); await sleep(800);
   }
 } catch (e) { console.log('FAIL', e.message); await page.screenshot({ path: `${out}-fail.png` }); }

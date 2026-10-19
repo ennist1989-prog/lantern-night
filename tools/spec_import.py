@@ -41,6 +41,11 @@ for eid, e in enemies.items():
 SPRITE_OVERRIDES = {
     'tsubaki_forge': {'custom': 'art/custom/boss/tsubaki_forge.png', 'frame': [64, 64], 'n': 6, 'tint': None, 'noFar': True},
     'tsubaki_final': {'custom': 'art/custom/boss/tsubaki_final.png', 'frame': [64, 64], 'n': 6, 'tint': None, 'noFar': True},
+    # pack Boss/GiantBlueSamurai/Idle.png is 576x48 = 6 frames of 96x48 (see the pack's IdlePreview.gif), not 12 squares
+    'bell_keeper': {'frame': [96, 48], 'n': 6, 'frameExact': True},
+    # #7 redesign slot (Ember, straw-warden-asset-pack.md): 384x64 strip; until it lands the GiantBamboo strip stays.
+    # No tint, and the Far recolour stays ON (no noFar): the Far form is the engine's #cfe8ff multiply.
+    'straw_warden': {'custom': 'art/custom/boss/straw_warden.png', 'frame': [64, 64], 'n': 6, 'tint': None},
 }
 for bid, ov in SPRITE_OVERRIDES.items():
     if bid not in bosses: continue
@@ -55,9 +60,12 @@ for bid, b in bosses.items():
     else:
         if custom: print(f'custom sprite for {bid} not delivered yet ({sp["custom"]}); keeping the pack/placeholder image')
         p = os.path.join(PACK, sp['pack'], sp.get('file', 'Idle.png'))
-        if not os.path.exists(p): missing.append((bid, p)); continue
         custom = None
-    shutil.copy(p, os.path.join(BOSSD, bid + '.png'))
+        if not os.path.exists(p):
+            missing.append((bid, p)); shipped = os.path.join(BOSSD, bid + '.png')
+            if not os.path.exists(shipped): continue
+            p = shipped   # pack not downloaded in this checkout: keep the shipped image but still (re)derive its meta
+    if os.path.abspath(p) != os.path.abspath(os.path.join(BOSSD, bid + '.png')): shutil.copy(p, os.path.join(BOSSD, bid + '.png'))
     meta[bid] = {**frame_meta(p, sp, custom=bool(custom)), 'sheet': bid}
 json.dump(meta, open(os.path.join(BOSSD, 'meta.json'), 'w'))
 print('missing sprites:', missing)
