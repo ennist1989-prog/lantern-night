@@ -46,9 +46,9 @@ def build_sachi():
             IF({'nsw': 'post_lit'}, [say('sachi', 'Granny Sachi', 'The square’s post is the first. Light it with the Lantern. It’ll wake the old light.')],
                [IF({'nsw': 'kaze_joined'}, [say('sachi', 'Granny Sachi', 'Now press Q, child, and look at the world through the Lantern. There’s a friend on the other shore; I can feel it.')],
                   [IF({'nsw': 'elder_told'}, [say('sachi', 'Granny Sachi', 'A fox, you say? That sounds like Kaze. Go and see Elder Matsu. He’ll want to hear about it.')],
-                     [IF({'nsw': 'daigo_joined'}, [say('sachi', 'Granny Sachi', 'The Well is south-west past the boulder. Don’t push at it; Lantern-bearers go around.')],
-                        [IF({'nsw': 'key_got'}, [say('sachi', 'Granny Sachi', 'Daigo’s safe! Bless you. Now: the key, and the Shrine.')],
-                           [say('sachi', 'Granny Sachi', 'The Shrine is north of the square, past the torii. Take your friends. And mind the Bell-Keeper.')])])])])])],
+                     [IF({'sw': 'key_got'}, [say('sachi', 'Granny Sachi', 'The Shrine is north of the square, past the torii. Take your friends. And mind the Bell-Keeper.')],
+                        [IF({'nsw': 'daigo_joined'}, [say('sachi', 'Granny Sachi', 'The Well is south-west past the boulder. Don’t push at it; Lantern-bearers go around.')],
+                           [say('sachi', 'Granny Sachi', 'Daigo’s safe! Bless you. Now: the key, and the Shrine.')])])])])])],
         [{'c': 'fade', 'dir': 'out', 'ms': 500}, {'c': 'heal', 'lumen': True}, {'c': 'wait', 'ms': 700}, {'c': 'fade', 'dir': 'in', 'ms': 500}, say('sachi', 'Granny Sachi', 'There. Warm tea and a warm blanket. HP, SP, and the Lantern are all topped up.')],
         [{'c': 'save'}], []])]
     m.event(6, 4, [page(g=NPC('sachi', 'down'), cond={'sw': 'intro_done'}, list=sachi_talk)], realm='near')
@@ -244,7 +244,7 @@ def build_summit():
                 say('kaze', 'Kaze', 'So we can’t just smash our way through, can we.')],
                [say('mio', 'Mio', 'He’s been holding the whole shore together out of grief. We can’t just smash through.')]),
             say('mio', 'Mio', 'No. We can’t. Not like that.'),
-            tut('boss', 'Boss tip: hit its weakness to break the Veil — then Parley or Send. The ⚠ telegraph lands next round: Guard or break it with a Stun/Unveil.', 12000),
+            IF({'nsw': 'boss_tip_seen'}, [say(None, 'Tip', 'Boss tip: hit its weakness to break the Veil — then Parley or Send. The ⚠ telegraph lands next round: Guard or break it with a Stun/Unveil. (Menu → Notes keeps this.)'), sw('boss_tip_seen')]),
             {'c': 'battle', 'troop': 'boss_bell_keeper', 'boss': True, 'noEscape': True,
              'win': [say(None, None, 'The bronze armor falls away piece by piece, like autumn leaves. A tired priest remains, kneeling.'),
                      say('keeper', 'Priest Ren', 'I could not… let her go. I did not want to be alone in the quiet.'),
@@ -257,7 +257,7 @@ def build_summit():
             IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'That isn’t a broken bell, Mio. That’s a hand.')],
                [say('mio', 'Mio', 'That isn’t a broken bell… that’s a hand.')]),
             narr('Night 3. Six nights have become five, and the calendar by Sachi’s door has one more day crossed out.'),
-            narr('Mio, Kaze and Daigo had only reached the first shore.', 'But the Bell was ringing again, and that was enough to begin.'),
+            narr('Mio and Kaze had only reached the first shore.', 'But the Bell was ringing again, and that was enough to begin.'),
             {'c': 'end'}], []])])], realm='near')
     m.event(8, 4, [page(g=NPC('keeper', 'down', nofar=True), trigger='action', list=[say('keeper', 'Bell-Keeper', 'You… are not the ones I wait for. Go. Shift. See what I cannot.')])], realm='far') if False else None
     foe(m, 6, 10, 'tr_candle_spirit_candle_spirit_bell_mouse', 'lantern2', aggro=3, range=1); foe(m, 13, 9, 'tr_gloam_bat_ofuda_moth', 'kettle', aggro=3, range=1)

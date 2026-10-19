@@ -102,14 +102,14 @@ def build_village():
     # ---- shrine gate
     m.event(18, 4, [page(trigger='touch', through=True, list=[
         IF({'nlock': 'L02'}, [{'c': 'se', 'name': 'buzzer'}, say('villager3', 'Gate Guard', 'Halt. No one climbs to the Shrine after dusk without the Elder’s seal. Orders.'), say('mio', 'Mio', 'Elder Matsu has one for us, I think. Let’s ask him.'), {'c': 'move', 'route': ['down']}],
-           [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [{'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The Guard checks the Elder’s seal and waves you through. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
+           [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [IF({'nlvl': 5}, [say('kaze', 'Kaze', 'Mio. The spirits up there bite harder than the ones down here. A few more fights on the Far Shore first wouldn’t hurt. (Recommended Lv 5)')]), {'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The Guard checks the Elder’s seal and waves you through. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
               [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['down']}])])])])], realm='near')
     # Far Shore: no guard stands here (lock L02 alternative route)
     m.event(18, 4, [page(trigger='touch', through=True, list=[
         IF({'nsw': 'kaze_joined'}, [
             say('mio', 'Mio', '(I shouldn’t climb alone. That fox on the Far Shore by the square post… I should find him first.)'),
             {'c': 'move', 'route': ['down']}],
-           [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [{'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
+           [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [IF({'nlvl': 5}, [say('kaze', 'Kaze', 'Mio. The spirits up there bite harder than the ones down here. A few more fights on the Far Shore first wouldn’t hurt. (Recommended Lv 5)')]), {'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
               [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['down']}])])])])], realm='far')
     # Gate Guard (Near only): his post by the gate
     m.event(19, 4, [page(g=NPC('villager3', 'left'), list=[say('villager3', 'Gate Guard', 'Up to the Shrine? Not without the Elder’s seal, miss. Not after dusk. Though the wind says the other shore has no guards…'), IF({'lock': 'L02'}, [say('villager3', 'Gate Guard', 'Ah, the seal. All in order. Go on.')])])], realm='near')
@@ -121,11 +121,11 @@ def build_village():
             {'c': 'flash', 'color': 0xcff6ff, 'ms': 500}, {'c': 'se', 'name': 'powerup'},
             say(None, None, 'Mio lifts the Lantern. The wick catches, and the post blooms with pale light.'),
             sw('post_lit'), {'c': 'litpost'}, {'c': 'lumen', 'n': 100}, quest('main', 1),
-            tut('post', 'Lantern Posts: rest, save, and Shift for free nearby. Now press Q to Shift to the Far Shore!', 7000)]),
+            say(None, 'Tip', 'Lantern Posts: rest, save, and Shift for free nearby. Now press Q (or Tab) to Shift to the Far Shore!')]),
         page(cond={'sw': 'post_lit'}, g=dict(obj='lantern_post'), trigger='action', marker=True, list=[{'c': 'post'}])]
     # ---- NPCs (Near)
     m.event(24, 10, [page(g=NPC('elder', 'down'), list=[
-        IF({'nsw': 'kaze_joined'}, [say('elder', 'Elder Matsu', 'Ah, Sachi’s girl. So you have the Lantern at last. Light the post in the square, then look about… with both eyes.')],
+        IF({'nsw': 'kaze_joined'}, [say('elder', 'Elder Matsu', 'Ah, Sachi’s girl. So you have the Lantern at last. Light the post in the square, then press Q and look through the Lantern, there by the post. Someone on the Far Shore has been waiting for you. Come back to me after.')],
            [IF({'nsw': 'elder_told'}, [
                say('elder', 'Elder Matsu', 'A fox, you say? Hm. Then the Lantern has chosen well.'),
                say('elder', 'Elder Matsu', 'Listen. The Shrine Bell has not rung since Priest Ren left us. Without it, no Lantern will light, and the spirits grow restless.'),
@@ -136,15 +136,15 @@ def build_village():
                choice(['Go to the Well', 'Wait. Sit with Granny a moment first'], [[say('mio', 'Mio', 'Then I’ll go now, before I think about it.')],
                    [say(None, None, 'Mio goes back to the little house and sits by the bed. Sachi’s breath is slow and even, and the hearth is cold.'),
                     say('mio', 'Mio', 'I’m scared, Granny. …But you’d tell me to go.'), say(None, None, 'Sachi doesn’t answer. Mio closes her fingers around the Lantern, and walks back out into the dusk.'), sw('mio_sat_first')]]), sw('elder_told'), sw('boulder_known'), quest('main', 3), IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Boulder, Well, key. Sounds like a morning stroll. Let’s go.')])],
-              [IF({'nsw': 'daigo_joined'}, [say('elder', 'Elder Matsu', 'The Well lies past the boulder, south-west. Mind your Lumen on the Far Shore.')],
-                  [IF({'nsw': 'key_got'}, [say('elder', 'Elder Matsu', 'Daigo is with you? Good lad. Find that key.')],
-                     [say('elder', 'Elder Matsu', 'The key! Then climb, children. The Bell has waited long enough.')])])])])])])
+              [IF({'sw': 'key_got'}, [say('elder', 'Elder Matsu', 'The key! Then climb, children. The Bell has waited long enough.')],
+                  [IF({'nsw': 'daigo_joined'}, [say('elder', 'Elder Matsu', 'The Well lies past the boulder, south-west. Mind your Lumen on the Far Shore.')],
+                     [say('elder', 'Elder Matsu', 'Daigo’s safe at the forge? Good lad. Now find that key.')])])])])])])
     m.event(20, 12, [page(g=NPC('child', 'down'), list=[say('elder', 'Notice Board', 'WISP BOUNTY — Dust Wisps are drifting into the fields north of the village. Calm or clear 4 of them. Reward from Elder Matsu.')] if False else [])]) if False else None
     # notice board
     m.event(21, 11, [page(g=dict(obj='post_banner'), list=[
-        say(None, None, 'NOTICE — Dust Wisps drift into the north fields. Calm or clear 4 of them. Reward: a Hush Bell pair and 60 gold.'),
-        IF({'nsw': 'wisps_taken'}, [choice(['Take the bounty', 'Leave it'], [[sw('wisps_taken'), quest('wisps', 0), {'c': 'tutorial', 'id': 'parley', 'text': 'Tip: in battle, Parley → Soothe raises a spirit’s Mood. At full Mood, use Send for a kinder end.', 'ms': 7000}], []])],
-           [IF({'sw': 'wisps_done'}, [say(None, None, 'The bounty is complete.')], [IF({'v': ['wisp_count', '>=', 4]}, [say(None, None, 'Four wisps calmed or cleared. You hand in the notice.'), {'c': 'item', 'id': 'hush_bell', 'n': 2}, gold(60), {'c': 'exp', 'n': 20}, quest('wisps', 0, True), sw('wisps_done')], [say(None, None, 'Progress: wisps calmed or cleared — keep walking the north fields.')])])])])])
+        say(None, None, 'NOTICE — Dust Wisps drift through the north fields on the Far Shore. Calm or clear 4 of them. Reward: a Hush Bell pair and 60 gold.'),
+        IF({'nsw': 'wisps_taken'}, [choice(['Take the bounty', 'Leave it'], [[sw('wisps_taken'), quest('wisps', 0), {'c': 'tutorial', 'id': 'parley', 'text': 'Tip: wisps only walk the Far Shore (Shift with Q). In battle, Parley raises a spirit’s Mood (Soothe at Lv 2); at full Mood, Send (Lv 3) gives a kinder end.', 'ms': 7000}], []])],
+           [IF({'sw': 'wisps_done'}, [say(None, None, 'The bounty is complete.')], [IF({'v': ['wisp_count', '>=', 4]}, [say(None, None, 'Four wisps calmed or cleared. You hand in the notice.'), {'c': 'item', 'id': 'hush_bell', 'n': 2}, gold(60), {'c': 'exp', 'n': 20}, quest('wisps', 0, True), sw('wisps_done')], [say(None, None, 'Progress: wisps calmed or cleared — keep walking the north fields on the Far Shore (Shift with Q).')])])])])])
     # villagers
     m.event(14, 19, [page(g=NPC('villager2', 'down'), move=dict(type='random', r=2), list=[say('villager2', 'Villager', 'Tonight’s the Lantern Festival, and not one lantern will light! Granny Sachi’s girl just got hers, though. That’s a start.')])], realm='near')
     m.event(22, 18, [page(g=NPC('woman', 'left'), move=dict(type='random', r=1), list=[
@@ -211,7 +211,9 @@ def build_village():
     # Granny Sachi's Far-side friend: Zashiki Child (special spawn, parley only)
     m.event(9, 16, [page(cond={'nself': 'A'}, g=NPC('child', 'down', step=False), trigger='action', list=[
         say(None, 'Zashiki Child', '…are you the one with the light? I’m so hungry for something sweet. Everyone forgot to leave the mochi out.'),
-        tut('zashiki', 'A shy spirit! Parley → Offer it a Mochi, then Invite it to bond. It will never fight — Soothe it gently.', 7000),
+        IF({'nsw': 'zashiki_mochi'}, [say(None, None, 'Mio finds a festival Mochi wrapped in her sleeve. Granny must have tucked it there.'), {'c': 'item', 'id': 'mochi', 'n': 1}, sw('zashiki_mochi')]),
+        IF({'nsw': 'zashiki_tip'}, [IF({'lvl': 4}, [say(None, 'Tip', 'A shy spirit. It will never fight. Parley → Offer it the Mochi to fill its Mood, then Invite it to bond.')],
+            [say(None, 'Tip', 'A shy spirit. It will never fight. Parley → Offer it the Mochi to fill its Mood. Invite (to bond) is learned at Lv 4, so come back later if you want it to stay with you.')]), sw('zashiki_tip')]),
         {'c': 'battle', 'troop': 'tr_zashiki_child', 'noEscape': False, 'win': [self_sw('A')], 'escape': []}]),
         page(cond={'self': 'A'}, g=NPC('child', 'down', step=False), list=[say(None, 'Zashiki Child', 'Thank you for being kind. I’ll keep your house warm.')])], realm='far')
     # ---- Far enemies (visible, avoidable)

@@ -40,7 +40,7 @@
   "name": "Wisp Bounty",
   "desc": "Elder Matsu posted a notice: the Dust Wisps are drifting into the fields. Calm or clear 4 of them.",
   "stages": [
-   "Calm or clear 4 Dust Wisps in the fields north of the village."
+   "Calm or clear 4 Dust Wisps in the north fields, on the Far Shore (Shift with Q)."
   ],
   "reward": "Hush Bell ×2, 60 gold",
   "doneText": "The fields are quiet again."
