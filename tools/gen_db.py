@@ -147,7 +147,7 @@ Q = {
  'chime': dict(name='Kiku’s Wind-chime', desc='Little Kiku lost her wind-chime. Something about it shines on the Far Shore.',
    stages=['Search for the wind-chime — maybe it fell somewhere only the Far Shore can see.','Bring the wind-chime back to Kiku.'],reward='Lucky Knot, 40 gold',doneText='Kiku’s chime sings again.'),
  'wisps': dict(name='Wisp Bounty', desc='Elder Matsu posted a notice: the Dust Wisps are drifting into the fields. Calm or clear 4 of them.',
-   stages=['Calm or clear 4 Dust Wisps in the fields north of the village.'],reward='Hush Bell ×2, 60 gold',doneText='The fields are quiet again.'),
+   stages=['Calm or clear 4 Dust Wisps in the north fields, on the Far Shore (Shift with Q).'],reward='Hush Bell ×2, 60 gold',doneText='The fields are quiet again.'),
 }
 
 SYS = dict(
@@ -162,6 +162,8 @@ SYS = dict(
    dict(unlock='parley',title='Parley',text='Spirits have a Mood meter (pink bar). Parley raises it; hits lower it. At full Mood a spirit is Calm and can be Sent onward for a kinder reward.'),
    dict(unlock='weak',title='Echo & Weaknesses',text='Hit a weakness to build Echo (up to +45% damage for the whole battle). Weaknesses are recorded in the Bestiary.'),
    dict(unlock='shiftfar',title='The Far Shore',text='Walls, rocks and doors differ between realms. If something blocks you, try the other shore.'),
+   dict(unlock='send',title='Send & Invite',text='At full Mood a spirit is Calm. Send (Lv 3) guides it onward for full EXP and a Wish Scrap or Name Fragment. Invite (Lv 4) asks a calm spirit to walk with you as a Bond.'),
+   dict(unlock='boss_tip_seen',title='Bosses',text='Hit a boss’s weakness to break its Veil, then Parley or Send. A ⚠ telegraph lands next round: Guard, or break it with a Stun/Unveil. Weaknesses can differ between shores, so Shift in battle.'),
    dict(title='Saving',text='Save anywhere: Menu → Save (10 slots). The game also autosaves on every map change, after battles, and before bosses.')],
 )
 
