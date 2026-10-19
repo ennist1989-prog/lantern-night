@@ -481,7 +481,24 @@ export class Battle {
       if (bestOther > bestHere + 0.05) return { type: 'shift' };
     }
     let best: any = null; let bs = -1;
-    for (const id of ['p_attack', ...b.skills]) { const s = SPEC.skills[id]; if (!s || !s.damage || b.sp < (s.cost.sp || 0) || (s.cost.bond && b.gauge < s.cost.bond)) continue; for (const f of foes) { const er = this.rate(f, s.element) * ((s.element === 'lumen' || s.element === 'umbra') ? (this.realm === 'far' ? 1.25 : 0.85) : 1); const sc = (this.stat(b, s.damage.stat) * 4 * s.damage.pow + s.damage.flat - this.stat(f, s.damage.def) * 2) * er * (s.scope === 'all_enemies' ? foes.length * 0.8 : 1) - (s.cost.sp || 0) * 0.5; if (sc > bs) { bs = sc; best = { type: 'skill', skill: id, targets: s.scope === 'all_enemies' ? foes.map((x) => x.uid) : [f.uid] }; } } }
+    const bossFight = foes.some((f) => f.boss);
+    if (!bossFight) {
+      // Trash fights: original greedy scoring (AoE bonus is right when everything dies fast).
+      for (const id of ['p_attack', ...b.skills]) { const s = SPEC.skills[id]; if (!s || !s.damage || b.sp < (s.cost.sp || 0) || (s.cost.bond && b.gauge < s.cost.bond)) continue; for (const f of foes) { const er = this.rate(f, s.element) * ((s.element === 'lumen' || s.element === 'umbra') ? (this.realm === 'far' ? 1.25 : 0.85) : 1); const sc = (this.stat(b, s.damage.stat) * 4 * s.damage.pow + s.damage.flat - this.stat(f, s.damage.def) * 2) * er * (s.scope === 'all_enemies' ? foes.length * 0.8 : 1) - (s.cost.sp || 0) * 0.5; if (sc > bs) { bs = sc; best = { type: 'skill', skill: id, targets: s.scope === 'all_enemies' ? foes.map((x) => x.uid) : [f.uid] }; } } }
+      return best || { type: 'guard' };
+    }
+    // Boss fights are long: score damage capped at each target's remaining HP (no credit for overkill on adds)
+    // and charge SP more as it runs low, so Auto keeps SP for the boss instead of draining it on AoE vs adds.
+    bs = -Infinity;
+    const lm = (el: string) => (el === 'lumen' || el === 'umbra') ? (this.realm === 'far' ? 1.25 : 0.85) : 1;
+    const spFrac = b.msp ? b.sp / b.msp : 1;
+    for (const id of ['p_attack', ...b.skills]) {
+      const s = SPEC.skills[id]; if (!s || !s.damage || b.sp < (s.cost.sp || 0) || (s.cost.bond && b.gauge < s.cost.bond)) continue;
+      const est = (f: Battler) => Math.max(1, this.stat(b, s.damage.stat) * 4 * s.damage.pow + s.damage.flat - this.stat(f, s.damage.def) * 2) * this.rate(f, s.element) * lm(s.element);
+      const pen = (s.cost.sp || 0) * (2 + 4 * (1 - spFrac));
+      if (s.scope === 'all_enemies') { let v = 0; for (const f of foes) v += Math.min(est(f), f.hp); const sc = v - pen; if (sc > bs) { bs = sc; best = { type: 'skill', skill: id, targets: foes.map((x) => x.uid) }; } }
+      else for (const f of foes) { const sc = Math.min(est(f), f.hp) - pen; if (sc > bs) { bs = sc; best = { type: 'skill', skill: id, targets: [f.uid] }; } }
+    }
     return best || { type: 'guard' };
   }
   // ---- rewards
