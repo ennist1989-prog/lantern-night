@@ -36,11 +36,5 @@ async function start() {
   // resume audio on first gesture
   const unlock = () => { const s: any = game.sound; if (s.context && s.context.state === 'suspended') s.context.resume(); };
   window.addEventListener('pointerdown', unlock); window.addEventListener('keydown', unlock);
-  // TEMP: Sentry verification — remove after confirmed
-  // Load the game with ?sentry_test=1 to throw an uncaught error after Sentry.init + Phaser boot.
-  if (new URLSearchParams(location.search).get('sentry_test') === '1') {
-    setTimeout(() => { throw new Error('Lantern Night Sentry verification error (TEMP ?sentry_test=1)'); }, 1500);
-  }
-  // END TEMP: Sentry verification
 }
 start();
