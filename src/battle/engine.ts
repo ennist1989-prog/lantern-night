@@ -464,6 +464,22 @@ export class Battle {
     const heroes = this.heroes(); const weakest = heroes.slice().sort((x, y) => x.hp / x.mhp - y.hp / y.mhp)[0];
     const heal = b.skills.map((id) => SPEC.skills[id]).find((s) => s && s.id && (s.effects || []).some((e: any) => e.op === 'heal') && s.scope === 'one_ally' && b.sp >= (s.cost.sp || 0));
     if (heal && weakest.hp / weakest.mhp < 0.45) return { type: 'skill', skill: heal.id, targets: [weakest.uid] };
+    // Mio: Shift when another shore has a strictly better weakness for a damaging party skill
+    if (b.actorId === 'mio' && this.canUse(b, 'mio_shift').ok) {
+      const other: Realm = this.realm === 'near' ? 'far' : 'near';
+      const partySkills = this.party.filter((p) => p.hp > 0).flatMap((p) => p.skills.map((id) => SPEC.skills[id]).filter((s) => s && s.damage && s.element));
+      let bestHere = 0, bestOther = 0;
+      for (const f of foes) {
+        for (const s of partySkills) {
+          const rH = (f.forms?.[this.realm]?.rates?.[s.element] ?? 1);
+          const rO = (f.forms?.[other]?.rates?.[s.element] ?? 1);
+          const mH = rH * ((s.element === 'lumen' || s.element === 'umbra') ? (this.realm === 'far' ? 1.25 : 0.85) : 1);
+          const mO = rO * ((s.element === 'lumen' || s.element === 'umbra') ? (other === 'far' ? 1.25 : 0.85) : 1);
+          if (mH > bestHere) bestHere = mH; if (mO > bestOther) bestOther = mO;
+        }
+      }
+      if (bestOther > bestHere + 0.05) return { type: 'shift' };
+    }
     let best: any = null; let bs = -1;
     for (const id of ['p_attack', ...b.skills]) { const s = SPEC.skills[id]; if (!s || !s.damage || b.sp < (s.cost.sp || 0) || (s.cost.bond && b.gauge < s.cost.bond)) continue; for (const f of foes) { const er = this.rate(f, s.element) * ((s.element === 'lumen' || s.element === 'umbra') ? (this.realm === 'far' ? 1.25 : 0.85) : 1); const sc = (this.stat(b, s.damage.stat) * 4 * s.damage.pow + s.damage.flat - this.stat(f, s.damage.def) * 2) * er * (s.scope === 'all_enemies' ? foes.length * 0.8 : 1) - (s.cost.sp || 0) * 0.5; if (sc > bs) { bs = sc; best = { type: 'skill', skill: id, targets: s.scope === 'all_enemies' ? foes.map((x) => x.uid) : [f.uid] }; } } }
     return best || { type: 'guard' };
