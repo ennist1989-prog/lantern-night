@@ -1,10 +1,16 @@
 import Phaser from 'phaser';
 import { loadDatabase, DB } from '../core/db';
 import { W, H, FONT } from '../ui/windows';
-const CHARS = 'mio kaze daigo sachi elder ghostman villager1 villager2 villager3 villager4 woman child priest keeper spirit statue eggboy smith noble ghostgirl skeleton kettle wisp wisp2 slime mouse mouse2 lantern lantern2'.split(' ');
-const FACES = CHARS.concat(['tengu', 'gspirit']);
+const CHARS = 'mio kaze daigo sachi elder ghostman villager1 villager2 villager3 villager4 woman child priest keeper spirit statue eggboy smith noble ghostgirl skeleton kettle wisp wisp2 slime mouse mouse2 lantern lantern2 tsubaki'.split(' ');
+const FACES = CHARS.concat(['tengu', 'gspirit', 'tsubaki_grief', 'tsubaki_anger', 'tsubaki_resolve']);
+/** Art/audio that may not be delivered yet (Tsubaki asset pack, final-boss BGM). These are only queued when
+ *  assets/manifest.json (written by tools/art_custom.py) lists them, so a missing file never 404s; create() then
+ *  aliases a missing char sheet to the current placeholder, and Audio falls back for a missing BGM. */
+const OPTIONAL: Record<'chars' | 'faces' | 'bgm', string[]> = { chars: ['tsubaki'], faces: ['tsubaki', 'tsubaki_grief', 'tsubaki_anger', 'tsubaki_resolve'], bgm: ['final'] };
+const CHAR_PLACEHOLDER: Record<string, string> = { tsubaki: 'mio' };
+const isOpt = (k: keyof typeof OPTIONAL, n: string) => OPTIONAL[k].includes(n);
 const FX = 'circle claw cut cutx explosion flam ice plant shield slash spark spirit spiritb thunder water'.split(' ');
-const BGM = 'title village village_far home well well_far shrine shrine_far battle boss sad credits calm fading'.split(' ');
+const BGM = 'title village village_far home well well_far shrine shrine_far battle boss sad credits calm fading final'.split(' ');
 const SE = 'bell buzzer cancel coin crit cursor dog door encounter escape explosion fade fire grass heal hit hit2 load magic magic2 ok pickup powerup save shift slash strange tick voice water'.split(' ');
 const ME = 'victory levelup gameover secret fanfare'.split(' ');
 export class BootScene extends Phaser.Scene {
@@ -17,18 +23,26 @@ export class BootScene extends Phaser.Scene {
     ['floor', 'ifloor', 'wallsimple'].forEach((n) => L.image('tile_' + n, `tiles/${n}.png`));
     L.image('objects', 'objects.png'); L.json('objectsmeta', 'objects.json'); L.json('iconsmeta', 'icons.json'); L.json('icons2meta', 'icons2.json'); L.spritesheet('icons2', 'icons2.png', { frameWidth: 34, frameHeight: 34 }); L.spritesheet('icons', 'icons.png', { frameWidth: 24, frameHeight: 24 });
     L.image('windowskin', 'ui/windowskin.png');
-    CHARS.forEach((c) => L.spritesheet('char_' + c, `chars/${c}.png`, { frameWidth: 16, frameHeight: 16 }));
-    FACES.forEach((c) => L.image('face_' + c, `faces/${c}.png`));
+    CHARS.filter((c) => !isOpt('chars', c)).forEach((c) => L.spritesheet('char_' + c, `chars/${c}.png`, { frameWidth: 16, frameHeight: 16 }));
+    FACES.filter((c) => !isOpt('faces', c)).forEach((c) => L.image('face_' + c, `faces/${c}.png`));
+    L.json('assetmanifest', 'manifest.json');
+    L.on('filecomplete-json-assetmanifest', (_k: string, _t: string, m: any) => {
+      for (const c of OPTIONAL.chars) if (m?.chars?.includes(c)) L.spritesheet('char_' + c, `chars/${c}.png`, { frameWidth: 16, frameHeight: 16 });
+      for (const c of OPTIONAL.faces) if (m?.faces?.includes(c)) L.image('face_' + c, `faces/${c}.png`);
+      for (const n of OPTIONAL.bgm) if (m?.bgm?.includes(n)) L.audio('bgm_' + n, `bgm/${n}.ogg`);
+    });
     L.json('bossmeta', 'boss/meta.json');
     L.json('spec_enemies', '../data/spec/enemies.json'); L.json('spec_bosses', '../data/spec/bosses.json');
     L.on('filecomplete-json-spec_enemies', (_k: string, _t: string, d: any) => { for (const id of Object.keys(d)) L.image('mon_' + id, `mon/${id}.png`); });
     L.on('filecomplete-json-spec_bosses', (_k: string, _t: string, d: any) => { for (const id of Object.keys(d)) L.image('boss_' + id, `boss/${id}.png`); });
     FX.forEach((c) => L.image('fx_' + c, `fx/${c}.png`)); L.json('fxmeta', 'fx/meta.json'); L.spritesheet('fx_p_Leaf', 'fx/p_Leaf.png', { frameWidth: 9, frameHeight: 7 }); L.spritesheet('fx_p_LeafPink', 'fx/p_LeafPink.png', { frameWidth: 9, frameHeight: 7 }); L.image('fx_p_Clouds', 'fx/p_Clouds.png');
-    BGM.forEach((n) => L.audio('bgm_' + n, `bgm/${n}.ogg`)); SE.forEach((n) => L.audio('se_' + n, `se/${n}.ogg`)); ME.forEach((n) => L.audio('me_' + n, `me/${n}.ogg`));
+    BGM.filter((n) => !isOpt('bgm', n)).forEach((n) => L.audio('bgm_' + n, `bgm/${n}.ogg`)); SE.forEach((n) => L.audio('se_' + n, `se/${n}.ogg`)); ME.forEach((n) => L.audio('me_' + n, `me/${n}.ogg`));
   }
   async create() {
     const tex = this.textures.get('objects'); const m = this.cache.json.get('objectsmeta');
     for (const [name, r] of Object.entries(m) as any) tex.add(name, 0, r[0], r[1], r[2], r[3]);
+    // optional art not delivered yet -> alias to the current placeholder so maps/events never show Phaser's missing texture
+    for (const [c, ph] of Object.entries(CHAR_PLACEHOLDER)) if (!this.textures.exists('char_' + c) && this.textures.exists('char_' + ph)) this.textures.addSpriteSheet('char_' + c, this.textures.get('char_' + ph).getSourceImage() as HTMLImageElement, { frameWidth: 16, frameHeight: 16 });
     this.registry.set('iconIdx', this.cache.json.get('iconsmeta')); this.registry.set('icon2Idx', this.cache.json.get('icons2meta'));
     try { await loadDatabase(); } catch (e) { this.add.text(20, 20, 'Failed to load data: ' + e, { color: '#f88' }); return; }
     document.getElementById('boot')?.remove();

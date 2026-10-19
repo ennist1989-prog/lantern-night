@@ -6,8 +6,13 @@ from PIL import Image, ImageDraw
 import numpy as np
 from contact_objs import extract
 from objdefs import OBJS
-R = "/workspace/lantern-night/_dl/pack/Ninja Adventure - Asset Pack/"
-O = "/workspace/lantern-night/public/assets/"
+from art_custom import overlay as art_overlay, manifest as art_manifest
+# Paths are relative to this checkout (was hard-coded to /workspace/lantern-night, so running it from any other clone
+# rebuilt the deploy checkout's assets). LN_DL can point at a shared _dl/ download folder (pack + fonts).
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DL = os.environ.get("LN_DL", os.path.join(ROOT, "_dl")) + "/"
+R = DL + "pack/Ninja Adventure - Asset Pack/"
+O = os.path.join(ROOT, "public", "assets") + "/"
 def mk(p): os.makedirs(os.path.dirname(p), exist_ok=True)
 def cp(src, dst):
     mk(O+dst); shutil.copyfile(R+src, O+dst)
@@ -121,8 +126,8 @@ for cx,cy in [(5,5),(42,5),(5,42),(42,42)]:
 sk.alpha_composite(fr, (48,0)); mk(O+"ui/windowskin.png"); sk.save(O+"ui/windowskin.png")
 
 # ---------- font ----------
-mk(O+"fonts/x"); shutil.copyfile("/workspace/lantern-night/_dl/PixelifySans.ttf", O+"fonts/PixelifySans.ttf")
-shutil.copyfile("/workspace/lantern-night/_dl/OFL-pixelify.txt", O+"fonts/OFL-PixelifySans.txt")
+mk(O+"fonts/x"); shutil.copyfile(DL+"PixelifySans.ttf", O+"fonts/PixelifySans.ttf")
+shutil.copyfile(DL+"OFL-pixelify.txt", O+"fonts/OFL-PixelifySans.txt")
 
 # ---------- audio ----------
 def enc(src, dst, br="72k", mono=True):
@@ -150,4 +155,6 @@ for k,p in ME.items(): enc(J+p, f"me/{k}.ogg", br="64k")
 # ---------- licences ----------
 mk(O+"x"); shutil.copyfile(R+"LICENSE.txt", O+"fonts/CC0-NinjaAdventure-LICENSE.txt")
 os.remove(O+"fonts/x") if os.path.exists(O+"fonts/x") else None
+# ---------- hand-made art (art/custom/) is copied LAST so the wipe above never loses it ----------
+art_overlay(); art_manifest()
 print("assets done"); 

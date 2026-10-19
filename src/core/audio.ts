@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { Settings } from './settings';
+/** Optional BGM (see boot.ts OPTIONAL) -> track to play until it is delivered. */
+const BGM_FALLBACK: Record<string, string> = { final: 'boss' };
 class AudioClass {
   game!: Phaser.Game; cur: Phaser.Sound.BaseSound | null = null; curName = ''; fadeTween: any = null;
   init(g: Phaser.Game) { this.game = g; }
@@ -9,8 +11,9 @@ class AudioClass {
     if (this.curName === name && this.cur && (this.cur as any).isPlaying) { this.applyVol(); return; }
     const old = this.cur; this.curName = name;
     const mgr = this.mgr();
-    if (!this.game.cache.audio.exists('bgm_' + name)) { this.cur = null; return; }
-    const s = mgr.add('bgm_' + name, { loop: true, volume: 0 });
+    let key = 'bgm_' + name; if (!this.game.cache.audio.exists(key) && BGM_FALLBACK[name]) key = 'bgm_' + BGM_FALLBACK[name];   // optional track not delivered yet
+    if (!this.game.cache.audio.exists(key)) { if (old) { old.stop(); old.destroy(); } this.cur = null; return; }
+    const s = mgr.add(key, { loop: true, volume: 0 });
     this.cur = s; s.play();
     const target = Settings.data.bgm * (opts.vol ?? 1);
     const dur = (opts.fade ?? 0.6) * 1000;

@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "assets": "python3 tools/build_assets.py",
     "data": "python3 tools/gen_game.py",
+    "art": "python3 tools/art_custom.py",
     "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {

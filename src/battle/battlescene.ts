@@ -71,7 +71,7 @@ export class BattleScene extends Phaser.Scene {
     const place = (f: Battler, x: number, y: number) => {
       let s = this.spr.get(f.uid);
       if (!s) {
-        s = this.add.sprite(x, y, this.foeTex(f), f.boss ? '0' : '0').setOrigin(0.5, 1).setDepth(10 + y); this.spr.set(f.uid, s); s.setScale(f.boss ? (this.bossMeta[f.id]?.fh <= 16 ? 10 : 215 / (this.bossMeta[f.id]?.fh || 50)) : (f.scale || 5) * (f.elite ? 1.25 : 1.2) * (f.add ? 0.85 : 1));
+        s = this.add.sprite(x, y, this.foeTex(f), f.boss ? '0' : '0').setOrigin(0.5, 1).setDepth(10 + y); this.spr.set(f.uid, s); s.setScale(f.boss ? (this.bossMeta[f.id]?.fh <= 16 ? 10 : Math.max(1, Math.round(215 / (this.bossMeta[f.id]?.fh || 50)))) : (f.scale || 5) * (f.elite ? 1.25 : 1.2) * (f.add ? 0.85 : 1));
         (s as any).bx = x; (s as any).by = y; s.setAlpha(0); this.tweens.add({ targets: s, alpha: 1, duration: 400, delay: initial ? f.slot * 120 : 0 }); this.tweens.add({ targets: s, y: y - 3, duration: 700 + f.slot * 90, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         if (f.boss) this.bossAnim(s, f); this.applyForm(f);
         const gl = this.add.ellipse(x, y - s.displayHeight * 0.45, s.displayWidth * 1.15, s.displayHeight * 0.95, 0x9fdcff, 0.2).setDepth(9 + y); (s as any).glow = gl; gl.setVisible(this.B.realm === 'far'); this.tweens.add({ targets: gl, alpha: 0.1, duration: 900, yoyo: true, repeat: -1 });
