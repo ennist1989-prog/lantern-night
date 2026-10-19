@@ -1,0 +1,46 @@
+{
+ "main": {
+  "name": "The Silent Bell",
+  "desc": "The Shrine Bell has not rung, and the Lanterns will not light. Granny Sachi has asked Mio to find out why.",
+  "stages": [
+   "Light the Lantern Post in the village square.",
+   "Shift to the Far Shore (Q) and look for a fox spirit.",
+   "Ask Elder Matsu about the silent Shrine Bell.",
+   "Find a way into Ashiro Well. A boulder blocks the path — try the Far Shore.",
+   "Find the Shrine Key in the Well.",
+   "Climb to the Bell Shrine and open the gate.",
+   "Face the Bell-Keeper at the top of the Shrine."
+  ],
+  "reward": "A restored Bell",
+  "doneText": "The Bell-Keeper has been laid to rest. The Far Shore is open."
+ },
+ "hanzo": {
+  "name": "A Message for Hanzo",
+  "desc": "A ghost on the Far Shore wants Hanzo, the fisherman, to hear something.",
+  "stages": [
+   "Speak to Hanzo in the Near village and tell him about the ghost.",
+   "Return to the Far Shore ghost with Hanzo’s answer."
+  ],
+  "reward": "Spirit Charm",
+  "doneText": "Two old friends finally spoke."
+ },
+ "chime": {
+  "name": "Kiku’s Wind-chime",
+  "desc": "Little Kiku lost her wind-chime. Something about it shines on the Far Shore.",
+  "stages": [
+   "Search for the wind-chime — maybe it fell somewhere only the Far Shore can see.",
+   "Bring the wind-chime back to Kiku."
+  ],
+  "reward": "Lucky Knot, 40 gold",
+  "doneText": "Kiku’s chime sings again."
+ },
+ "wisps": {
+  "name": "Wisp Bounty",
+  "desc": "Elder Matsu posted a notice: the Dust Wisps are drifting into the fields. Calm or clear 4 of them.",
+  "stages": [
+   "Calm or clear 4 Dust Wisps in the fields north of the village."
+  ],
+  "reward": "Hush Bell ×2, 60 gold",
+  "doneText": "The fields are quiet again."
+ }
+}

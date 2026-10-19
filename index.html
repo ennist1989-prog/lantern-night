@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1030" />
+<link rel="icon" href="data:," />
+<title>Lantern Night: The Far Shore</title>
+<meta name="description" content="A tiny RPG Maker-style spirit adventure. Play in your browser." />
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#05070f;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
+  #game{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#cfe3ff;font:16px sans-serif;background:#05070f;z-index:1}
+  #touch{position:fixed;left:0;right:0;bottom:0;height:0;z-index:5;pointer-events:none;display:none}
+  #touch.on{display:block}
+  .tb{position:absolute;pointer-events:auto;width:64px;height:64px;border-radius:50%;background:rgba(40,60,130,.45);border:2px solid rgba(220,235,255,.7);color:#fff;font:bold 20px sans-serif;display:flex;align-items:center;justify-content:center;touch-action:none}
+  .tb:active,.tb.dn{background:rgba(120,160,255,.7)}
+  .tb.sm{width:52px;height:52px;font-size:15px}
+</style>
+</head>
+<body>
+<div id="boot">Loading…</div>
+<div id="game"></div>
+<div id="touch">
+  <div class="tb" data-k="up" style="left:62px;bottom:130px">▲</div>
+  <div class="tb" data-k="left" style="left:6px;bottom:78px">◀</div>
+  <div class="tb" data-k="right" style="left:118px;bottom:78px">▶</div>
+  <div class="tb" data-k="down" style="left:62px;bottom:26px">▼</div>
+  <div class="tb" data-k="ok" style="right:16px;bottom:78px">A</div>
+  <div class="tb" data-k="cancel" style="right:86px;bottom:34px">B</div>
+  <div class="tb sm" data-k="shift" style="right:16px;bottom:156px">◐</div>
+  <div class="tb sm" data-k="dash" style="right:80px;bottom:112px">»</div>
+  <div class="tb sm" data-k="menu" style="right:144px;bottom:68px">☰</div>
+</div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

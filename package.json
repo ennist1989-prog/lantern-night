@@ -1,0 +1,22 @@
+{
+  "name": "lantern-night",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "assets": "python3 tools/build_assets.py",
+    "data": "python3 tools/gen_game.py",
+    "deploy": "bash scripts/deploy.sh"
+  },
+  "dependencies": {
+    "phaser": "^4.2.1"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
+  }
+}
