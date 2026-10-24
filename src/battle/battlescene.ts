@@ -70,7 +70,7 @@ export class BattleScene extends Phaser.Scene {
     let k = 'mon_' + f.id; const t = this.textures.get(k); if (!t.has('0')) t.add('0', 0, 0, 0, t.getSourceImage().width, t.getSourceImage().height);
     if (this.B.realm === 'far') { k = farTexture(this, k); const t2 = this.textures.get(k); if (!t2.has('0')) t2.add('0', 0, 0, 0, t2.getSourceImage().width, t2.getSourceImage().height); } return k;
   }
-  foeTint(f: Battler): number { if (f.gilded) return 0xffe08a; if (f.boss && f.tint && this.B.realm === 'near') return parseInt(f.tint.replace('#', ''), 16); if (f.boss && this.B.realm === 'far') return 0xcfe8ff; if (this.B.realm === 'near' && f.tint) return parseInt(f.tint.replace('#', ''), 16); return 0xffffff; }
+  foeTint(f: Battler): number { if (f.gilded) return 0xffe08a; if (f.boss && f.tint && this.B.realm === 'near') return parseInt(f.tint.replace('#', ''), 16); if (f.boss && this.B.realm === 'far') return f.sprite?.noFar ? 0xffffff : 0xcfe8ff; /* noFar (SPRITE_OVERRIDES, e.g. Tsubaki) skips the Far recolour in battle too, matching NO_FAR on the map */ if (this.B.realm === 'near' && f.tint) return parseInt(f.tint.replace('#', ''), 16); return 0xffffff; }
   layoutFoes(initial = false) {
     const foes = this.B.foes.filter((f) => !f.gone || this.spr.get(f.uid)); const boss = foes.find((f) => f.boss); const others = foes.filter((f) => !f.boss);
     const place = (f: Battler, x: number, y: number) => {
