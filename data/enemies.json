@@ -1,0 +1,522 @@
+{
+ "dust_wisp": {
+  "name": "Dust Wisp",
+  "sprite": "wisp",
+  "level": 1,
+  "params": {
+   "mhp": 22,
+   "atk": 5,
+   "def": 2,
+   "mat": 4,
+   "mdf": 2,
+   "agi": 6
+  },
+  "exp": 8,
+  "gold": 5,
+  "skills": [
+   {
+    "id": "e_strike",
+    "w": 3
+   },
+   {
+    "id": "e_puff",
+    "w": 1
+   }
+  ],
+  "kind": "char",
+  "drops": [
+   [
+    "dust_pouch",
+    0.3
+   ]
+  ],
+  "spirit": true,
+  "mood0": 20,
+  "likes": [
+   "tea"
+  ],
+  "temper": "curious",
+  "countVar": "wisp_count",
+  "res": {
+   "near": {
+    "flame": 1.5,
+    "gale": 0.75
+   },
+   "far": {
+    "lumen": 1.5,
+    "umbra": 0.75
+   }
+  },
+  "forms": {
+   "near": {
+    "tint": 13805688
+   }
+  },
+  "desc": "A mote of lonely dust that drifted loose from a hearth. It follows warm light.",
+  "parleyHint": "Curious. Hum or Soothe works well.",
+  "calmDrop": "wish_scrap",
+  "face": "wisp"
+ },
+ "moss_slime": {
+  "name": "Moss Slime",
+  "sprite": "slime",
+  "level": 2,
+  "params": {
+   "mhp": 34,
+   "atk": 6,
+   "def": 4,
+   "mat": 3,
+   "mdf": 3,
+   "agi": 4
+  },
+  "exp": 11,
+  "gold": 7,
+  "skills": [
+   {
+    "id": "e_strike",
+    "w": 3
+   },
+   {
+    "id": "e_splash",
+    "w": 1
+   }
+  ],
+  "kind": "char",
+  "drops": [
+   [
+    "onigiri",
+    0.12
+   ]
+  ],
+  "mood0": 10,
+  "likes": [
+   "honey",
+   "onigiri"
+  ],
+  "temper": "plain",
+  "res": {
+   "near": {
+    "flame": 1.5,
+    "tide": 0.5
+   },
+   "far": {
+    "lumen": 1.25,
+    "flame": 1.25
+   }
+  },
+  "forms": {
+   "near": {},
+   "far": {
+    "tint": 12582880
+   }
+  },
+  "desc": "Damp and sleepy. It only wants somewhere cool and quiet.",
+  "parleyHint": "Slow to warm up. Offer food.",
+  "calmDrop": "wish_scrap",
+  "face": "slime"
+ },
+ "bell_mouse": {
+  "name": "Bell Mouse",
+  "sprite": "mouse",
+  "level": 2,
+  "params": {
+   "mhp": 20,
+   "atk": 5,
+   "def": 2,
+   "mat": 4,
+   "mdf": 3,
+   "agi": 10
+  },
+  "exp": 9,
+  "gold": 6,
+  "skills": [
+   {
+    "id": "e_strike",
+    "w": 2
+   },
+   {
+    "id": "e_puff",
+    "w": 1
+   }
+  ],
+  "kind": "char",
+  "drops": [
+   [
+    "dust_pouch",
+    0.2
+   ]
+  ],
+  "mood0": 30,
+  "likes": [
+   "honey",
+   "tea"
+  ],
+  "temper": "curious",
+  "bond": "bond_bellmouse",
+  "countVar": "mouse_count",
+  "res": {
+   "near": {
+    "flame": 1.25
+   },
+   "far": {
+    "lumen": 1.25,
+    "gale": 1.5
+   }
+  },
+  "forms": {},
+  "desc": "A mouse that rings a tiny bell wherever it goes. Fast and shy.",
+  "parleyHint": "Very curious. May become a Bond if Sent kindly.",
+  "calmDrop": "wish_scrap",
+  "face": "mouse"
+ },
+ "paper_lantern": {
+  "name": "Paper Lantern",
+  "sprite": "lantern",
+  "level": 3,
+  "params": {
+   "mhp": 40,
+   "atk": 6,
+   "def": 3,
+   "mat": 9,
+   "mdf": 5,
+   "agi": 5
+  },
+  "exp": 16,
+  "gold": 10,
+  "skills": [
+   {
+    "id": "e_lantern",
+    "w": 3
+   },
+   {
+    "id": "e_strike",
+    "w": 1
+   }
+  ],
+  "kind": "char",
+  "drops": [
+   [
+    "wish_scrap",
+    0.2
+   ]
+  ],
+  "spirit": true,
+  "mood0": 15,
+  "likes": [
+   "tea",
+   "honey"
+  ],
+  "temper": "sorrowful",
+  "countVar": "lantern_count",
+  "res": {
+   "near": {
+    "flame": 2.0,
+    "tide": 1.25
+   },
+   "far": {
+    "lumen": 0.75,
+    "tide": 1.5,
+    "gale": 1.25
+   }
+  },
+  "forms": {
+   "near": {
+    "sprite": "lantern",
+    "nofar": true
+   },
+   "far": {
+    "sprite": "lantern2"
+   }
+  },
+  "desc": "A festival lantern nobody lit this year. Its cold flame burns out of sorrow.",
+  "parleyHint": "Sorrowful. “Remember” hits hard.",
+  "calmDrop": "wish_scrap",
+  "face": "lantern"
+ },
+ "stone_watcher": {
+  "name": "Stone Watcher",
+  "sprite": "statue",
+  "level": 4,
+  "params": {
+   "mhp": 58,
+   "atk": 11,
+   "def": 5,
+   "mat": 5,
+   "mdf": 5,
+   "agi": 9
+  },
+  "exp": 20,
+  "gold": 14,
+  "skills": [
+   {
+    "id": "e_bite",
+    "w": 3
+   },
+   {
+    "id": "e_howl",
+    "w": 1
+   }
+  ],
+  "kind": "char",
+  "drops": [
+   [
+    "bell_shard",
+    0.15
+   ]
+  ],
+  "spirit": true,
+  "mood0": 0,
+  "likes": [
+   "onigiri"
+  ],
+  "temper": "plain",
+  "countVar": "watcher_count",
+  "res": {
+   "near": {
+    "flame": 1.25,
+    "gale": 1.25,
+    "tide": 1.25
+   },
+   "far": {
+    "lumen": 1.5,
+    "umbra": 0.5
+   }
+  },
+  "forms": {
+   "near": {
+    "sprite": "statue"
+   },
+   "far": {
+    "sprite": "spirit",
+    "nofar": false
+   }
+  },
+  "desc": "A guardian statue that kept watch for so long that its watching became a spirit.",
+  "parleyHint": "Loyal. Soothe, then Send.",
+  "calmDrop": "wish_scrap",
+  "face": "statue"
+ },
+ "hearth_ember": {
+  "name": "Hearth Ember",
+  "sprite": "kettle",
+  "level": 3,
+  "params": {
+   "mhp": 50,
+   "atk": 8,
+   "def": 6,
+   "mat": 5,
+   "mdf": 3,
+   "agi": 5
+  },
+  "exp": 15,
+  "gold": 10,
+  "skills": [
+   {
+    "id": "e_strike",
+    "w": 2
+   },
+   {
+    "id": "e_ember",
+    "w": 2
+   }
+  ],
+  "kind": "char",
+  "drops": [
+   [
+    "tea",
+    0.2
+   ]
+  ],
+  "mood0": 10,
+  "likes": [
+   "tea"
+  ],
+  "temper": "sorrowful",
+  "res": {
+   "near": {
+    "tide": 1.75,
+    "flame": 0.25,
+    "bloom": 1.0
+   },
+   "far": {
+    "lumen": 1.25,
+    "tide": 1.5
+   }
+  },
+  "forms": {},
+  "desc": "The last coal of a hearth that went out when the well was abandoned. It still wants to keep somebody warm.",
+  "parleyHint": "Sorrowful and warm. Tea helps. Water hurts it badly.",
+  "calmDrop": "wish_scrap",
+  "face": "kettle"
+ },
+ "hollow_samurai": {
+  "name": "Hollow Samurai",
+  "sprite": "skeleton",
+  "level": 4,
+  "params": {
+   "mhp": 72,
+   "atk": 12,
+   "def": 6,
+   "mat": 4,
+   "mdf": 4,
+   "agi": 6
+  },
+  "exp": 22,
+  "gold": 16,
+  "skills": [
+   {
+    "id": "e_clang",
+    "w": 3
+   },
+   {
+    "id": "e_strike",
+    "w": 2
+   }
+  ],
+  "kind": "char",
+  "drops": [
+   [
+    "bell_shard",
+    0.2
+   ]
+  ],
+  "mood0": 0,
+  "likes": [],
+  "temper": "sorrowful",
+  "res": {
+   "near": {
+    "flame": 1.25,
+    "bloom": 1.25,
+    "phys": 0.75
+   },
+   "far": {
+    "lumen": 1.5,
+    "umbra": 0.5,
+    "phys": 1.0
+   }
+  },
+  "forms": {
+   "near": {
+    "tint": 15259840
+   },
+   "far": {
+    "tint": 12577023
+   }
+  },
+  "desc": "A shrine guard who forgot why he stands watch.",
+  "parleyHint": "Sorrowful. “Remember” may reach him.",
+  "calmDrop": "wish_scrap",
+  "face": "skeleton"
+ },
+ "well_spirit": {
+  "name": "Ido-no-Kami",
+  "sprite": "gspirit",
+  "level": 3,
+  "params": {
+   "mhp": 130,
+   "atk": 9,
+   "def": 5,
+   "mat": 9,
+   "mdf": 5,
+   "agi": 6
+  },
+  "exp": 60,
+  "gold": 40,
+  "skills": [
+   {
+    "id": "e_sorrow",
+    "w": 2
+   },
+   {
+    "id": "e_splash",
+    "w": 2
+   },
+   {
+    "id": "e_strike",
+    "w": 1
+   }
+  ],
+  "kind": "boss",
+  "mini": true,
+  "boss": false,
+  "mood0": 10,
+  "likes": [
+   "tea",
+   "honey"
+  ],
+  "temper": "sorrowful",
+  "spirit": true,
+  "res": {
+   "near": {
+    "flame": 1.5,
+    "tide": 0.5
+   },
+   "far": {
+    "lumen": 1.25,
+    "tide": 0.5,
+    "bloom": 1.5
+   }
+  },
+  "forms": {},
+  "hidden": false,
+  "desc": "The spirit of Ashiro Well. It guarded the old lantern until the day the villagers stopped drawing water.",
+  "parleyHint": "Sorrowful. Remember, Soothe… and Send when calm.",
+  "calmDrop": "wish_scrap",
+  "scale": 3.2,
+  "face": "gspirit"
+ },
+ "bell_keeper": {
+  "name": "The Bell-Keeper",
+  "sprite": "tengu",
+  "level": 5,
+  "params": {
+   "mhp": 330,
+   "atk": 13,
+   "def": 9,
+   "mat": 9,
+   "mdf": 8,
+   "agi": 8
+  },
+  "exp": 120,
+  "gold": 100,
+  "skills": [
+   {
+    "id": "e_clang",
+    "w": 3
+   },
+   {
+    "id": "e_howl",
+    "w": 1
+   }
+  ],
+  "kind": "boss",
+  "boss": true,
+  "mood0": 0,
+  "likes": [],
+  "temper": "sorrowful",
+  "armorNear": true,
+  "dmgMult": 1.0,
+  "res": {
+   "near": {
+    "flame": 0.75,
+    "gale": 0.75,
+    "lumen": 0.75
+   },
+   "far": {
+    "lumen": 1.5,
+    "umbra": 0.75,
+    "gale": 1.25
+   }
+  },
+  "forms": {
+   "near": {
+    "tint": 14540270
+   },
+   "far": {}
+  },
+  "desc": "The shrine’s guardian. Bronze armor holds the Near Shore; its true, grieving form lives on the Far. It tolls every third round: Guard!",
+  "parleyHint": "Armor blocks Parley on the Near Shore. On the Far Shore it can be reached.",
+  "scale": 4.6,
+  "face": "tengu"
+ }
+}
