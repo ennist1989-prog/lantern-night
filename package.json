@@ -12,6 +12,7 @@
     "art": "python3 tools/art_custom.py",
     "test:sentry": "node tests/sentry_filter.cjs",
     "test:art": "python3 tests/test_frame_meta.py",
+    "test:willow": "node tests/willow_sim.cjs",
     "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {

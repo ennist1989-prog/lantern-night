@@ -477,6 +477,14 @@ export class MapScene extends Phaser.Scene {
   }
   async handleDefeat(boss: boolean, o: any) {
     if (o.noLose) { $.healAll(); return; }
+    // Per-fight wipe retry (Willow Mother is Parley-only): no Retry/Post choice and no fade-out. Restore the pre-fight checkpoint,
+    // put the party back on the Near Shore at full health, autosave, then play the event's hint lines (e.g. the Wick pointing at Parley).
+    if (o.wipe) {
+      if ($.checkpoint) SaveManager.restoreString($.checkpoint);
+      $.realm = 'near'; $.lumen = Math.max($.lumen, 20); $.healAll(); Audio.se('load'); await this.hardReload({}); this.applyRealmVisuals(); this.autosave('cp');
+      for (const l of o.wipe.lines || []) await this.msg.show(l.face ?? null, l.name ?? null, l.text);
+      return;
+    }
     if (boss && $.checkpoint) {
       await this.msg.show(null, null, 'The Lantern dims… but the story is not over.');
       const i = await this.msg.choice(['Retry the fight', 'Return to the last Lantern Post'], -1);
