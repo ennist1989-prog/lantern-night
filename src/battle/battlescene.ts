@@ -192,12 +192,12 @@ export class BattleScene extends Phaser.Scene {
     await new Promise<void>((r) => { this.tweens.add({ targets: [top, bot, name, epi, skip], alpha: 0, duration: 220, onComplete: () => r() }); });
     [top, bot, name, epi, skip].forEach((o) => o.destroy());
   }
-  /** After two losses to the same boss: an optional hint + Lantern Warmth offer (never forced). */
+  /** After any loss to the same boss: an optional hint + Lantern Warmth offer (never forced). */
   async assistOffer() {
-    const tid = String(this.d.troop); const n = $.bossLosses[tid] || 0; if (n < 2) return;
+    const tid = String(this.d.troop); const n = $.bossLosses[tid] || 0; if (n < 1) return;
     const boss = this.B.foes.find((f) => f.boss)!; const hint = this.bossHint(boss);
     const pick: string = await new Promise((resolve) => {
-      this.log('The Lantern flickers… it has failed here twice. Would you like a little help?', 99999);
+      this.log(n > 1 ? 'The Lantern flickers… it has failed here before. Would you like a little help?' : 'The Lantern flickers… this fight went badly last time. Would you like a little help?', 99999);
       this.setCmd([{ label: 'A hint', data: 'hint' }, { label: 'Warm the Lantern', data: 'warm' }, { label: 'Hint + Warmth', data: 'both' }, { label: 'No thanks', data: 'no' }], (it) => { this.cmdWin.active = false; this.cmdWin.setVisible(false); resolve(it.data); }, () => { this.cmdWin.active = false; this.cmdWin.setVisible(false); resolve('no'); });
     });
     if (pick === 'warm' || pick === 'both') { (this.B as any).ctx.warmth = Math.max((this.B as any).ctx.warmth || 0, 2); this.warmBoost = 2; }

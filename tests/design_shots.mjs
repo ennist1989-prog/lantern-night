@@ -85,6 +85,25 @@ SC.shift_talk = async () => {
   const tut = await page.evaluate(async () => { const d = await (await fetch('data/maps/map002.json')).json(); return JSON.stringify(d).match(/Move: Arrows[^"]*/)?.[0] || null; });
   return { shiftKeys, shiftAfter, ctrlKeys, ctrlAfter, fAfter, enterPresses: presses, dur, dashKey, q, tutorial: tut, shots: [p1] };
 };
+// ---- Lantern Warmth offer after the FIRST boss loss, and it survives the checkpoint Retry.
+SC.warmth = async () => {
+  await teleport(page, 6, 8, 6, 'up'); await page.evaluate(() => { const $ = window.__S.$; for (const id of ['mio', 'kaze']) { if (!$.party.includes(id)) $.addActor(id); } $.bossLosses = {}; });
+  const fight = () => page.evaluate(() => { const m = window.__game.scene.getScene('Map'); m.interp.run([{ c: 'checkpoint', boss: true }, { c: 'battle', troop: 'boss_bell_keeper', boss: true, noEscape: true }]); });
+  const btxt = () => texts('Battle').catch(() => []);
+  const offerShown = async (ms) => { for (let i = 0; i < ms / 250; i++) { const t = (await btxt()).join(' | '); if (/Would you like a little help/.test(t)) return t.match(/The Lantern flickers[^|]*/)?.[0] || true; if (/Attack|Fight/.test(t) && i > 8) return false; await sleep(250); } return false; };
+  await fight(); await waitScene(page, 'Battle', 15000); const first = await offerShown(9000);
+  // lose for real: wipe the party, then let the scene's own end check run the defeat path (counts the loss, returns 'lose' to the event)
+  await sleep(800); await page.evaluate(() => { const sc = window.__game.scene.getScene('Battle'); for (const p of sc.B.party) p.hp = 0; sc.endCheck(); });
+  for (let i = 0; i < 160 && !(await texts('Map')).some((t) => /Retry the fight/.test(t)); i++) { await press('Enter', 50); await sleep(150); }
+  const lossesAtDefeat = await page.evaluate(() => ({ ...window.__S.$.bossLosses }));
+  const retryOffered = (await texts('Map')).some((t) => /Retry the fight/.test(t)); await press('Enter'); await sleep(3500);
+  const lossesAfterRetry = await page.evaluate(() => ({ ...window.__S.$.bossLosses }));
+  for (let i = 0; i < 20 && (await st()).busy; i++) await sleep(250);
+  await fight(); await waitScene(page, 'Battle', 15000); const second = await offerShown(12000); const p1 = await shot('warmth-offer-after-first-loss');
+  let warmth = null; if (second) { await press('ArrowDown'); await sleep(200); await press('Enter'); await sleep(2200); warmth = await page.evaluate(() => { const sc = window.__game.scene.getScene('Battle'); return { ctxWarmth: sc.B.ctx.warmth, warmBoost: sc.warmBoost }; }); }
+  const p2 = await shot('warmth-accepted');
+  return { firstFightOffer: first, retryOffered, lossesAtDefeat, lossesAfterRetry, secondFightOffer: second, warmth, shots: [p1, p2] };
+};
 export function register(name, fn) { SC[name] = fn; }
 const extra = process.env.EXTRA; if (extra) await import(extra);
 await page.goto(base); await newGame(page); await mashUntil(page, () => window.__S.$.sw('intro_done') && !window.__game.scene.getScene('Map').interp.busy, null, 120);
