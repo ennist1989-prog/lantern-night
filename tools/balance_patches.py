@@ -30,9 +30,9 @@ kt = bosses['kappa_toll']; kt['stats']['mat'] = 22; kt['stats']['def'] = 14
 wm = bosses['willow_mother']
 wm['parleyOnly'] = {'floorPct': 35, 'regrowPct': 100, 'calmAdds': True, 'hint': 'willow_parley',
                     'regrowText': 'The Willow Mother drinks from the river. Her wounds close as if they were never there.',
-                    'hintText': 'Hint: blades can’t end a grief this deep. Parley: Remember her children (or Offer a Marigold Petal) until she is Calm, then Send her.'}
+                    'hintText': 'Hint: blades can’t end a grief this deep. Choose Parley and Remember her children three times. Once she is Calm, Send her home.'}
 wm['forms']['near']['outputMult'] = 0.8; wm['forms']['far']['outputMult'] = 0.75
-wm['parley']['key']['note'] = 'Parley only: blades can’t end her grief. Remember three times, or Offer a Marigold Petal, then Send.'
+wm['parley']['key']['note'] = 'Parley only: blades can’t end her grief. Remember three times until she is Calm, then Send her home.'
 dump(bp, bosses)
 
 # Well Spirit (Ido-no-Kami): the Old Well key used to be a cutscene. It is now a short Parley battle. It is a slice-only

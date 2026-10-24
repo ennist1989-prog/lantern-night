@@ -33,4 +33,11 @@ for (const realm of ['near', 'far']) { const [l1, m1, l2, m2] = band[realm]; con
 for (const realm of ['near', 'far']) for (const style of ['auto', 'shift']) for (const lv of [9, 10, 12, 15]) {
   const r = run('boss_willow_mother', ['mio', 'kaze'], lv, { realm, style, n: Math.min(N, 100) }); ok(r.win === '0%', `fight ${realm} ${style} L${lv}: ${r.win} wins (must be 0%)`);
 }
+// 3) the hints teach exactly the route the parley bot above plays (Remember x3 -> Calm -> Send), never the Marigold Petal (Offer only wastes Mio's turn here)
+{ const fs = require('fs'), path = require('path'); const R = path.join(__dirname, '..', 'public', 'data');
+  const w = JSON.parse(fs.readFileSync(path.join(R, 'spec', 'bosses.json'), 'utf8')).willow_mother; const note = JSON.parse(fs.readFileSync(path.join(R, 'system.json'), 'utf8')).notes.find((n) => n.unlock === 'willow_tip').text;
+  const tip = JSON.stringify(JSON.parse(fs.readFileSync(path.join(R, 'maps', 'map112.json'), 'utf8')).events).match(/The Willow Mother can[^"]*/)?.[0] || ''; const bh = (fs.readFileSync(path.join(__dirname, '..', 'src', 'battle', 'battlescene.ts'), 'utf8').match(/willow_mother: '([^']*)'/) || [])[1] || '';
+  const T = { hint: w.parleyOnly.hintText, key: w.parley.key.note, note, tip, bossHint: bh };
+  ok(Object.values(T).every((t) => t && !/petal|offer/i.test(t)), 'no Willow hint mentions Offer / Marigold Petal');
+  ok(Object.values(T).every((t) => /Remember/.test(t) && /three times/.test(t) && /Calm/.test(t) && /Send/.test(t)) && w.parley.key.verb === 'remember' && w.parley.key.times === 3, 'every Willow hint says Remember three times -> Calm -> Send (matches key: remember x3)'); }
 console.log(fails ? `WILLOW SIM ${fails} FAIL` : 'WILLOW SIM ALL PASS'); process.exit(fails ? 1 : 0);

@@ -398,7 +398,7 @@ def build_hollow():
         mio('We’re not yours. But we can help you remember.'),
         say('willow', 'Willow Mother', 'Remember? Then you will take them away from me. Like the village did. Like the river does.'),
         IF({'nsw': 'willow_tip'}, [kz('She is grieving, not hunting. Words may reach her where blades won’t.'),
-            say(None, 'Tip', 'The Willow Mother can’t be beaten by force: her roots drink the river and her wounds close. Use Parley. Remember three times (or Offer a Marigold Petal) until she is Calm, then Send her.'), sw('willow_tip')]),
+            say(None, 'Tip', 'The Willow Mother can’t be beaten by force: her roots drink the river and her wounds close. Choose Parley and Remember her children three times. Once she is Calm, Send her home.'), sw('willow_tip')]),
         choice(['Face the Willow Mother', 'Wait. Prepare first'], [[{'c': 'checkpoint', 'boss': True},
             {'c': 'battle', 'troop': 'boss_willow_mother', 'boss': True, 'noEscape': True, 'win': win, 'lose': [{'c': 'abort'}], 'wipe': willow_wipe}], []])]),
         page(cond={'sw': 'willow_done'}, g=NPC('willow', 'down', nofar=True, tint=0xe8ffe8), list=[
