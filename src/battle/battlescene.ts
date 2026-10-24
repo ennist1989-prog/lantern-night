@@ -352,7 +352,10 @@ export class BattleScene extends Phaser.Scene {
     const B = this.B; const T = (id: number) => this.by(id);
     switch (e.t) {
       case 'turn': break;
-      case 'summon': { Audio.se('powerup'); await this.log(`${this.by(e.actor).name} calls ${e.name}!`, 500); await playSummonFx(this, e); $.usedSummons[e.id] = ($.usedSummons[e.id] || 0) + 1; break; }
+      case 'summon': {
+        // two events share t:'summon': a foe calling adds ({src, ids}, engine.summon) and a party Keepsake summon ({actor, id, name}); the foe branch used to be an unreachable duplicate case
+        if (e.actor === undefined) { Audio.se('bell'); const src = T(e.src); this.addTrauma(0.5); this.layoutFoes(); await this.log(`${src.name}'s bell calls more spirits!`, 900); this.drawOrder(); break; }
+        Audio.se('powerup'); await this.log(`${this.by(e.actor).name} calls ${e.name}!`, 500); await playSummonFx(this, e); $.usedSummons[e.id] = ($.usedSummons[e.id] || 0) + 1; break; }
       case 'phase': { this.B.foes.forEach((f) => this.applyForm(f)); this.drawOrder(); await this.t(150); break; }
       case 'use': {
         const a = T(e.actor); const spr = this.spr.get(a.uid); Audio.se(e.se || 'magic'); this.log(`${a.name} ${e.item ? 'uses' : e.skill === 'p_attack' ? 'attacks!' : 'uses'}${e.skill === 'p_attack' ? '' : ' ' + e.name + '!'}`.replace('uses Attack!', 'attacks!'), 420);
@@ -399,7 +402,6 @@ export class BattleScene extends Phaser.Scene {
         else { Audio.se('buzzer'); s.setAlpha(1); await this.log(`${t.name} hesitates and pulls back… (it's no longer Calm)`, 1000); } break; }
       case 'say': { await this.log(e.text, 1400); break; }
       case 'tutorial': { if (!$.tutorialsShown['b_' + e.id] && TUT[e.id]) { $.tutorialsShown['b_' + e.id] = true; await this.log(TUT[e.id], 2600); } break; }
-      case 'summon': { Audio.se('bell'); const src = T(e.src); this.addTrauma(0.5); this.layoutFoes(); await this.log(`${src.name}'s bell calls more spirits!`, 900); this.drawOrder(); break; }
       case 'realm': { Audio.se('shift'); await this.flashAll(e.realm === 'far' ? 0xcff6ff : 0xffe9b0); this.refreshRealmVisuals(); this.popup(W / 2, 200, e.realm === 'far' ? 'Far Shore' : 'Near Shore', e.realm === 'far' ? '#7fe9ff' : '#ffe08a', 40); this.drawOrder(); await this.t(400); break; }
       case 'forcedShift': { await this.log('The Lantern gutters… the Far Shore lets go of you.', 900); this.refreshRealmVisuals(); await this.flashAll(0xffffff); break; }
       case 'lumen': this.drawRealm(); break;
