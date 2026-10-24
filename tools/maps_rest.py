@@ -66,7 +66,7 @@ def build_tea():
     m.obj('both', 'barrel', 1, 3, fw=1); m.obj('both', 'barrel2', 1, 4, fw=1); m.obj('both', 'plant_pot', 12, 3, fw=1); m.obj('both', 'rug_red', 5, 7, fw=2, block=False, flat=True)
     m.light(4, 3, 4); m.light(9, 4, 4)
     m.door_touch(7, 9, 1, 25, 15, 'down')
-    shop_items = ['rice_ball', 'herbal_tea', 'honey', 'mochi', 'lantern_oil', 'antidote_salt', 'wick_trim', 'kuzu_tonic', 'hush_bell', 'smoke_ball', 'firecracker', 'origami_crane', 'incense_stick', 'paper_charm', 'chime_offering', 'mio_w2', 'kaze_w2', 'daigo_w2', 'garb2', 'charm3', 'lucky_knot']  # shop.ts filters by shopChapter + Daigo party
+    shop_items = ['rice_ball', 'herbal_tea', 'honey', 'mochi', 'lantern_oil', 'antidote_salt', 'wick_trim', 'kuzu_tonic', 'hush_bell', 'smoke_ball', 'firecracker', 'origami_crane', 'incense_stick', 'paper_charm', 'chime_offering', 'mio_w2', 'kaze_w2', 'daigo_w2', 'garb2', 'lucky_knot']  # E6: Bell Charm (charm3) has one source, the sq04 reward (design: sq04 ties to charm3_sp_regen)  # shop.ts filters by shopChapter + Daigo party
     m.event(4, 3, [page(g=NPC('woman', 'down'), list=[
         say('woman', 'Tama', 'Welcome, welcome! Tea’s hot and the road’s long. What can I do for you?'),
         choice(['Shop', 'Rest (15 G)', 'Chat', 'Leave'], [[{'c': 'shop', 'items': shop_items, 'name': 'Tama', 'face': 'woman'}], [{'c': 'inn', 'price': 15, 'name': 'Tama', 'face': 'woman', 'ask': 'A bed and a bowl of miso is 15 gold. Stay the night?'}],
@@ -106,7 +106,8 @@ def build_well():
     m.obj('both', 'stairs_up', 3, 3, fw=1, block=False)
     m.event(3, 3, [page(trigger='touch', through=True, list=[{'c': 'transfer', 'map': 1, 'x': 5, 'y': 24, 'dir': 'up', 'se': 'grass'}])])
     # chests
-    chest(m, 3, 8, [('charm3', 1)]); chest(m, 28, 14, [('honey', 2)]); chest(m, 8, 7, [('rice_ball', 2), ('herbal_tea', 1)])
+    chest(m, 3, 8, [('sweet_tea', 1), ('kuzu_tonic', 1)])  # E6: was charm3 (also sq04 reward + shop); now modest consumables
+    chest(m, 28, 14, [('honey', 2)]); chest(m, 8, 7, [('rice_ball', 2), ('herbal_tea', 1)])
     m.walk('both', 8, 7, True)
     # field-spell nook (Fox-fire Torch, Kaze Lv4): a hay bale blocks a cache in the NE room
     m.obj('both', 'chest', 27, 3, fw=1, block=False)
