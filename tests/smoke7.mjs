@@ -2,6 +2,7 @@ import { launch, sleep, press, waitScene, waitFor, activeScenes, newGame, mashUn
 const { browser, page, errors } = await launch();
 const shot = (n) => page.screenshot({ path: `${SSDIR}/${n}.png` });
 const st = () => page.evaluate(() => { const S = window.__S, m = window.__game.scene.getScene('Map'); return { map: S.$.map?.id ?? S.$.mapId, x: m.player?.tx, y: m.player?.ty, realm: S.$.realm, lumen: Math.round(S.$.lumen), gold: S.$.gold, party: S.$.party.slice(), sw: Object.keys(S.$.switches || {}).filter(k => S.$.switches[k]).sort().join(','), items: JSON.stringify(S.$.items), q: JSON.stringify(S.$.quests).length }; });
+const toSlot = async (slot) => { for (let i = 0; i < 30; i++) { const cur = await page.evaluate(() => window.__game.scene.getScene('SaveLoad').list.current?.data.slot); if (cur === slot) return; await press(page, cur > slot ? 'ArrowUp' : 'ArrowDown'); await sleep(120); } throw new Error('could not move SaveLoad cursor to slot ' + slot); };   // key-by-key with a check: a dropped key on a loaded runner picked the wrong slot
 try {
   await newGame(page);
   await mashUntil(page, () => window.__S.$.sw('intro_done'));
@@ -11,13 +12,13 @@ try {
   await press(page, 'x'); await waitScene(page, 'Menu'); await sleep(400);
   for (let i = 0; i < 9; i++) { await press(page, 'ArrowDown'); await sleep(50); }
   await press(page, 'Enter'); await waitScene(page, 'SaveLoad'); await sleep(500);
-  await press(page, 'ArrowDown'); await press(page, 'ArrowDown'); await press(page, 'Enter'); await sleep(500); await shot('23-save-confirm');
+  await toSlot(3); await press(page, 'Enter'); await sleep(500); await shot('23-save-confirm');
   await press(page, 'Enter'); await sleep(700); await shot('23-save-done');
   console.log('slot3', await page.evaluate(() => JSON.stringify(window.__S.SaveManager.meta(3))));
   await page.reload(); await waitScene(page, 'Title', 30000); await sleep(800); await shot('24-title-continue');
   await press(page, 'Enter'); await waitScene(page, 'SaveLoad'); await sleep(600); await shot('24-load');
   console.log('latest', await page.evaluate(() => window.__S.SaveManager.latestSlot()));
-  for (let i = 0; i < 2; i++) { await press(page, 'ArrowDown'); } 
+  await toSlot(3);
   await press(page, 'Enter'); await sleep(500); await shot('24-load-confirm'); await press(page, 'Enter');
   await waitScene(page, 'Map', 45000); await sleep(1200);   // loading a save is slow on CI runners
   const after = await st(); console.log('after ', JSON.stringify(after));
