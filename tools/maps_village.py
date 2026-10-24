@@ -7,8 +7,9 @@ def build_village():
     def rect(x0, y0, x1, y1):
         for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1): cells.add((x, y))
-    rect(15, 15, 20, 18); rect(17, 3, 18, 14); rect(5, 16, 14, 17); rect(21, 16, 30, 17); rect(17, 19, 18, 24); rect(5, 22, 16, 24)
+    rect(15, 15, 20, 18); rect(17, 3, 18, 14); rect(5, 16, 14, 17); rect(21, 16, 35, 17); rect(17, 19, 18, 24); rect(5, 22, 16, 24)
     rect(7, 15, 7, 15); rect(25, 15, 25, 15); rect(12, 12, 12, 15); rect(24, 9, 24, 15); rect(3, 21, 9, 26)
+    m.fill('both', 34, 13, 35, 19, GRASS, walk=False)
     m.blob('both', cells)
     # ---- border trees (blocking band is collision = default 1 outside walkable rect)
     for x in range(0, 36, 3):
@@ -24,6 +25,7 @@ def build_village():
         m.obj('both', 'tree_pink' if (x // 3) % 3 == 0 else 'tree_big', x + 1, 29, fw=3, block=False)
     for y in range(3, 28, 3):
         for x in (-1, 33):
+            if x == 33 and y in (12, 15): continue          # east road gap (Ch3: the road to the Whispering Forest)
             m.obj('both', 'tree_big', x, y + 1, fw=3, block=False); m.obj('both', 'tree_orange' if y % 2 else 'tree_big', x + (1 if x < 0 else 0), y + 3, fw=3, block=False)
     # keep trees out of the shrine gap: add pines flanking
     for x, y in [(15, 2), (21, 2), (15, 5), (21, 5)]:
@@ -220,4 +222,11 @@ def build_village():
     def foe(x, y, troop, sheet, **kw):
         e = dict(troop=troop, aggro=kw.get('aggro', 4), chase=True, range=kw.get('range', 3), spd=kw.get('spd', 260)); m.event(x, y, [page(g=NPC(sheet), enemy=e)], realm='far')
     foe(8, 22, 'tr_dust_wisp', 'wisp'); foe(14, 7, 'tr_straw_hound', 'mouse2'); foe(27, 12, 'tr_dust_wisp_dust_wisp', 'wisp'); foe(26, 23, 'tr_dust_wisp_moss_slimeling', 'wisp2'); foe(10, 12, 'tr_dust_wisp', 'wisp'); foe(22, 5, 'tr_straw_hound', 'mouse2')
+    # ---- Ch3: the east road to the Whispering Forest, and the lanterns the Bell relit
+    for y in (16, 17):
+        m.event(35, y, [page(trigger='touch', through=True, list=[IF({'sw': 'ch3_started'}, [{'c': 'transfer', 'map': 10, 'x': 1, 'y': 18, 'dir': 'right'}],
+            [say('mio', 'Mio', '(The east road goes to the Forest and the Crossing. Not tonight. Not until the Bell rings.)'), {'c': 'move', 'route': ['left']}])])])
+    m.obj('both', 'pine_s', 34, 14, fw=2); m.obj('both', 'pine_s', 34, 20, fw=2)
+    for (x, y) in [(32, 15), (32, 18), (14, 15), (21, 15)]:
+        m.event(x, y, [page(cond={'sw': 'boss_done'}, g=dict(obj='lantern_post'), list=[say(None, None, 'A festival lantern, relit when the Bell rang. Its flame leans east, toward the Forest road.')])])
     return m

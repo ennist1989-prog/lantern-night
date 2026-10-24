@@ -3,7 +3,7 @@ and generates quest-log entries in quests.json for every quest with chapter <= C
 import json, os, re
 SRC = '/workspace/rpg-research/data/sidequests.json'
 PUB = os.path.join(os.path.dirname(__file__), '..', 'public')
-CHAPTER_CAP = 2
+CHAPTER_CAP = 3
 LEGACY = {'sq01': 'hanzo', 'sq02': 'chime'}   # already hand-built quests in the slice (their log entries stay as authored)
 def build():
     d = json.load(open(SRC))
@@ -21,7 +21,7 @@ def build():
             names = [items.get(i['id'], {}).get('name', i['id']) + (' ×%d' % i['qty'] if i['qty'] > 1 else '') for i in r.get('items', [])]
             if r.get('nameFragments'): names.append('Name Fragment ×%d' % r['nameFragments'])
             if r.get('bondOfferings'): names.append('Offerings ×%d' % r['bondOfferings'])
-            Q[q['id']] = {'name': q['name'], 'desc': st[0], 'stages': st[:2] if q['id'] == 'sq03' else st[:2], 'reward': ', '.join(names), 'doneText': q.get('twist', ''), 'sq': q['id']}
+            Q[q['id']] = {'name': q['name'], 'desc': st[0], 'stages': st if q['chapter'] >= 3 else st[:2], 'reward': ', '.join(names), 'doneText': q.get('twist', ''), 'sq': q['id']}
     for sid, lid in LEGACY.items():
         if lid in Q: Q[lid]['sq'] = sid
     json.dump(out, open(os.path.join(PUB, 'data/sidequests.json'), 'w'), ensure_ascii=False)

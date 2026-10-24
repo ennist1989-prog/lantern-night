@@ -6,7 +6,7 @@ import { DB, PARAM_NAMES, ELEMENT_NAMES, ELEMENT_COLORS, iconOf } from '../core/
 import { Win, Selectable, COL } from '../ui/windows';
 import { SPEC } from '../battle/spec';
 import { RARITY_COL, activeSets, traitText, itemParams, forgeStat } from '../core/gear';
-import { itemNeedsTarget, useItemOnActor, useItemGlobal, castField, canCastField } from '../core/fielduse';
+import { itemNeedsTarget, useItemOnActor, useItemGlobal, castField, canCastField, isFieldSkill } from '../core/fielduse';
 import { locksFor, KIND_LABEL, lockOpen } from '../core/locks';
 type S = any;
 const SCHOOL: Record<string, string> = { rites: 'Lantern Rites', fox: 'Foxfire Arts', forge: 'Forge Rites', bond: 'Bond Song', veil: 'Veil Art', echo: 'Echo Art', combo: 'Unison Art', field: 'Field Magic' };
@@ -44,23 +44,23 @@ export async function skillScreen(sc: S) {
   const who = await sc.pickMember(300, 100); if (!who) return; let cur = who; let closeResult: any;
   const panel = sc.panel(); panel.setDepth(100); const list = sc.mk(new Selectable(sc, 248, 150, 560, 380, sc.tone)); list.setDepth(101); const desc = sc.mk(new Win(sc, 248, 536, 560, 80, sc.tone)); desc.setDepth(101);
   const head = sc.mk(new Win(sc, 248, 8, 560, 134, sc.tone)); head.setDepth(101); list.cols = 2; list.rowH = 34; list.pad = 14; list.fontSize = 19;
-  const usableOut = (sk: any) => sk.type === 'field' || (sk.scope === 'one_ally' && (sk.effects || []).some((e: any) => e.op === 'heal'));
+  const usableOut = (sk: any) => isFieldSkill(sk) || (sk.scope === 'one_ally' && (sk.effects || []).some((e: any) => e.op === 'heal'));
   const build = () => {
     head.clear(); sc.drawActor(head, cur, 14, 8, 530); const a = $.actors[cur]; const rows: any[] = [];
     for (const k of a.skills) { const sk = DB.skills[k]; if (!sk || ['p_attack', 'p_guard'].includes(k) || sk.tags?.includes('summon')) continue;
-      const cost = [sk.cost?.sp ? sk.cost.sp + ' SP' : sk.cost?.bond ? sk.cost.bond + ' BG' : '', sk.cost?.lumen ? sk.cost.lumen + '◈' : '', sk.cost?.echo ? sk.cost.echo + '◆' : ''].filter(Boolean).join(' ');
-      rows.push({ label: sk.name, icon: iconOf(sk), value: cost, enabled: usableOut(sk) && (sk.type === 'field' ? canCastField(cur, k).ok : a.sp >= (sk.cost?.sp || 0)), color: sk.type === 'field' ? COL.teal : ELEMENT_COLORS[sk.element || 'phys'], data: { k } }); }
+      const kc: any = sk.field?.cost || sk.cost; const cost = [kc?.sp ? kc.sp + ' SP' : kc?.bond ? kc.bond + ' BG' : '', kc?.lumen ? kc.lumen + '◈' : '', kc?.echo ? kc.echo + '◆' : ''].filter(Boolean).join(' ');
+      rows.push({ label: sk.name, icon: iconOf(sk), value: cost, enabled: usableOut(sk) && (isFieldSkill(sk) ? canCastField(cur, k).ok : a.sp >= (sk.cost?.sp || 0)), color: isFieldSkill(sk) ? COL.teal : ELEMENT_COLORS[sk.element || 'phys'], data: { k } }); }
     let hidden = 0; for (const [lv, k] of DB.actors[cur].skills) { const sk = DB.skills[k]; if (sk && a.level < lv && String(k).startsWith('sp_') && hidden++ < 4) rows.push({ label: '???', value: 'Lv ' + lv, enabled: false, color: COL.dim, data: { k, locked: lv } }); }
     list.setItems(rows);
   };
   list.onSelect = (it: any) => { desc.clear(); if (!it) return; const { k, locked } = it.data; const sk = DB.skills[k];
     if (locked) { desc.txt(`A spell for ${DB.actors[cur].name} to learn at Level ${locked}.`, 14, 8, { size: 18, wrap: 530, color: COL.dim }); return; }
-    desc.txt(sk.desc || '', 14, 6, { size: 17, wrap: 530 }); const sch = sk.school ? SCHOOL[sk.school] : ''; desc.txt((sch ? sch + ' · ' : '') + ELEMENT_NAMES[sk.element || 'phys'] + (sk.type === 'field' ? ' · Field (map only)' : sk.type === 'field' ? '' : ' · ' + ({ phys: 'Physical', mag: 'Magic', support: 'Support', parley: 'Parley', special: 'Special' } as any)[sk.type]) + (sk.cooldown ? ' · CD ' + sk.cooldown : '') + (sk.oncePerBattle ? ' · once/battle' : ''), 14, 54, { size: 15, color: ELEMENT_COLORS[sk.element || 'phys'] }); };
+    desc.txt(sk.desc || '', 14, 6, { size: 17, wrap: 530 }); const sch = sk.school ? SCHOOL[sk.school] : ''; desc.txt((sch ? sch + ' · ' : '') + ELEMENT_NAMES[sk.element || 'phys'] + (sk.type === 'field' ? ' · Field (map only)' : sk.field ? ' · Field + Battle' : sk.type === 'field' ? '' : ' · ' + ({ phys: 'Physical', mag: 'Magic', support: 'Support', parley: 'Parley', special: 'Special' } as any)[sk.type]) + (sk.cooldown ? ' · CD ' + sk.cooldown : '') + (sk.oncePerBattle ? ' · once/battle' : ''), 14, 54, { size: 15, color: ELEMENT_COLORS[sk.element || 'phys'] }); };
   build(); list.active = true;
   await new Promise<void>((res) => {
     list.onCancel = () => res(); list.onPage = (d: number) => { const i = $.party.indexOf(cur); cur = $.party[(i + d + $.party.length) % $.party.length]; build(); Audio.se('cursor'); };
     list.onOk = async (it: any) => { const k = it.data.k; const sk = DB.skills[k]; list.active = false;
-      if (sk.type === 'field') { const r = castField(cur, k); if (!r.ok) { Audio.se('buzzer'); if (r.msg) note(sc, r.msg); } else if (r.action) { closeResult = { action: { ...r.action, fromMenu: true } }; res(); return; } else { Audio.se('powerup'); if (r.msg) note(sc, r.msg); } }
+      if (isFieldSkill(sk)) { const r = castField(cur, k); if (!r.ok) { Audio.se('buzzer'); if (r.msg) note(sc, r.msg); } else if (r.action) { closeResult = { action: { ...r.action, fromMenu: true } }; res(); return; } else { Audio.se('powerup'); if (r.msg) note(sc, r.msg); } }
       else { const t = await sc.pickMember(420, 200); if (t) { const a = $.actors[cur], b = $.actors[t]; const mhp = $.param(b, 'mhp'); if (b.hp >= mhp || b.hp <= 0) Audio.se('buzzer'); else { const ef = sk.effects.find((e: any) => e.op === 'heal'); a.sp -= sk.cost.sp; b.hp = Math.min(mhp, b.hp + Math.round((ef.base || 0) + (ef.mult || 0) * $.param(a, ef.stat || 'mat'))); Audio.se('heal'); } } }
       build(); sc.refresh(); list.active = true; };
   });
