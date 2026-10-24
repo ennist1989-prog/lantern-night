@@ -1,5 +1,5 @@
 // Unified input: keyboard + gamepad + touch buttons -> RPG-Maker-style virtual keys.
-export type Key = 'up' | 'down' | 'left' | 'right' | 'ok' | 'cancel' | 'menu' | 'dash' | 'shift' | 'pageup' | 'pagedown' | 'auto' | 'fast';
+export type Key = 'up' | 'down' | 'left' | 'right' | 'ok' | 'cancel' | 'menu' | 'dash' | 'shift' | 'pageup' | 'pagedown' | 'auto' | 'fast' | 'skip';
 const KEYMAP: Record<string, Key[]> = {
   ArrowUp: ['up'], ArrowDown: ['down'], ArrowLeft: ['left'], ArrowRight: ['right'],
   KeyW: ['up'], KeyS: ['down'], KeyA: ['left'], KeyD: ['right'],
@@ -7,7 +7,9 @@ const KEYMAP: Record<string, Key[]> = {
   KeyX: ['cancel', 'menu'], Escape: ['cancel', 'menu'], Numpad0: ['cancel', 'menu'],
   ShiftLeft: ['dash'], ShiftRight: ['dash'],
   KeyQ: ['shift', 'pageup'], Tab: ['shift'], KeyE: ['pagedown'], PageUp: ['pageup'], PageDown: ['pagedown'],
-  KeyV: ['auto'], KeyF: ['fast'], ControlLeft: ['dash'], ControlRight: ['dash'],
+  KeyV: ['auto'], KeyF: ['fast', 'skip'],
+  // Dash (Shift) is movement only. Fast-forwarding text uses its own key (hold Ctrl or F / RT or R-stick) so walking into a talk with Shift held can't skip dialogue.
+  ControlLeft: ['skip'], ControlRight: ['skip'],
 };
 class InputClass {
   private down = new Set<Key>(); private prev = new Set<Key>();
@@ -49,9 +51,9 @@ class InputClass {
       if (b(12) || ay < -0.5) this.pad.add('up'); if (b(13) || ay > 0.5) this.pad.add('down');
       if (b(14) || ax < -0.5) this.pad.add('left'); if (b(15) || ax > 0.5) this.pad.add('right');
       if (b(0)) this.pad.add('ok'); if (b(1)) { this.pad.add('cancel'); }
-      if (b(9) || b(8)) this.pad.add('menu'); if (b(2) || b(6) || b(7)) this.pad.add('dash');
+      if (b(9) || b(8)) this.pad.add('menu'); if (b(2) || b(6)) this.pad.add('dash'); if (b(7)) this.pad.add('skip');
       if (b(3)) { this.pad.add('shift'); } if (b(4)) this.pad.add('pageup'); if (b(5)) this.pad.add('pagedown');
-      if (b(10)) this.pad.add('auto'); if (b(11)) this.pad.add('fast');
+      if (b(10)) this.pad.add('auto'); if (b(11)) { this.pad.add('fast'); this.pad.add('skip'); }
       if (this.pad.size) this.lastDevice = 'pad';
     }
   }

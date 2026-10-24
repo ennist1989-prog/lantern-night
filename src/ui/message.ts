@@ -97,7 +97,7 @@ export class MessageSystem {
         const ev = this.scene.events.on('update', function upd(this: any) { });
         this.scene.events.off('update', ev as any);
         const timer = this.scene.time.addEvent({ delay: 16, loop: true, callback: () => {
-          const skip = Input.isDown('dash'); this.skipHeld = skip;
+          const skip = Input.isDown('skip'); this.skipHeld = skip;
           if (Input.isTriggered('auto')) { Settings.data.msgAuto = !Settings.data.msgAuto; Settings.save(); }
           this.autoTxt.setVisible(Settings.data.msgAuto);
           if (!done) {
@@ -158,7 +158,7 @@ export class MessageSystem {
       const wrapped = this.wrap(ln, 640).join('\n');
       const t = this.scene.add.text(W / 2, H / 2, wrapped, { fontFamily: FONT, fontSize: '28px', color: opts.color ?? '#dfe8ff', align: 'center', lineSpacing: 10, stroke: '#000', strokeThickness: 4 }).setOrigin(0.5); this.layer.add(t);
       t.setAlpha(0); this.scene.tweens.add({ targets: t, alpha: 1, duration: 600 });
-      await new Promise<void>((resolve) => { let f = 0; const tm = this.scene.time.addEvent({ delay: 16, loop: true, callback: () => { f++; if ((f > 25 && (Input.isTriggered('ok') || Input.isTriggered('cancel'))) || (f > 20 && Input.isDown('dash')) || (Settings.data.msgAuto && f > 160)) { Input.consume('ok'); Input.consume('cancel'); tm.remove(); resolve(); } } }); });
+      await new Promise<void>((resolve) => { let f = 0; const tm = this.scene.time.addEvent({ delay: 16, loop: true, callback: () => { f++; if ((f > 25 && (Input.isTriggered('ok') || Input.isTriggered('cancel'))) || (f > 20 && Input.isDown('skip')) || (Settings.data.msgAuto && f > 160)) { Input.consume('ok'); Input.consume('cancel'); tm.remove(); resolve(); } } }); });
       await new Promise<void>((r) => this.scene.tweens.add({ targets: t, alpha: 0, duration: 350, onComplete: () => { t.destroy(); r(); } }));
     }
     this.scene.tweens.add({ targets: bg, alpha: 0, duration: 500, onComplete: () => bg.destroy() });
