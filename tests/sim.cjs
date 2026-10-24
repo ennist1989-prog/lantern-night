@@ -37,4 +37,15 @@ if (require.main === module) {
       while (!B.ended && g++ < 60) { B.startRound(); for (const p of B.party) if (p.hp > 0) p.action = B.autoAction(p); B.buildOrder(); for (const b of B.order.slice()) { if (B.ended) break; if (b.hp <= 0 || b.gone) continue; const before = B.realm; B.act(b); if (before === 'near' && B.realm === 'far' && B.lumen < AUTO_LUMEN_RESERVE) wentFar = true; } if (!B.ended) B.endRound(); B.checkEnd(); }
       n++; if (B.ended === 'win') wins++; if (lumen0 < 60) low++; if (wentFar) belowReserve++; }
     const ok = wins === n && belowReserve === 0; console.log((ok ? 'PASS' : 'FAIL') + ' N1 auto reserve: ordinary troops won ' + wins + '/' + n + ', Near->Far Shifts that dipped below the ' + AUTO_LUMEN_RESERVE + ' Lumen reserve ' + belowReserve + '/' + low); if (!ok) process.exitCode = 1; }
+  // N10: a Far fight that drains Lumen to 0 forces the party back to Near and flags it (B.forcedNear), so the map won't
+  // restore the Far Shore at ~0 Lumen afterwards (mapscene.startBattle). Control: plenty of Lumen never sets the flag.
+  {
+    const trial = (lumen0) => { const B = new Battle({ realm: 'far', lumen: lumen0, lumenMax: 60, difficulty: 'standard', items: {}, itemDB: ITEMS, pity: {}, flags: {} }, mkParty(['mio', 'kaze'], 6), 'tr_dust_wisp');
+      let g = 0, flagRound = -1; while (!B.ended && g++ < 60) { const go = B.forcedNear || B.round >= 4; if (!go) B.foes.forEach((f) => { f.mhp = Math.max(f.mhp, 999); f.hp = f.mhp; }); else B.foes.forEach((f) => (f.hp = Math.min(f.hp, 1)));
+        B.startRound(); for (const p of B.party) if (p.hp > 0) p.action = { type: 'guard' }; if (go) for (const p of B.party) if (p.hp > 0) p.action = { type: 'skill', skill: 'p_attack', targets: [B.foesAlive()[0].uid] };
+        B.buildOrder(); for (const b of B.order.slice()) { if (B.ended) break; if (b.hp <= 0 || b.gone) continue; B.act(b); } if (!B.ended) B.endRound(); B.checkEnd(); if (B.forcedNear && flagRound < 0) flagRound = B.round; }
+      return { end: B.ended, realm: B.realm, forcedNear: B.forcedNear, lumen: B.lumen, flagRound }; };
+    const low = trial(1.7), high = trial(40); const ok = low.forcedNear && low.realm === 'near' && low.end === 'win' && !high.forcedNear && high.realm === 'far' && high.end === 'win';
+    console.log((ok ? 'PASS' : 'FAIL') + ' N10 forced Near: Far fight at 1.7 Lumen ' + JSON.stringify(low) + ', at 40 Lumen ' + JSON.stringify(high)); if (!ok) process.exitCode = 1;
+  }
 }

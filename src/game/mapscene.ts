@@ -460,12 +460,14 @@ export class MapScene extends Phaser.Scene {
     const troop = SPEC.troops[troopId]; if (!troop) throw new Error('unknown troop ' + troopId); const boss = !!(o.boss || troop.boss);
     const zid = o.zone || this.zoneId(); if (troop.saveBefore) this.autosave('boss');
     Audio.se('encounter'); Audio.bgm(null, {}); await this.flash(0xffffff, 220); await this.fader.out(this, 260);
-    this.overlay = true; Input.clear(); const realm = $.realm; let peaceful = false;
-    const res: string = await new Promise((resolve) => { this.scene.setVisible(false); this.scene.pause(); this.scene.launch('Battle', { troop: troopId, realm, zone: zid, preempt: !!o.preempt, boss, noEscape: !!(o.noEscape || troop.noEscape), noLose: !!o.noLose, onEnd: (r: string, pe: boolean) => { peaceful = !!pe; this.scene.stop('Battle'); this.scene.setVisible(true); this.scene.resume(); resolve(r); } }); });
+    this.overlay = true; Input.clear(); const realm = $.realm; let peaceful = false; let forcedNear = false;
+    const res: string = await new Promise((resolve) => { this.scene.setVisible(false); this.scene.pause(); this.scene.launch('Battle', { troop: troopId, realm, zone: zid, preempt: !!o.preempt, boss, noEscape: !!(o.noEscape || troop.noEscape), noLose: !!o.noLose, onEnd: (r: string, pe: boolean, info?: { forcedNear?: boolean }) => { peaceful = !!pe; forcedNear = !!info?.forcedNear; this.scene.stop('Battle'); this.scene.setVisible(true); this.scene.resume(); resolve(r); } }); });
     // N1: an in-battle Shift (manual or Auto) is local to ordinary fights. Random encounters and plain map foes put the
     // party back on the shore they were walking before the fight. Scripted/boss battles keep the battle's realm, since
     // their own win/lose lists hand off explicitly (Bell-Keeper → Near-Shore transfer, Well Spirit, Willow Mother).
-    if (res !== 'lose' && !boss && (o.random || o.enemyEv !== undefined)) $.realm = realm;
+    // N10: never restore the Far Shore when the fight already forced the party back to Near (Lumen ran out in battle), or
+    // when there is no Lumen left to stand on it; restoring Far there would fade the player straight to respawn.
+    if (res !== 'lose' && !boss && (o.random || o.enemyEv !== undefined) && !forcedNear && !(realm === 'far' && $.lumen <= 0)) $.realm = realm;
     this.overlay = false; Input.clear(); this.applyRealmVisuals(); this.refreshEvents(); $.setV('battle_peaceful', peaceful ? 1 : 0);
     Audio.bgm(this.mapBgm()); const zz = SPEC.zones[zid]; $.grace = zz?.graceSteps ?? 8; this.stepsLeft = Math.max(this.stepsLeft, this.rollSteps(false, zz?.encounterSteps?.[$.realm] || 26)); await this.fader.in(this, 300);
     if (res === 'lose') { await this.handleDefeat(boss, o); return 'lose'; }

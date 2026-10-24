@@ -35,6 +35,8 @@ export class Battle {
   realm: Realm; lumen: number; lumenMax: number; ctx: Ctx; party: Battler[] = []; foes: Battler[] = []; round = 0; echo = 0; escapes = 0; ended: '' | 'win' | 'lose' | 'escape' = '';
   rng: () => number; troop: any; bossDef: any = null; recruits: { id: string; dup: boolean }[] = []; fragments = 0; goldBonus = 0; tutorials: string[] = []; sentList: Battler[] = []; calmDropGiven = 0; lockRealm = 0; weakSeen = new Set<string>();
   order: Battler[] = []; evFired = new Set<string>(); addsEchoGiven = false; addsSummoned = 0; tolls = 0; noEscape = false; troopLevel = 1; weakHitsDealt = 0; parleyActs = 0;
+  /** N10: set when the Far Shore let go of the party in battle (Lumen hit 0 → forced back to Near). The map must not restore Far afterwards. */
+  forcedNear = false;
   constructor(ctx: Ctx, party: Battler[], troopId: string, opts: { boss?: boolean } = {}) {
     this.ctx = ctx; this.realm = ctx.realm; this.lumen = ctx.lumen; this.lumenMax = ctx.lumenMax; this.rng = ctx.rng || Math.random; this.party = party;
     party.forEach((p, i) => { p.slot = i; });
@@ -254,7 +256,7 @@ export class Battle {
   }
   endRound(): Ev[] {
     const ev: Ev[] = [];
-    if (this.realm === 'far') { let d = 1 + Math.min(0, ...this.party.map((p) => p.bondTraits.reduce((s, t) => s + (t.lumenDrain || 0), 0))); d = Math.max(0, d); if (this.ctx.difficulty === 'gentle') d *= 0.5; this.lumen = Math.max(0, this.lumen - d); ev.push({ t: 'lumen', v: this.lumen }); if (this.lumen <= 0) { this.realm = 'near'; ev.push({ t: 'forcedShift' }); } }
+    if (this.realm === 'far') { let d = 1 + Math.min(0, ...this.party.map((p) => p.bondTraits.reduce((s, t) => s + (t.lumenDrain || 0), 0))); d = Math.max(0, d); if (this.ctx.difficulty === 'gentle') d *= 0.5; this.lumen = Math.max(0, this.lumen - d); ev.push({ t: 'lumen', v: this.lumen }); if (this.lumen <= 0) { this.realm = 'near'; this.forcedNear = true; ev.push({ t: 'forcedShift' }); } }
     else { this.lumen = Math.min(this.lumenMax, this.lumen + 1); ev.push({ t: 'lumen', v: this.lumen }); }
     if (this.ctx.warmth) for (const p of this.party) if (alive(p)) { const n = Math.min(Math.max(1, Math.round(p.mhp * 0.03 * this.ctx.warmth)), p.mhp - p.hp); if (n > 0) { p.hp += n; ev.push({ t: 'heal', target: p.uid, amt: n, hp: p.hp } as any); } }
     if (this.lockRealm > 0) this.lockRealm--;
