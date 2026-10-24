@@ -11,9 +11,10 @@
     "data": "python3 tools/gen_game.py",
     "art": "python3 tools/art_custom.py",
     "test:art": "python3 tests/test_frame_meta.py",
-    "test": "tsc --noEmit && node tests/sim.cjs --assert",
-    "test:sim": "node tests/sim.cjs --assert",
+    "test": "tsc --noEmit && node tests/sim.cjs --assert && node tests/sim.cjs",
+    "test:sim": "node tests/sim.cjs --assert && node tests/sim.cjs",
     "test:e2e": "node tests/e2e.mjs",
+    "test:willow": "node tests/willow_sim.cjs",
     "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {

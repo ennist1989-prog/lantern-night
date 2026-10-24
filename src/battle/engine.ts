@@ -33,7 +33,7 @@ export function enemyGold(b: Battler) { if (b.boss) return b.def.gold; return Ma
 
 export class Battle {
   realm: Realm; lumen: number; lumenMax: number; ctx: Ctx; party: Battler[] = []; foes: Battler[] = []; round = 0; echo = 0; escapes = 0; ended: '' | 'win' | 'lose' | 'escape' = '';
-  rng: () => number; troop: any; bossDef: any = null; recruits: { id: string; dup: boolean }[] = []; fragments = 0; goldBonus = 0; tutorials: string[] = []; sentList: Battler[] = []; calmDropGiven = 0; lockRealm = 0; weakSeen = new Set<string>();
+  rng: () => number; troop: any; bossDef: any = null; recruits: { id: string; dup: boolean }[] = []; fragments = 0; goldBonus = 0; tutorials: string[] = []; poHinted = false; poRegrows = 0; sentList: Battler[] = []; calmDropGiven = 0; lockRealm = 0; weakSeen = new Set<string>();
   order: Battler[] = []; evFired = new Set<string>(); addsEchoGiven = false; addsSummoned = 0; tolls = 0; noEscape = false; troopLevel = 1; weakHitsDealt = 0; parleyActs = 0;
   /** N10: set when the Far Shore let go of the party in battle (Lumen hit 0 → forced back to Near). The map must not restore Far afterwards. */
   forcedNear = false;
@@ -204,10 +204,19 @@ export class Battle {
   }
   hurt(a: Battler, t: Battler, dmg: number, ev: Ev[], info: any) {
     if (t.hp <= 0) return; t.hp = Math.max(0, t.hp - dmg); ev.push({ t: 'hit', actor: a.uid, target: t.uid, dmg, crit: info.crit, weak: info.weak, resist: info.resist, immune: info.immune, hp: t.hp });
+    if (t.boss && t.def?.parleyOnly && dmg > 0) this.parleyOnlyHit(t, ev);
     if (t.states.exposed) this.clearState(t, 'exposed', ev); if (t.states.marked && info.crit) this.clearState(t, 'marked', ev);
     if (t.side === 'foe') { if (dmg > 0) { if (t.calm) { t.calm = false; delete t.states.calm; t.mood = Math.max(0, t.mood - 30); ev.push({ t: 'calmbreak', target: t.uid }); } else t.mood = Math.max(0, t.mood - 10); } }
     else { t.gauge = Math.min(100, t.gauge + Math.floor((50 * dmg) / t.mhp * (1 + t.bondTraits.reduce((n: number, x: any) => n + (x.bondGain || 0), 0)))); }
     if (t.hp <= 0) { t.hp = 0; this.onDown(t, ev); }
+  }
+  /** Per-boss `parleyOnly` (Willow Mother): blades can't end her. Below floorPct her roots drink the river and she regrows to regrowPct,
+   *  so a fight can only end in a wipe/enrage; the first hit each battle shows a one-time (per save) tutorial hint. Battle rules are unchanged for everyone else. */
+  parleyOnlyHit(t: Battler, ev: Ev[]) {
+    const po = t.def.parleyOnly; if (!this.poHinted && po.hint) { this.poHinted = true; this.tutorials.push(po.hint); ev.push({ t: 'tutorial', id: po.hint, text: po.hintText }); }
+    if (t.hp > t.mhp * (po.floorPct ?? 35) / 100) return;
+    const to = Math.round(t.mhp * (po.regrowPct ?? 100) / 100); const amt = to - t.hp; t.hp = to; this.poRegrows++;
+    ev.push({ t: 'say', text: po.regrowText || `${t.name} draws the river up through her roots. Her wounds close.`, who: t.uid }); ev.push({ t: 'heal', target: t.uid, amt, hp: t.hp });
   }
   onDown(t: Battler, ev: Ev[]) { for (const k of Object.keys(t.states)) { if (['burn', 'chill', 'wilt', 'calm', 'gathering', 'guard', 'possessed', 'taunt'].includes(k)) delete t.states[k]; } t.tell = null; ev.push({ t: 'down', target: t.uid }); }
   // ---------------------------------------------------------------- acting
@@ -244,7 +253,7 @@ export class Battle {
   }
   turnEnd(b: Battler, ev: Ev[]) {
     if (b.hp <= 0) return;
-    for (const id of Object.keys(b.states)) { const td = this.stateDef(id); for (const t of td.traits) { if (t.dot) { const d = Math.max(1, Math.floor(b.mhp * t.dot)); b.hp = Math.max(0, b.hp - d); ev.push({ t: 'dot', target: b.uid, id, dmg: d, hp: b.hp }); if (b.hp <= 0) { this.onDown(b, ev); return; } } if (t.regen) { const h = Math.floor(b.mhp * t.regen); b.hp = Math.min(b.mhp, b.hp + h); ev.push({ t: 'heal', target: b.uid, amt: h, hp: b.hp }); } } }
+    for (const id of Object.keys(b.states)) { const td = this.stateDef(id); for (const t of td.traits) { if (t.dot) { const d = Math.max(1, Math.floor(b.mhp * t.dot)); b.hp = Math.max(0, b.hp - d); ev.push({ t: 'dot', target: b.uid, id, dmg: d, hp: b.hp }); if (b.boss && b.def?.parleyOnly) this.parleyOnlyHit(b, ev); if (b.hp <= 0) { this.onDown(b, ev); return; } } if (t.regen) { const h = Math.floor(b.mhp * t.regen); b.hp = Math.min(b.mhp, b.hp + h); ev.push({ t: 'heal', target: b.uid, amt: h, hp: b.hp }); } } }
     if (b.side === 'party' && b.cd) for (const k of Object.keys(b.cd)) if (b.cd[k] > 0) b.cd[k]--;
     if (b.side === 'party') { const rg = b.bondTraits.reduce((n: number, x: any) => n + (x.regen || 0), 0); if (rg && b.hp > 0) { const h = Math.max(1, Math.floor(b.mhp * rg)); if (b.hp < b.mhp) { b.hp = Math.min(b.mhp, b.hp + h); ev.push({ t: 'heal', target: b.uid, amt: h, hp: b.hp }); } } }
     if (b.side === 'party') { const sr = b.bondTraits.find((x) => x.spRegen)?.spRegen; if (sr) { b.sp = Math.min(b.msp, b.sp + sr); ev.push({ t: 'sp', target: b.uid, amt: sr }); } }
@@ -427,7 +436,8 @@ export class Battle {
     if (x.gone || x.hp <= 0) return; if (v > 0) { if (x.states.unveiled) v *= 2; if (this.ctx.difficulty === 'gentle') v = Math.round(v * 1.25); const pb = user.bondTraits.find((t: any) => t.parleyBonus?.[verbName])?.parleyBonus?.[verbName]; if (pb) v += pb; if (user.side === 'party') v = Math.round(v * (1 + user.bondTraits.reduce((n: number, t: any) => n + (t.mood || 0), 0))); if (user.side === 'party') user.gauge = Math.min(100, user.gauge + 5); }
     x.mood = Math.max(0, Math.min(x.moodMax, x.mood + v)); this.parleyActs++; ev.push({ t: 'mood', target: x.uid, v, mood: x.mood, verb: verbName }); this.checkCalm(x, ev);
   }
-  checkCalm(x: Battler, ev: Ev[]) { if (!x.calm && x.mood >= x.calmAt) { x.calm = true; x.calmTurns = 0; x.states.calm = { t: 99 }; if (x.tell) { x.tell = null; delete x.states.gathering; ev.push({ t: 'tellcancel', target: x.uid }); } ev.push({ t: 'calm', target: x.uid }); } }
+  checkCalm(x: Battler, ev: Ev[]) { if (!x.calm && x.mood >= x.calmAt) { x.calm = true; x.calmTurns = 0; x.states.calm = { t: 99 }; if (x.tell) { x.tell = null; delete x.states.gathering; ev.push({ t: 'tellcancel', target: x.uid }); } ev.push({ t: 'calm', target: x.uid });
+    if (x.boss && x.def?.parleyOnly?.calmAdds) for (const a of this.foes) if (a.add && alive(a) && !a.calm) { a.mood = Math.max(a.mood, a.calmAt); a.calm = true; a.calmTurns = 0; a.states.calm = { t: 99 }; if (a.tell) { a.tell = null; delete a.states.gathering; ev.push({ t: 'tellcancel', target: a.uid }); } ev.push({ t: 'calm', target: a.uid }); } } }
   parleyVerb(user: Battler, x: Battler, verb: string, ev: Ev[], item?: string) {
     const tt = SPEC.parley.temperaments[x.temper]; let v = tt[verb] ?? 0; const key = x.def?.parley?.key;
     if (verb === 'offer' && item) { const it = this.ctx.itemDB[item]; const cats: string[] = it?.cats || []; const liked = item === key?.item || x.likes.some((l) => cats.includes(l) || l === item) || (key?.item && item === key.item); const dis = x.dislikes.some((l) => cats.includes(l) || l === item); v = liked ? tt.offer[1] : dis ? tt.offer[2] : tt.offer[0]; if (liked) x.offered = true; if (this.ctx.items[item] !== undefined) this.ctx.items[item] = Math.max(0, this.ctx.items[item] - 1); }
@@ -437,7 +447,7 @@ export class Battle {
     if (keyHit && !x.calm) { x.mood = Math.max(x.mood, x.calmAt); ev.push({ t: 'keyact', target: x.uid, note: key.note }); this.checkCalm(x, ev); }
   }
   doOffer(b: Battler, item: string, uid: number, ev: Ev[]) { const x = this.foes.find((f) => f.uid === uid); if (!x || !alive(x)) return; const it = this.ctx.itemDB[item]; ev.push({ t: 'use', actor: b.uid, name: 'Offer ' + (it?.name || item), skill: 'parley_offer', targets: [x.uid], se: 'pickup', anim: null, item }); this.parleyVerb(b, x, 'offer', ev, item); }
-  canSend(x: Battler) { return x.calm || x.hp <= x.mhp * 0.25 || !!x.states.unveiled || !!x.states.heart_break; }
+  canSend(x: Battler) { if (x.boss && x.def?.parleyOnly) return x.calm; return x.calm || x.hp <= x.mhp * 0.25 || !!x.states.unveiled || !!x.states.heart_break; }
   doSend(b: Battler, x: Battler, ev: Ev[]) {
     if (!this.canSend(x)) { ev.push({ t: 'sendfail', target: x.uid }); return; }
     x.gone = 'sent'; this.sentList.push(x); const hollow = x.kind === 'hollowed' || x.fragment || x.def?.parley?.fragment; if (hollow || x.boss) { this.fragments += x.boss ? (x.def.rewards?.fragment || 1) + (x.calm ? (x.def.peaceful_rewards?.fragment || 0) : 0) : 1; } ev.push({ t: 'send', target: x.uid, fragment: !!hollow });
