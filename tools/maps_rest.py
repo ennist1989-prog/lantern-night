@@ -283,13 +283,22 @@ def build_summit():
              'win': [say(None, None, 'The bronze armor falls away piece by piece, like autumn leaves. A tired priest remains, kneeling.'),
                      say('keeper', 'Priest Ren', 'I could not… let her go. I did not want to be alone in the quiet.'),
                      say('mio', 'Mio', 'You aren’t alone. You never were. Hana waited, too. Let us ring it together.'),
-                     {'c': 'me', 'name': 'fanfare'}, {'c': 'shake', 'power': 2, 'ms': 800}, sw('boss_done'), {'c': 'chapter', 'n': 3}, item('wellkeeper_pebble'), quest('main', 6, True)],
+                     {'c': 'me', 'name': 'fanfare'}, {'c': 'shake', 'power': 2, 'ms': 800}, sw('boss_done'), {'c': 'chapter', 'n': 3},
+                     # A6 epilogue: let the rewards land one at a time (toasts replace each other) before the bell scene
+                     item('wellkeeper_pebble'), {'c': 'wait', 'ms': 1500}, quest('main', 6, True), {'c': 'wait', 'ms': 1900}],
              'lose': [{'c': 'abort'}]},
             {'c': 'flash', 'color': 0xffffff, 'ms': 800}, {'c': 'se', 'name': 'bell'}, {'c': 'wait', 'ms': 900}, {'c': 'se', 'name': 'bell'},
             narr('The Bell rang once, and the valley breathed out.', 'Across Ashiro, every lantern caught fire at once, and every spirit that had waited too long was finally able to go home.', 'Priest Ren lit the last lantern himself, for the daughter who had never really left.'),
             say(None, None, 'Then the paper seal on the clapper-rope tightens itself, knot by knot, and the bell goes silent again.'),
             IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'That isn’t a broken bell, Mio. That’s a hand.')],
                [say('mio', 'Mio', 'That isn’t a broken bell… that’s a hand.')]),
+            # A6 epilogue: a short aftermath at the summit, then Wisp's Ch3 handoff (fade + transfer) below runs unchanged
+            say('keeper', 'Priest Ren', 'Thank you, Lantern-bearer. I held that rope so long I forgot what my hands were for. I will keep watch here tonight. Whatever tied that knot, it was not me.'),
+            IF({'sw': 'kaze_joined'}, [
+                say('kaze', 'Kaze', 'We did it, Mio. We actually rang it. …Even if it didn’t stay rung.'),
+                say('kaze', 'Kaze', 'Your Granny will have heard it. I bet she’s up with the kettle on. Let’s go home.'),
+                say('mio', 'Mio', 'Home first. Then we work out that knot.')],
+               [say('mio', 'Mio', 'Granny will have heard it. Home first. Then I’ll work out that knot.')]),
             narr('Night 3. Six nights have become five, and the calendar by Sachi’s door has one more day crossed out.'),
             narr('Mio and Kaze had only reached the first shore.', 'But the Bell was ringing again, and that was enough to begin.'),
             {'c': 'fade', 'dir': 'out', 'ms': 800}, {'c': 'transfer', 'map': 2, 'x': 6, 'y': 6, 'dir': 'up', 'se': None, 'realm': 'near'}], []])])], realm='near')
