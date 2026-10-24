@@ -449,7 +449,7 @@ export class BattleScene extends Phaser.Scene {
   syncBack() { for (const a of this.B.party) { const ac = $.actors[a.id]; ac.hp = a.hp; ac.sp = a.sp; } $.lumen = this.B.lumen; $.realm = this.B.realm; for (const k of Object.keys($.items)) if (!$.items[k]) delete $.items[k]; }
   async finish(r: 'win' | 'escape' | 'lose') {
     this.ended = true; this.hideLog(); if (r !== 'win') this.syncBack(); this.B.party.forEach((a) => { const ac = $.actors[a.id]; ac.states = []; });
-    await this.fader.out(this, 300); this.d.onEnd(r, this.B.peaceful);
+    await this.fader.out(this, 300); this.d.onEnd(r, this.B.peaceful, { forcedNear: this.B.forcedNear });
   }
 }
 void H;
