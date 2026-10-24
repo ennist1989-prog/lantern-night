@@ -17,6 +17,8 @@ export interface Battler {
 export interface Ctx { warmth?: number; realm: Realm; lumen: number; lumenMax: number; difficulty: 'gentle' | 'standard' | 'tough'; items: Record<string, number>; itemDB: Record<string, any>; pity: Record<string, number>; flags: Record<string, any>; recLevel?: number; rng?: () => number; ward?: boolean; teachSend?: boolean; }
 const rint = (rng: () => number, n: number) => Math.floor(rng() * n);
 let UID = 1;
+/** Lumen Auto keeps in hand in ordinary fights before paying for a Near→Far Shift. */
+export const AUTO_LUMEN_RESERVE = 10;
 const PARAMS = ['mhp', 'msp', 'atk', 'def', 'mat', 'mdf', 'agi'];
 export const alive = (b: Battler) => b.hp > 0 && !b.gone;
 export function levelStats(e: any, lv: number) {
@@ -33,6 +35,8 @@ export class Battle {
   realm: Realm; lumen: number; lumenMax: number; ctx: Ctx; party: Battler[] = []; foes: Battler[] = []; round = 0; echo = 0; escapes = 0; ended: '' | 'win' | 'lose' | 'escape' = '';
   rng: () => number; troop: any; bossDef: any = null; recruits: { id: string; dup: boolean }[] = []; fragments = 0; goldBonus = 0; tutorials: string[] = []; sentList: Battler[] = []; calmDropGiven = 0; lockRealm = 0; weakSeen = new Set<string>();
   order: Battler[] = []; evFired = new Set<string>(); addsEchoGiven = false; addsSummoned = 0; tolls = 0; noEscape = false; troopLevel = 1; weakHitsDealt = 0; parleyActs = 0;
+  /** N10: set when the Far Shore let go of the party in battle (Lumen hit 0 → forced back to Near). The map must not restore Far afterwards. */
+  forcedNear = false;
   constructor(ctx: Ctx, party: Battler[], troopId: string, opts: { boss?: boolean } = {}) {
     this.ctx = ctx; this.realm = ctx.realm; this.lumen = ctx.lumen; this.lumenMax = ctx.lumenMax; this.rng = ctx.rng || Math.random; this.party = party;
     party.forEach((p, i) => { p.slot = i; });
@@ -252,7 +256,7 @@ export class Battle {
   }
   endRound(): Ev[] {
     const ev: Ev[] = [];
-    if (this.realm === 'far') { let d = 1 + Math.min(0, ...this.party.map((p) => p.bondTraits.reduce((s, t) => s + (t.lumenDrain || 0), 0))); d = Math.max(0, d); if (this.ctx.difficulty === 'gentle') d *= 0.5; this.lumen = Math.max(0, this.lumen - d); ev.push({ t: 'lumen', v: this.lumen }); if (this.lumen <= 0) { this.realm = 'near'; ev.push({ t: 'forcedShift' }); } }
+    if (this.realm === 'far') { let d = 1 + Math.min(0, ...this.party.map((p) => p.bondTraits.reduce((s, t) => s + (t.lumenDrain || 0), 0))); d = Math.max(0, d); if (this.ctx.difficulty === 'gentle') d *= 0.5; this.lumen = Math.max(0, this.lumen - d); ev.push({ t: 'lumen', v: this.lumen }); if (this.lumen <= 0) { this.realm = 'near'; this.forcedNear = true; ev.push({ t: 'forcedShift' }); } }
     else { this.lumen = Math.min(this.lumenMax, this.lumen + 1); ev.push({ t: 'lumen', v: this.lumen }); }
     if (this.ctx.warmth) for (const p of this.party) if (alive(p)) { const n = Math.min(Math.max(1, Math.round(p.mhp * 0.03 * this.ctx.warmth)), p.mhp - p.hp); if (n > 0) { p.hp += n; ev.push({ t: 'heal', target: p.uid, amt: n, hp: p.hp } as any); } }
     if (this.lockRealm > 0) this.lockRealm--;
@@ -465,7 +469,9 @@ export class Battle {
     const heal = b.skills.map((id) => SPEC.skills[id]).find((s) => s && s.id && (s.effects || []).some((e: any) => e.op === 'heal') && s.scope === 'one_ally' && b.sp >= (s.cost.sp || 0));
     if (heal && weakest.hp / weakest.mhp < 0.45) return { type: 'skill', skill: heal.id, targets: [weakest.uid] };
     // Mio: Shift when another shore has a strictly better weakness for a damaging party skill
-    if (b.actorId === 'mio' && this.canUse(b, 'mio_shift').ok) {
+    // Ordinary fights keep a Lumen reserve: Auto only pays the 10◈ Near→Far Shift while at least AUTO_LUMEN_RESERVE would be left (boss fights unchanged).
+    const reserveOk = foes.some((f) => f.boss) || this.realm === 'far' || this.lumen >= 10 + AUTO_LUMEN_RESERVE;
+    if (b.actorId === 'mio' && reserveOk && this.canUse(b, 'mio_shift').ok) {
       const other: Realm = this.realm === 'near' ? 'far' : 'near';
       const partySkills = this.party.filter((p) => p.hp > 0).flatMap((p) => p.skills.map((id) => SPEC.skills[id]).filter((s) => s && s.damage && s.element));
       let bestHere = 0, bestOther = 0;
