@@ -12,10 +12,14 @@ try {
   let fights = 0; const t0 = Date.now(); let cheated = false; let retried = false; let sawRetry = true;
   while (Date.now() - t0 < 420000) {
     const sc = await activeScenes(page);
-    await flow.step(); if (flow.done()) { await sleep(1500); await flow.step(); break; }   // Ch3 handoff: epilogue -> Sachi's house -> Ch3 opener (was: Credits)
+    const fp = await flow.step(); if (!retried && /The Lantern dims/.test(fp.shown)) { retried = true; console.log('RETRY PROMPT (defeat -> Retry the fight)'); await sleep(300); await shot('83-retry-prompt'); }
+    if (Date.now() - (globalThis.lastLog || 0) > 30000) { globalThis.lastLog = Date.now(); console.log('t+' + Math.round((Date.now() - t0) / 1000) + 's', sc.join('+'), 'map', fp.map, 'retried', retried, 'seen', JSON.stringify(flow.seen)); }
+    if (flow.done()) { await sleep(1500); await flow.step(); break; }   // Ch3 handoff: epilogue -> Sachi's house -> Ch3 opener (was: Credits)
     if (!sc.includes('Battle') && fights > 3) { const lines = await page.evaluate(() => { const m = window.__game.scene.getScene('Map'); return (m?.msg?.win?.children?.list || []).filter(c => c.text).map(c => c.text).join('|'); }); if (lines.includes('Retry')) { await shot('83-retry-prompt'); console.log('RETRY PROMPT'); await press(page, 'Enter', 60); await sleep(2500); await shot('84-after-retry'); console.log('after retry', await page.evaluate(() => JSON.stringify({ map: window.__S.$.map, hp: window.__S.$.party.map(p => window.__S.$.actors[p].hp) }))); retried = true; } }   // then win the retry and follow the Ch3 handoff
     if (sc.includes('Battle')) { fights++; if (fights > 40 && !cheated) { } 
       const inb = await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); return b?.B ? [b.B.round, b.B.foes[0].hp] : null; });
+      // L3 vs the L5 Keeper can stall for minutes under Enter-mash; hasten the first loss so the Retry prompt is reached (the test is about Retry -> win -> aftermath)
+      if (!retried && !globalThis.weakened && inb && inb[0] >= 2) { globalThis.weakened = 1; await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); for (const p of b.B.party) { p.hp = 1; } }); }
       if (retried && !cheated && inb && inb[0] >= 2) { await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); b.B.foes[0].hp = 20; b.B.foes[0].dispHp = 20; }); cheated = true; }
     }
     const txt = await page.evaluate(() => { const m = window.__game.scene.getScene('Map'); return m?.msg?.choiceOpen ? 'choice' : ''; });
