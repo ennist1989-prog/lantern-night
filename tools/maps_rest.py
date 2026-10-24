@@ -146,7 +146,7 @@ def build_well():
         {'c': 'flash', 'color': 0xcff6ff, 'ms': 500}, {'c': 'se', 'name': 'magic2'},
         say(None, None, 'Mio hums the old lantern song. The Lantern warms in her hands, and the dark water stills.'),
         say(None, 'Ido-no-Kami', 'The old lantern… still burns somewhere. Thank you. Take the key. Ring the Bell for me.'),
-        {'c': 'me', 'name': 'fanfare'}, {'c': 'item', 'id': 'shrine_key'}, {'c': 'exp', 'n': 25}, sw('key_got'), quest('main', 5),
+        {'c': 'me', 'name': 'fanfare'}, {'c': 'item', 'id': 'shrine_key'}, {'c': 'exp', 'n': 25}, sw('key_got'), {'c': 'chapter', 'n': 2}, quest('main', 5),
         IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Gentle beats loud. Remember that when we meet the Bell-Keeper.')],
            [say('mio', 'Mio', 'Gentle… Remember that, for whatever waits at the Bell.')]),
         tut('exit', 'Stairs near the south chamber lead back up to the village.', 5000)])])
@@ -250,7 +250,7 @@ def build_summit():
              'win': [say(None, None, 'The bronze armor falls away piece by piece, like autumn leaves. A tired priest remains, kneeling.'),
                      say('keeper', 'Priest Ren', 'I could not… let her go. I did not want to be alone in the quiet.'),
                      say('mio', 'Mio', 'You aren’t alone. You never were. Hana waited, too. Let us ring it together.'),
-                     {'c': 'me', 'name': 'fanfare'}, {'c': 'shake', 'power': 2, 'ms': 800}, sw('boss_done'), item('wellkeeper_pebble'), quest('main', 6, True)],
+                     {'c': 'me', 'name': 'fanfare'}, {'c': 'shake', 'power': 2, 'ms': 800}, sw('boss_done'), {'c': 'chapter', 'n': 3}, item('wellkeeper_pebble'), quest('main', 6, True)],
              'lose': [{'c': 'abort'}]},
             {'c': 'flash', 'color': 0xffffff, 'ms': 800}, {'c': 'se', 'name': 'bell'}, {'c': 'wait', 'ms': 900}, {'c': 'se', 'name': 'bell'},
             narr('The Bell rang once, and the valley breathed out.', 'Across Ashiro, every lantern caught fire at once, and every spirit that had waited too long was finally able to go home.', 'Priest Ren lit the last lantern himself, for the daughter who had never really left.'),
