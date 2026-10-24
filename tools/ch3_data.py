@@ -29,5 +29,7 @@ Y = load(P('system.json'))
 for k in ('7', '8', '9'): Y['mapNames'].pop(k, None); Y['dungeonExit'].pop(k, None)
 Y['mapNames'].update({'10': 'Whispering Forest', '111': 'The Crossing', '112': 'Willow Hollow', '113': 'Misty Grove'})
 Y['dungeonExit'].pop('10', None); Y['dungeonExit']['112'] = {'map': 111, 'x': 43, 'y': 12, 'dir': 'left'}
+Y['notes'] = [n for n in Y.get('notes', []) if n.get('unlock') != 'willow_tip'] + [dict(unlock='willow_tip', title='The Willow Mother',
+    text='She is grieving, not hunting. Blades can’t end her grief: her roots drink the river and her wounds close. Parley instead: Remember her children three times (or Offer a Marigold Petal) until she is Calm, then Send her. If the party falls, the Lantern brings you back to try again.')]
 json.dump(Y, open(P('system.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
 print('ch3 data ok')

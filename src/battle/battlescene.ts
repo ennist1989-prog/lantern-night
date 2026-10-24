@@ -204,7 +204,7 @@ export class BattleScene extends Phaser.Scene {
     if (pick === 'hint' || pick === 'both') await this.log(hint, 3200); else this.hideLog();
     if (pick === 'warm' || pick === 'both') await this.log('The Lantern glows warm: the party recovers a little each round.', 1500);
   }
-  bossHint(f: Battler): string { const h: Record<string, string> = { straw_warden: 'Its straw is weak to fire. Shift to the Far Shore to cancel its stare, and keep an Echo pip to chain a second hit.', bell_keeper: 'Hit the bell’s weakness to break the Veil, then Parley. Guard when the ⚠ warning appears.' }; return h[f.id] || `${f.name} has a weak point. Watch which element makes WEAK! appear, break its Veil ◆, then Soothe or Send.`; }
+  bossHint(f: Battler): string { const h: Record<string, string> = { straw_warden: 'Its straw is weak to fire. Shift to the Far Shore to cancel its stare, and keep an Echo pip to chain a second hit.', bell_keeper: 'Hit the bell’s weakness to break the Veil, then Parley. Guard when the ⚠ warning appears.', willow_mother: 'Blades can’t end her grief: she regrows. Parley instead. Remember three times (or Offer a Marigold Petal) until she is Calm, then Send her.' }; return h[f.id] || `${f.name} has a weak point. Watch which element makes WEAK! appear, break its Veil ◆, then Soothe or Send.`; }
   endCheck() { const r = this.B.checkEnd(); if (r === 'win') { this.victory(); return true; } if (r === 'lose') { this.defeat(); return true; } if (this.B.ended === 'escape') { this.finish('escape'); return true; } return false; }
   // ---------------------------------------------------------------- command phase
   setCmd(items: any[], onOk: (it: any) => void, onCancel: (() => void) | null) { const c = this.cmdWin; c.rowH = 27; c.pad = 10; c.fontSize = 20; c.setItems(items); c.onOk = onOk; c.onCancel = onCancel; c.active = true; c.setVisible(true); }
@@ -401,7 +401,7 @@ export class BattleScene extends Phaser.Scene {
         if (e.ok) { Audio.se('powerup'); await this.fx('spirit', p.x, p.y - 40, 6); await new Promise<void>((r) => this.tweens.add({ targets: s, alpha: 0, y: (s as any).by - 60, duration: 600 / this.speed(), onComplete: () => r() })); this.lab.get(t.uid)?.setVisible(false); Audio.me('secret'); await this.log(`${t.name} accepts! It will walk beside you as a Bond.`, 1300); }
         else { Audio.se('buzzer'); s.setAlpha(1); await this.log(`${t.name} hesitates and pulls back… (it's no longer Calm)`, 1000); } break; }
       case 'say': { await this.log(e.text, 1400); break; }
-      case 'tutorial': { if (!$.tutorialsShown['b_' + e.id] && TUT[e.id]) { $.tutorialsShown['b_' + e.id] = true; await this.log(TUT[e.id], 2600); } break; }
+      case 'tutorial': { const tx = TUT[e.id] || e.text; if (!$.tutorialsShown['b_' + e.id] && tx) { $.tutorialsShown['b_' + e.id] = true; await this.log(tx, 2600); } break; }
       case 'realm': { Audio.se('shift'); await this.flashAll(e.realm === 'far' ? 0xcff6ff : 0xffe9b0); this.refreshRealmVisuals(); this.popup(W / 2, 200, e.realm === 'far' ? 'Far Shore' : 'Near Shore', e.realm === 'far' ? '#7fe9ff' : '#ffe08a', 40); this.drawOrder(); await this.t(400); break; }
       case 'forcedShift': { await this.log('The Lantern gutters… the Far Shore lets go of you.', 900); this.refreshRealmVisuals(); await this.flashAll(0xffffff); break; }
       case 'lumen': this.drawRealm(); break;

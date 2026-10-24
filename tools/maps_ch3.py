@@ -387,13 +387,20 @@ def build_hollow():
            say('willow', 'Willow Mother', 'Hana. Ren. Little Sou. I remember now. I remember all of them.'),
            say('willow', 'Willow Mother', 'You came for the wick. It grew in the glade where my children played. Take this, and plant it on my bank. It will carry you across.'),
            item('willow_sprig'), sw('willow_done'), quest('ch3', 6)] + tsu
+    # Parley-only boss: a party wipe never ends the run. The scene restores the pre-fight checkpoint on the Near Shore at full
+    # health (mapscene.handleDefeat, 'wipe') and the Whisper Wick, calling from the glade beyond, points at Parley.
+    willow_wipe = {'realm': 'near', 'lines': [
+        {'face': None, 'name': None, 'text': 'The hollow goes dark… and then a small, warm light flickers from the glade beyond the river.'},
+        {'face': 'lantern', 'name': 'Whisper Wick', 'text': 'She does not need to be beaten, little lantern. She needs to be remembered. Parley: Remember her children, then Send her home.'},
+        {'face': 'kaze', 'name': 'Kaze', 'text': 'You heard it. Words, not blades. Let’s try again.'}]}
     m.event(28, 4, [page(cond={'nsw': 'willow_done'}, g=NPC('willow', 'down', nofar=True), list=[
         say('willow', 'Willow Mother', 'Who are you? Are you one of mine? I had so many. I have forgotten their names. I sing them, and they slip into the water.'),
         mio('We’re not yours. But we can help you remember.'),
         say('willow', 'Willow Mother', 'Remember? Then you will take them away from me. Like the village did. Like the river does.'),
-        IF({'nsw': 'willow_tip'}, [say(None, 'Tip', 'She is grieving, not wicked. In Parley, Remember three times (or Offer a Marigold Petal) to calm her. Anchor can lock the Shore where she is weaker.'), sw('willow_tip')]),
+        IF({'nsw': 'willow_tip'}, [kz('She is grieving, not hunting. Words may reach her where blades won’t.'),
+            say(None, 'Tip', 'The Willow Mother can’t be beaten by force: her roots drink the river and her wounds close. Use Parley. Remember three times (or Offer a Marigold Petal) until she is Calm, then Send her.'), sw('willow_tip')]),
         choice(['Face the Willow Mother', 'Wait. Prepare first'], [[{'c': 'checkpoint', 'boss': True},
-            {'c': 'battle', 'troop': 'boss_willow_mother', 'boss': True, 'noEscape': True, 'win': win, 'lose': [{'c': 'abort'}]}], []])]),
+            {'c': 'battle', 'troop': 'boss_willow_mother', 'boss': True, 'noEscape': True, 'win': win, 'lose': [{'c': 'abort'}], 'wipe': willow_wipe}], []])]),
         page(cond={'sw': 'willow_done'}, g=NPC('willow', 'down', nofar=True, tint=0xe8ffe8), list=[
             say('willow', 'Willow Mother', 'Plant the sprig on the bank, little lantern. Its roots know the way.')])])
     # bloom soil (Far): plant the sprig -> root bridge
