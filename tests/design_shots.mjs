@@ -66,6 +66,25 @@ SC.well_lose = async () => { await wsSetup(); await B_(() => { const B = window.
   await page.keyboard.down('ArrowLeft'); await sleep(260); await page.keyboard.up('ArrowLeft'); await sleep(400); await page.keyboard.down('ArrowRight'); await sleep(260); await page.keyboard.up('ArrowRight');
   await talkUntil(() => window.__game.scene.getScenes(true).some((s) => s.sys.settings.key === 'Battle'), 40); const again = (await scenes()).includes('Battle'); if (again) { await sleep(2500); await B_(() => { window.__game.scene.getScene('Battle').B.foes[0].hp = 1; }); }
   const r2 = await wsAfter(); return { retryOffered: offered, afterRetry: r, retouchStartsBattle: again, final: r2, seen, shots: [p1] }; };
+// ---- C3: Shift = dash only; holding it must not advance/skip dialogue. Text fast-forward is hold F/Ctrl.
+SC.shift_talk = async () => {
+  const keys = (k) => page.evaluate(() => { const I = window.__S.Input; return { dash: I.isDown('dash'), skip: I.isDown('skip'), shift: I.isDown('shift'), ok: I.isDown('ok') }; });
+  const run = () => page.evaluate(() => { const m = window.__game.scene.getScene('Map'); window.__tk = { done: false }; m.interp.run([{ c: 'msg', name: 'Mio', text: 'Line one. Holding Shift must not skip this.' }, { c: 'msg', name: 'Mio', text: 'Line two.' }]).then(() => { window.__tk.done = true; }); });
+  const line = async () => (await texts('Map')).find((t) => /Line (one|two)/.test(t)) || null;
+  await page.keyboard.down('ShiftLeft'); await sleep(200); const shiftKeys = await keys();
+  await run(); await sleep(2500); const shiftAfter = { line: await line(), done: await page.evaluate(() => window.__tk.done), busy: (await st()).msg }; const p1 = await shot('c3-shift-held-dialogue');
+  await page.keyboard.up('ShiftLeft'); await sleep(150);
+  await page.keyboard.down('ControlLeft'); await sleep(150); const ctrlKeys = await keys(); await sleep(1800); const ctrlAfter = { done: await page.evaluate(() => window.__tk.done), busy: (await st()).msg }; await page.keyboard.up('ControlLeft'); await sleep(300);
+  await run(); await sleep(400); await page.keyboard.down('KeyF'); await sleep(1800); const fAfter = { done: await page.evaluate(() => window.__tk.done) }; await page.keyboard.up('KeyF'); await sleep(300);
+  await run(); await sleep(300); let presses = 0; while (!(await page.evaluate(() => window.__tk.done)) && presses < 10) { await press('Enter'); presses++; await sleep(250); }
+  // dash still works on the field: Shift held -> faster move duration
+  const dur = await page.evaluate(() => { const m = window.__game.scene.getScene('Map'); return { walk: m.moveDur(false), dash: m.moveDur(true) }; });
+  await page.keyboard.down('ShiftLeft'); await sleep(100); const dashKey = await keys(); await page.keyboard.up('ShiftLeft');
+  // realm Shift is still Q/Tab, not the Shift key
+  await page.keyboard.down('KeyQ'); await sleep(60); const q = await keys(); await page.keyboard.up('KeyQ'); await sleep(200);
+  const tut = await page.evaluate(async () => { const d = await (await fetch('data/maps/map002.json')).json(); return JSON.stringify(d).match(/Move: Arrows[^"]*/)?.[0] || null; });
+  return { shiftKeys, shiftAfter, ctrlKeys, ctrlAfter, fAfter, enterPresses: presses, dur, dashKey, q, tutorial: tut, shots: [p1] };
+};
 export function register(name, fn) { SC[name] = fn; }
 const extra = process.env.EXTRA; if (extra) await import(extra);
 await page.goto(base); await newGame(page); await mashUntil(page, () => window.__S.$.sw('intro_done') && !window.__game.scene.getScene('Map').interp.busy, null, 120);

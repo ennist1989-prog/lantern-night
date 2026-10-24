@@ -20,10 +20,10 @@ Source on `main`: `git add -A && git commit -m "..." && git push`.
 | Move | Arrows / WASD | D-pad / left stick | on-screen D-pad |
 | OK / talk | Z / Enter / Space | A | OK button |
 | Cancel / menu | X / Esc | B (cancel), Start/Select (menu) | Menu button |
-| Dash | hold Shift or Ctrl | X / LT / RT | — |
+| Dash (walking only) | hold Shift | X / LT | Dash toggle |
 | Shift realms (Near ⇄ Far) | Q / Tab | Y | Shift button |
 | Page (menus) | Q / E | LB / RB | — |
-| Message Auto / Skip | V / F | L-stick / R-stick click | — |
+| Message Auto / fast-forward (hold) | V / hold F or Ctrl | L-stick click / hold RT or R-stick click | — |
 
 Battle: Fight / Flee / Auto / Speed ×1–×2. Actor commands: Attack, Skill, Parley, Bond, Guard, Item, Shift (Mio).
 

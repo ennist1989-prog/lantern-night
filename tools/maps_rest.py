@@ -35,7 +35,7 @@ def build_sachi():
         say('sachi', 'Granny Sachi', 'Light the Lantern Post in the village square. Then go see Elder Matsu. Take care of your light, child. It’s the only thing that follows you across.'),
         say('mio', 'Mio', '…I’ll try, Granny.'),
         {'c': 'item', 'id': 'lantern'}, sw('intro_done'), quest('main', 0),
-        tut('controls', 'Move: Arrows/WASD · Talk/OK: Z/Enter · Menu: X/Esc · Dash: hold Shift · Shift realms: Q/Tab', 9000)]
+        tut('controls', 'Move: Arrows/WASD · Talk/OK: Z/Enter · Menu: X/Esc · Dash: hold Shift · Realm Shift: Q/Tab · Skip text: hold F/Ctrl', 9000)]
     m.event(6, 7, [page(cond={'nsw': 'intro_done'}, trigger='auto', list=intro)])
     sachi_talk = [choice(['Talk', 'Rest (free)', 'Save', 'Never mind'], [[
             IF({'anysw': ['first_send', 'warden_done'], 'noitem': 'collectors_book'}, [say('sachi', 'Granny Sachi', 'Ah, you have begun to meet them properly. Here, child: my old ledger. Spirits you meet write themselves in it, and the bonds you keep.'), item('collectors_book'), tut('ledger', 'Keeper’s Ledger: Menu now shows Bonds (equip, give Offerings) and the Bestiary. Check Key Items for everything else you carry.', 8000)]),

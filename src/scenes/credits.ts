@@ -26,7 +26,7 @@ export class CreditsScene extends Phaser.Scene {
     this.add.text(W - 10, H - 8, 'Z / X: skip', { fontFamily: FONT, fontSize: '14px', color: '#6a7ab0' }).setOrigin(1, 1).setDepth(50);
   }
   update(_t: number, dt: number) {
-    const sp = (Input.isDown('ok') || Input.isDown('dash') ? 240 : 46) * dt / 1000; this.texts.forEach((t) => (t.y -= sp));
+    const sp = (Input.isDown('ok') || Input.isDown('skip') ? 240 : 46) * dt / 1000; this.texts.forEach((t) => (t.y -= sp));
     const last = this.texts[this.texts.length - 1]; if (!this.done && ((last && last.y < H / 2 - 20) || Input.isTriggered('cancel'))) { this.done = true; this.fader.out(this, 900).then(() => { Audio.bgm(null); this.scene.start('Title'); }); }
   }
 }

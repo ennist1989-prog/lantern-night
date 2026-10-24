@@ -440,7 +440,7 @@ export class BattleScene extends Phaser.Scene {
     for (const r of rows) { win.txt(r.t, 40, y, { size: r.sz || 18, color: r.c, wrap: 480 }); y += r.gap || 30; }
     if (lv.length) setTimeout(() => Audio.me('levelup'), 1400);
     win.txt('▼', 530, hgt - 34, { size: 20, color: COL.gold });
-    await this.t(600); await new Promise<void>((r) => { const tm = this.time.addEvent({ delay: 16, loop: true, callback: () => { if (Input.isTriggered('ok') || Input.isTriggered('cancel') || Input.isDown('dash')) { Input.consume('ok'); Input.consume('cancel'); tm.remove(); r(); } } }); });
+    await this.t(600); await new Promise<void>((r) => { const tm = this.time.addEvent({ delay: 16, loop: true, callback: () => { if (Input.isTriggered('ok') || Input.isTriggered('cancel') || Input.isDown('skip')) { Input.consume('ok'); Input.consume('cancel'); tm.remove(); r(); } } }); });
     this.finish('win');
   }
   async defeat() { this.ended = true; if (this.B.bossDef) { const k = String(this.d.troop); $.bossLosses[k] = ($.bossLosses[k] || 0) + 1; } this.tellIcons.forEach((t) => t.destroy()); Audio.bgm(null); Audio.me('gameover'); await this.log('Everyone’s light gutters out…', 1400); this.syncBack(); this.finish('lose'); }
