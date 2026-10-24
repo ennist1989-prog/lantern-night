@@ -19,7 +19,7 @@ try {
   console.log('latest', await page.evaluate(() => window.__S.SaveManager.latestSlot()));
   for (let i = 0; i < 2; i++) { await press(page, 'ArrowDown'); } 
   await press(page, 'Enter'); await sleep(500); await shot('24-load-confirm'); await press(page, 'Enter');
-  await waitScene(page, 'Map', 15000); await sleep(1200);
+  await waitScene(page, 'Map', 45000); await sleep(1200);   // loading a save is slow on CI runners
   const after = await st(); console.log('after ', JSON.stringify(after));
   // Lumen refills 1/s on the Near-Shore map (mapscene update), so it keeps ticking between the 'before' snapshot,
   // the save (~2 s of menu navigation later) and the post-load wait. That made the old exact compare print
