@@ -3,7 +3,7 @@ import { Input } from '../core/input';
 import { Audio } from '../core/audio';
 import { $ } from '../core/state';
 import { SaveManager, fmtTime } from '../core/save';
-import { W, H, Win, Selectable, COL, FONT, tickWindows, Tone } from '../ui/windows';
+import { W, H, Win, Selectable, COL, FONT, tickWindows, Tone, fitLine } from '../ui/windows';
 export class SaveLoadScene extends Phaser.Scene {
   d: any; wins: Win[] = []; list!: Selectable; info!: Win; msgT: string = ''; busy = false;
   constructor() { super('SaveLoad'); }
@@ -16,7 +16,7 @@ export class SaveLoadScene extends Phaser.Scene {
     this.list.rowH = 40; this.list.pad = 15; this.list.fontSize = 20;
     this.list.drawItem = (w, it, x, y, cw) => { const m = it.data.meta; const col = it.enabled === false ? COL.dim : COL.white; w.txt(it.data.slot === 0 ? 'Autosave' : 'Slot ' + it.data.slot, x + 4, y + 4, { size: 20, color: it.data.slot === 0 ? COL.teal : COL.gold });
       if (!m) { w.txt('— empty —', x + 130, y + 4, { size: 19, color: COL.dim }); return; }
-      w.txt(m.label, x + 130, y + 4, { size: 19, color: col }); w.txt('Lv ' + m.level, x + 400, y + 4, { size: 19, color: col }); w.txt(m.realm === 'far' ? 'Far' : 'Near', x + 470, y + 4, { size: 17, color: m.realm === 'far' ? COL.teal : COL.warn }); w.txt(fmtTime(m.playtime), x + 530, y + 4, { size: 19, color: col }); w.txt(new Date(m.ts).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), x + cw - 6, y + 4, { size: 17, color: COL.dim, align: 'right' }); };
+      w.txt('Ch ' + (m.chapter || 1), x + 120, y + 6, { size: 17, color: COL.teal }); fitLine(w.txt(m.label, x + 172, y + 4, { size: 19, color: col }), 220, [17, 15]); w.txt('Lv ' + m.level, x + 400, y + 4, { size: 19, color: col }); w.txt(m.realm === 'far' ? 'Far' : 'Near', x + 470, y + 4, { size: 17, color: m.realm === 'far' ? COL.teal : COL.warn }); w.txt(fmtTime(m.playtime), x + 530, y + 4, { size: 19, color: col }); w.txt(new Date(m.ts).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), x + cw - 6, y + 4, { size: 17, color: COL.dim, align: 'right' }); };
     this.refreshList(); this.list.active = true;
     this.list.onSelect = () => this.refreshInfo();
     this.list.onOk = (it) => this.choose(it.data.slot);

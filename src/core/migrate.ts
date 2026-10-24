@@ -1,7 +1,10 @@
 // Save-file migrations. Every snapshot carries `v` (SAVE_VERSION) and the game state carries `ver`; older saves are upgraded in place on load.
 //  v1 (chapters 1-2 slice, first deploy)  ->  v2 (items/equipment/key items/spells/summons package)
+//  v2 -> v3: `chapter` was never advanced (always 1); infer it from story switches
 import { DB } from './db';
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
+/** Story chapter implied by switches (ch2 starts once the Well's Shrine Key is won, ch3 once the Bell-Keeper falls). */
+export function inferChapter(g: G): number { const sw = g.switches || {}; return Math.max(g.chapter || 1, sw.boss_done ? 3 : sw.key_got ? 2 : 1); }
 const LEGACY_ITEMS: Record<string, string> = { onigiri: 'rice_ball', tea: 'herbal_tea' };
 type G = any;
 const steps: Record<number, (g: G) => void> = {
@@ -25,6 +28,7 @@ const steps: Record<number, (g: G) => void> = {
     if (sw.shiro_asked && !sw.hanzo_told) grant('hanzo_note');
     g.switches = sw; g.ver = 2;
   },
+  2: (g) => { g.chapter = inferChapter(g); g.ver = 3; },
 };
 /** Upgrade a raw game-state object to SAVE_VERSION (mutates). Unknown/newer versions are left alone. */
 export function migrateGame(g: G): G { let v = g.ver || 1; while (v < SAVE_VERSION && steps[v]) { steps[v](g); v = g.ver || v + 1; } return g; }

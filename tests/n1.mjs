@@ -29,7 +29,8 @@ try {
     k.sp = k.sp; $.gain('hush_bell', 1); o.repelItem = Field.useItemGlobal('hush_bell');
     // migration v1 -> v2
     const old = JSON.parse(JSON.stringify({ ver: 1, gold: 55, items: { onigiri: 2, tea: 1, lantern: 1, bogus_item: 3 }, switches: { elder_told: true, first_send: true, boss_done: true, shiro_asked: true }, actors: { mio: { id: 'mio', level: 4, exp: 10, hp: 30, sp: 9, equips: { weapon: 'mio_w1', armor: 'garb1', acc: null, bond: null }, skills: ['mio_flare', 'ghost_skill'], states: [] } }, party: ['mio'], bonds: {}, bestiary: {} }));
-    const mg = window.__S.migrateGame(old); o.mig = { ver: mg.ver, items: mg.items, hasSongs: Array.isArray(mg.songs), acc2: 'acc2' in mg.actors.mio.equips, seal: mg.items.elder_seal, book: mg.items.collectors_book, clapper: mg.items.shrine_bell_clapper, note: mg.items.hanzo_note, skills: mg.actors.mio.skills };
+    const mg = window.__S.migrateGame(old); o.mig = { ver: mg.ver, items: mg.items, hasSongs: Array.isArray(mg.songs), acc2: 'acc2' in mg.actors.mio.equips, seal: mg.items.elder_seal, book: mg.items.collectors_book, clapper: mg.items.shrine_bell_clapper, note: mg.items.hanzo_note, skills: mg.actors.mio.skills, chapter: mg.chapter };
+    o.mig2 = window.__S.migrateGame({ ver: 2, chapter: 1, switches: { key_got: true } }); o.mig2b = window.__S.migrateGame({ ver: 2, switches: {} });
     return o;
   });
   console.log(JSON.stringify(r).slice(0, 1800));
@@ -40,7 +41,8 @@ try {
   ok(r.forged1, 'forging raises primary stat (' + r.forgeStat + ')'); ok(!r.L06before && r.L06after, 'L06 lock opens with shrine_key'); ok(!r.L02, 'L02 closed without elder_seal');
   ok(r.kazeSpells.includes('sp_foxfire_torch') && r.kazeSpells.includes('sp_gust_clear'), 'Kaze learns Foxfire Torch (L4) + Gust (L6): ' + r.kazeSpells.join(','));
   ok(r.canTorch === true && r.torch.action?.kind === 'tile', 'field spell returns tile action'); ok(r.repelItem.ok, 'Hush Bell repel use ok');
-  ok(r.mig.ver === 2 && r.mig.hasSongs && r.mig.acc2 && r.mig.items.rice_ball === 2 && !('bogus_item' in r.mig.items), 'v1 save migrated (renamed items, dropped unknown, new fields)');
+  ok(r.mig.ver === 3 && r.mig.chapter === 3 && r.mig2.chapter === 2 && r.mig2.ver === 3 && r.mig2b.chapter === 1, 'chapter inferred from story switches (B2): ' + [r.mig.chapter, r.mig2.chapter, r.mig2b.chapter]);
+  ok(r.mig.ver === 3 && r.mig.hasSongs && r.mig.acc2 && r.mig.items.rice_ball === 2 && !('bogus_item' in r.mig.items), 'v1 save migrated (renamed items, dropped unknown, new fields)');
   ok(r.mig.seal && r.mig.book && r.mig.clapper && r.mig.note, 'migration grants key items for story flags'); ok(!r.mig.skills.includes('ghost_skill'), 'unknown skills filtered');
   ok(errors.filter((e) => !/willReadFrequently/.test(e)).length === 0, 'no console errors ' + JSON.stringify(errors.filter((e) => !/willReadFrequently/.test(e)).slice(0, 3)));
 } catch (e) { console.log('EXC', e.message); fails++; }

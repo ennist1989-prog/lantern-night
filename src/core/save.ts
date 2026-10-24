@@ -1,5 +1,6 @@
 import { $, SAVE_VERSION } from './state';
 import { DB } from './db';
+import { inferChapter } from './migrate';
 const PFX = 'lotfs.save.';
 export interface SaveMeta { slot: number; ts: number; playtime: number; label: string; level: number; members: string[]; chapter: number; realm: string; }
 const MAPNAMES = () => DB.system.mapNames || {};
@@ -9,7 +10,7 @@ function snapshot(): any {
 }
 export function metaFor(slot: number, d: any): SaveMeta {
   const g = d.game; const lv = Math.max(...g.party.map((p: string) => g.actors[p].level));
-  return { slot, ts: d.ts, playtime: d.playtime, label: mapName(g.map.id), level: lv, members: g.party, chapter: g.chapter || 1, realm: g.realm };
+  return { slot, ts: d.ts, playtime: d.playtime, label: mapName(g.map.id), level: lv, members: g.party, chapter: inferChapter(g), realm: g.realm };
 }
 export const SaveManager = {
   slots: 10,
