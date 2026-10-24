@@ -160,7 +160,7 @@ SYS = dict(
    dict(title='Lantern Posts',text='Posts glow with safe light: free Shifts, no drain, no wandering spirits. Use one to rest (full restore) or save.'),
    dict(title='Dash',text='Hold Shift (or press » on touch) to dash. Options → Always Dash flips it.'),
    dict(unlock='parley',title='Parley',text='Spirits have a Mood meter (pink bar). Parley raises it; hits lower it. At full Mood a spirit is Calm and can be Sent onward for a kinder reward.'),
-   dict(unlock='weak',title='Echo & Weaknesses',text='Hit a weakness to build Echo (up to +45% damage for the whole battle). Weaknesses are recorded in the Bestiary.'),
+   dict(unlock='weak',title='Echo & Weaknesses',text='Hit a weakness to earn an Echo pip (up to 3). Spend a pip to act again right away: an extra Attack, Skill or Bond. Weaknesses are recorded in the Bestiary.'),
    dict(unlock='shiftfar',title='The Far Shore',text='Walls, rocks and doors differ between realms. If something blocks you, try the other shore.'),
    dict(unlock='send',title='Send & Invite',text='At full Mood a spirit is Calm. Send (Lv 3) guides it onward for full EXP and a Wish Scrap or Name Fragment. Invite (Lv 4) asks a calm spirit to walk with you as a Bond.'),
    dict(unlock='boss_tip_seen',title='Bosses',text='Hit a boss’s weakness to break its Veil, then Parley or Send. A ⚠ telegraph lands next round: Guard, or break it with a Stun/Unveil. Weaknesses can differ between shores, so Shift in battle.'),
