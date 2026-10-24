@@ -23,7 +23,7 @@ const log = () => page.evaluate(() => { const l = window.__log; window.__log = [
 try {
   await newGame(page); await mashUntil(page, () => window.__S.$.sw('intro_done') && !window.__game.scene.getScene('Map').interp.busy, null, 120); await fast(true); await idle(30000);
   // a finished Chapter 2: every story switch maps 1-6 ever set
-  const prior = JSON.parse(fs.readFileSync('/tmp/ln_prior_sw.json', 'utf8'));
+  const prior = JSON.parse(fs.readFileSync(process.env.LN_PRIOR_SW || new URL('./fixtures/ch2_story_switches.json', import.meta.url), 'utf8'));   // checked-in fixture (was a box-only /tmp file, so CI failed)
   await page.evaluate((p) => { const { $ } = window.__S; for (const k of p) $.setSw(k, true); $.setSw('ch3_started', false); $.gain('lantern', 1); $.chapter = 3; $.gold = 2000; $.lumen = 60; }, prior);
   // --- the Ch2 -> Ch3 handoff: summit autorun takes us home, Sachi opens Chapter 3
   await teleport(page, 6, 10, 10); await idle(30000); await sleep(800); await idle(30000);
