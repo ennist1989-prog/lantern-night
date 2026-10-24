@@ -1,18 +1,19 @@
-import { launch, press, hold, sleep, waitScene, newGame, mashUntil, teleport, activeScenes } from './lib.mjs';
-const SS = '/workspace/lantern-night/screenshots';
+import { launch, press, hold, sleep, waitScene, newGame, mashUntil, teleport, activeScenes, bkFlow } from './lib.mjs';
+const SS = process.env.SS || '/workspace/lantern-night/screenshots';
 const { browser, page, errors } = await launch();
 const shot = (n) => page.screenshot({ path: `${SS}/${n}.png` });
 try {
   await newGame(page);
   await mashUntil(page, () => window.__S.$.sw('intro_done'), null, 80);
-  await page.evaluate(() => { const $ = window.__S.$; for (const s of ['post_lit', 'kaze_joined', 'elder_told', 'daigo_joined', 'key_got', 'gate_open', 'ped_solved', 'warden_done', 'parley_taught']) $.setSw(s, true); $.addActor('kaze'); for (const id of $.party) { const a = $.actors[id]; while (a.level < 3) $.gainExp(a, 20 * a.level); a.hp = $.param(a, 'mhp'); a.sp = $.param(a, 'msp'); } $.realm = 'near'; $.gain('rice_ball', 3); });
+  await page.evaluate(() => { const $ = window.__S.$; for (const s of ['post_lit', 'kaze_joined', 'elder_told', 'daigo_joined', 'key_got', 'gate_open', 'ped_solved', 'warden_done', 'parley_taught']) $.setSw(s, true); $.addActor('kaze'); for (const id of $.party) { const a = $.actors[id]; while (a.level < 3) $.gainExp(a, 20 * a.level); a.hp = $.param(a, 'mhp'); a.sp = $.param(a, 'msp'); } $.gain('shrine_bell_clapper', 1); $.realm = 'near'; $.gain('rice_ball', 3); });
   await teleport(page, 6, 8, 6, 'up'); await sleep(600); await shot('80-summit');
   await press(page, 'Enter'); await sleep(400);
+  const flow = bkFlow(page);
   let fights = 0; const t0 = Date.now(); let cheated = false; let sawRetry = true;
   while (Date.now() - t0 < 240000) {
     const sc = await activeScenes(page);
-    if (sc.includes('Credits')) break;
-    if (!sc.includes('Battle') && !sc.includes('Credits') && fights > 3) { const lines = await page.evaluate(() => { const m = window.__game.scene.getScene('Map'); return (m?.msg?.win?.children?.list || []).filter(c => c.text).map(c => c.text).join('|'); }); if (lines.includes('Retry')) { await shot('83-retry-prompt'); console.log('RETRY PROMPT'); await press(page, 'Enter', 60); await sleep(2500); await shot('84-after-retry'); console.log('after retry', await page.evaluate(() => JSON.stringify({ map: window.__S.$.map, hp: window.__S.$.party.map(p => window.__S.$.actors[p].hp) }))); break; } }
+    await flow.step(); if (flow.done()) { await sleep(1500); await flow.step(); break; }   // Ch3 handoff: epilogue -> Sachi's house -> Ch3 opener (was: Credits)
+    if (!sc.includes('Battle') && fights > 3) { const lines = await page.evaluate(() => { const m = window.__game.scene.getScene('Map'); return (m?.msg?.win?.children?.list || []).filter(c => c.text).map(c => c.text).join('|'); }); if (lines.includes('Retry')) { await shot('83-retry-prompt'); console.log('RETRY PROMPT'); await press(page, 'Enter', 60); await sleep(2500); await shot('84-after-retry'); console.log('after retry', await page.evaluate(() => JSON.stringify({ map: window.__S.$.map, hp: window.__S.$.party.map(p => window.__S.$.actors[p].hp) }))); break; } }
     if (sc.includes('Battle')) { fights++; if (fights > 40 && !cheated) { } 
       const inb = await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); return b?.B ? [b.B.round, b.B.foes[0].hp] : null; });
       if (false) { await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); b.B.foes[0].hp = 20; b.B.foes[0].dispHp = 20; }); cheated = true; }
@@ -23,6 +24,7 @@ try {
     if (!sawRetry && (await page.evaluate(() => (window.__S.$.fades || 0) > 0 || !!window.__retryShown))) sawRetry = true;
   }
   console.log('scenes', await activeScenes(page));
+  const v = flow.verdict(); console.log((v.ok ? 'PASS' : 'FAIL') + ' Bell-Keeper aftermath flow', JSON.stringify(v.seen)); if (!v.ok) process.exitCode = 1;
   await shot('82-end');
   console.log('errors', errors.filter((e) => !e.includes('willReadFrequently')).slice(0, 6));
 } catch (e) { console.log('FAIL', e.message); console.log(errors.filter((e) => !e.includes('willReadFrequently')).slice(0, 8)); await shot('8x-fail'); }
