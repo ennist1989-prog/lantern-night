@@ -17,6 +17,11 @@ r['unlock'] = [u for u in r.get('unlock', []) if 'Kaze joins' not in u]
 # L5 retune: after Gale Cut moved to L5 (#5) and the #15/#16 fixes, Mio+Kaze won ~87-92% at L5, so the boss was
 # no longer a test. ATK 21 -> 25 lands L5 at ~66-69%, L6 ~95%, L7 ~99% (seeded, n=1000, auto and shift bots).
 bk['stats']['atk'] = 25
+# Ch3 Kappa Toll-Keeper retune: Dish Splash (MAT, Tide magic, every turn) out-damaged Mio+Kaze's MDF at L8, so the bout
+# was a coin-flip cliff (5-9% at L8 Near, ~62% at L9). MAT 26 -> 22 softens the splash; DEF 12 -> 14 keeps L9 (Crossing
+# recLevel) in the 55-65% band instead of letting it climb. HP/ATK/skills unchanged; paying the toll / Offering a cucumber
+# is still the easy out. Seeded n=300 sims (Mio+Kaze, default gear): /workspace/ln-pm/kappa-retune-spec.md.
+kt = bosses['kappa_toll']; kt['stats']['mat'] = 22; kt['stats']['def'] = 14
 dump(bp, bosses)
 
 # Well Spirit (Ido-no-Kami): the Old Well key used to be a cutscene. It is now a short Parley battle. It is a slice-only
@@ -42,4 +47,4 @@ troops['tr_well_spirit'] = {'id': 'tr_well_spirit', 'name': 'Ido-no-Kami', 'enem
 # Battle art: reuse the Dust Wisp crop (tinted water-blue and drawn larger at runtime); boot loads mon/<id>.png.
 MON = os.path.join(ROOT, 'public', 'assets', 'mon'); shutil.copyfile(os.path.join(MON, 'dust_wisp.png'), os.path.join(MON, 'well_spirit.png'))
 dump(ep, enemies); dump(tp, troops)
-print('balance patches ok: warden mhp', w['stats']['mhp'], 'exp', w['exp'], '| bell_keeper atk', bk['stats']['atk'], '| bell_keeper rewards', r['items'], r['unlock'])
+print('balance patches ok: warden mhp', w['stats']['mhp'], 'exp', w['exp'], '| bell_keeper atk', bk['stats']['atk'], '| bell_keeper rewards', r['items'], r['unlock'], '| kappa_toll', kt['stats'])
