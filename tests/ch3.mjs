@@ -1,8 +1,8 @@
 // Ch3: The Whispering Forest — story flow through all four maps (dialogue auto-advanced), real boss battles, shops, Status fit, screenshots.
-import { launch, sleep, newGame, waitScene, teleport, press, mashUntil } from './lib.mjs';
+import { launch, sleep, newGame, waitScene, teleport, press, mashUntil, SSDIR } from './lib.mjs';
 import { waitInput } from './bdrive.mjs';
 import fs from 'fs';
-const DIR = process.env.SS ? process.env.SS + '/ch3' : '/workspace/lantern-night/screenshots/ch3'; fs.mkdirSync(DIR, { recursive: true });
+const DIR = SSDIR + '/ch3'; fs.mkdirSync(DIR, { recursive: true });
 const { browser, page, errors } = await launch(process.argv[2]);
 let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 const shot = (n) => page.screenshot({ path: `${DIR}/${n}.png` });

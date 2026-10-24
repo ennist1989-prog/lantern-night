@@ -4,7 +4,7 @@ import { chromium } from 'playwright-core';
 import { sleep, waitScene, newGame, mashUntil } from './lib.mjs';
 import { waitInput } from './bdrive.mjs';
 const base = process.argv[2] || 'http://127.0.0.1:8138/'; const out = process.argv[3] || 'shots/art'; const troops = process.argv.slice(4);
-const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const ctx = await browser.newContext({ viewport: { width: 816, height: 624 } }); const blocked = [];
 await ctx.route(/sentry\.io|ingest\.sentry|sentry-cdn|\/envelope\//i, (r) => { blocked.push(r.request().url()); r.abort(); });
 const page = await ctx.newPage(); const errors = [], bad = [];

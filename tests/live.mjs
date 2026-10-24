@@ -1,5 +1,5 @@
-import { launch, press, hold, sleep, waitScene, mashUntil, activeScenes } from './lib.mjs';
-const SS = '/workspace/lantern-night/screenshots'; const URL = 'https://ennist1989-prog.github.io/lantern-night/';
+import { launch, press, hold, sleep, waitScene, mashUntil, activeScenes, SSDIR } from './lib.mjs';
+const SS = SSDIR; const URL = 'https://ennist1989-prog.github.io/lantern-night/';
 const { browser, page, errors } = await launch(URL);
 try {
   await waitScene(page, 'Title', 60000); await sleep(1500); await page.screenshot({ path: SS + '/100-live-title.png' }); console.log('title ok');

@@ -1,6 +1,6 @@
 // Slice integration: locks on real maps, field-spell targets, key-item gating
-import { launch, press, sleep, newGame, mashUntil, teleport } from './lib.mjs';
-const SS = '/workspace/lantern-night/screenshots';
+import { launch, press, sleep, newGame, mashUntil, teleport, SSDIR } from './lib.mjs';
+const SS = SSDIR;
 const { browser, page, errors } = await launch();
 let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 
@@ -30,7 +30,7 @@ try {
   const kp0 = await keeperPage(); await page.evaluate(() => { window.__S.$.gain('shrine_bell_clapper', 1); mapScene().refreshEvents(); }); const kp1 = await keeperPage();
   ok(kp0 === 0 && kp1 === 1, `Keeper arena gated by clapper (page ${kp0} -> ${kp1})`);
   // ---- field spell: Clearing Gust on the sand drift (summit, Near)
-  await page.evaluate(() => { window.__S.$.setSw('drift_gone', false); mapScene().refreshEvents(); }); await teleport(page, 6, 4, 4, 'up');
+  await page.evaluate(() => { window.__S.$.repel = 999; window.__S.$.setSw('drift_gone', false); mapScene().refreshEvents(); }); await teleport(page, 6, 4, 4, 'up');   // repel: a random encounter on arrival used to eat the cast (CI flake)
   await page.screenshot({ path: SS + '/n3-sand.png' });
   const gusted = await page.evaluate(() => { const { $, Field } = window.__S; const r = Field.castField('kaze', 'sp_gust_clear'); window.__fa = mapScene().fieldAction(r.action); return r.ok; });
   await mash(() => window.__S.$.sw('drift_gone'), null, 40); ok(gusted && await page.evaluate(() => window.__S.$.sw('drift_gone')), 'Clearing Gust clears the sand drift (field spell on the map)');

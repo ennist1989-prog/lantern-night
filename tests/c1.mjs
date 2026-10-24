@@ -1,7 +1,7 @@
 // Cursor sweep: screenshot every selectable screen; verifies shared heartbeat cursor is drawn (pixel check on title at first load)
-import { launch, press, sleep, newGame, mashUntil, waitScene, teleport } from './lib.mjs';
+import { launch, press, sleep, newGame, mashUntil, waitScene, teleport, SSDIR } from './lib.mjs';
 import { execSync } from 'child_process';
-const SS = '/workspace/lantern-night/screenshots/cursor'; execSync('mkdir -p ' + SS);
+const SS = SSDIR + '/cursor'; execSync('mkdir -p ' + SS);
 const { browser, page, errors } = await launch();
 let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 const shot = (n) => page.screenshot({ path: `${SS}/${n}.png` });
@@ -42,16 +42,18 @@ try {
   await sleep(600);
   // battle: commands, skill list, targets
   await page.evaluate(() => { window.__S.$.realm = 'far'; window.__bp = window.__game.scene.getScene('Map').startBattle('tr_dust_wisp_dust_wisp', { random: true, zone: 'z01' }); });
-  await waitScene(page, 'Battle', 15000); await sleep(1800); await shot('40-battle-partycmd');
-  await press(page, 'Enter'); await sleep(600); await shot('41-battle-actorcmd');
+  // wait for the actual command windows instead of fixed sleeps (the battle intro is slower on a loaded box / CI with software GL)
+  const waitCmd = (first) => page.waitForFunction((first) => { const b = window.__game.scene.getScene('Battle'); return !!b && b.cmdWin?.active && b.cmdWin.visible && b.cmdWin.items?.[0]?.label === first; }, first, { timeout: 30000, polling: 100 });
+  await waitScene(page, 'Battle', 15000); await waitCmd('Fight'); await sleep(300); await shot('40-battle-partycmd');
+  await press(page, 'Enter'); await waitCmd('Attack'); await sleep(300); await shot('41-battle-actorcmd');
   ok(await cursorOn('Battle', 'cmdWin'), 'battle command cursor drawn');
-  await press(page, 'Enter'); await sleep(500); await shot('42-battle-target-enemy');
+  await press(page, 'Enter'); await page.waitForFunction(() => window.__game.scene.getScene('Battle').cursorTxt.visible, null, { timeout: 5000, polling: 100 }).catch(() => {}); await sleep(200); await shot('42-battle-target-enemy');
   ok(await page.evaluate(() => window.__game.scene.getScene('Battle').cursorTxt.visible), 'enemy target cursor visible');
-  await back(); await press(page, 'ArrowDown'); await press(page, 'Enter'); await sleep(500); await shot('43-battle-skills');
-  await back(); await sleep(300);
+  await back(); await waitCmd('Attack'); await press(page, 'ArrowDown'); await press(page, 'Enter'); await sleep(500); await shot('43-battle-skills');
+  await back(); await waitCmd('Attack'); await sleep(200);
   // item -> ally target
   const labels = await page.evaluate(() => window.__game.scene.getScene('Battle').cmdWin.items.map((i) => i.label)); const ii = labels.indexOf('Item');
-  for (let k = 1; k < ii; k++) await press(page, 'ArrowDown', 40); await press(page, 'Enter'); await sleep(500); await shot('44-battle-items'); await press(page, 'Enter'); await sleep(500); await shot('45-battle-target-ally');
+  for (let k = 1; k < ii; k++) await press(page, 'ArrowDown', 40); await press(page, 'Enter'); await sleep(500); await shot('44-battle-items'); await press(page, 'Enter'); await page.waitForFunction(() => window.__game.scene.getScene('Battle').cursorTxt.visible, null, { timeout: 5000, polling: 100 }).catch(() => {}); await sleep(200); await shot('45-battle-target-ally');
   ok(await page.evaluate(() => window.__game.scene.getScene('Battle').cursorTxt.visible), 'ally target cursor visible');
   console.log('errors', errors.filter((e) => !/willReadFrequently|Canvas2D/.test(e)).slice(0, 5));
 } catch (e) { console.log('EXC', e.message); fails++; await shot('99-fail'); }

@@ -5,3 +5,4 @@ live/
 *.zip
 .env
 .env.local
+test-results/

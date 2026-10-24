@@ -1,8 +1,8 @@
 // New Game blackout: capture frames from pressing New Game until the first narration ends; no house/map pixels may show before the intro text.
-import { launch, press, sleep, waitScene } from './lib.mjs';
+import { launch, press, sleep, waitScene, SSDIR } from './lib.mjs';
 import { execSync } from 'child_process'; import fs from 'fs';
 const tag = process.argv[2] || 'after'; const url = process.argv[3];
-const DIR = `/workspace/lantern-night/screenshots/newgame-${tag}`; execSync(`rm -rf ${DIR} && mkdir -p ${DIR}`);
+const DIR = `${SSDIR}/newgame-${tag}`; execSync(`rm -rf ${DIR} && mkdir -p ${DIR}`);
 const { browser, page, errors } = await launch(url);
 let fails = 0;
 try {

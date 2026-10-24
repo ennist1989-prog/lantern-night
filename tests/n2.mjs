@@ -1,6 +1,6 @@
 // Menu UI screens: Item / Skill / Equip / Key Items / Forge / Bonds + field use; screenshots to screenshots/n2-*.png
-import { launch, press, sleep, newGame, mashUntil, activeScenes, waitScene } from './lib.mjs';
-const SS = '/workspace/lantern-night/screenshots';
+import { launch, press, sleep, newGame, mashUntil, activeScenes, waitScene, SSDIR } from './lib.mjs';
+const SS = SSDIR;
 const { browser, page, errors } = await launch();
 let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 const cmdLabels = () => page.evaluate(() => window.__game.scene.getScene('Menu').cmd.items.map((i) => i.label));

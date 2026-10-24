@@ -1,6 +1,6 @@
-import { launch, sleep, press, waitScene, activeScenes, newGame, mashUntil, teleport } from './lib.mjs';
+import { launch, sleep, press, waitScene, activeScenes, newGame, mashUntil, teleport, SSDIR } from './lib.mjs';
 const { browser, page, errors } = await launch();
-const shot = (n) => page.screenshot({ path: `screenshots/${n}.png` });
+const shot = (n) => page.screenshot({ path: `${SSDIR}/${n}.png` });
 const cases = JSON.parse(process.argv[2] || '[]'); // [[troop, miolv, kazelv, daigolv, auto]]
 try {
   await newGame(page);
