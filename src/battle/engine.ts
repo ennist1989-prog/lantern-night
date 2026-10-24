@@ -437,7 +437,7 @@ export class Battle {
   doSend(b: Battler, x: Battler, ev: Ev[]) {
     if (!this.canSend(x)) { ev.push({ t: 'sendfail', target: x.uid }); return; }
     x.gone = 'sent'; this.sentList.push(x); const hollow = x.kind === 'hollowed' || x.fragment || x.def?.parley?.fragment; if (hollow || x.boss) { this.fragments += x.boss ? (x.def.rewards?.fragment || 1) + (x.calm ? (x.def.peaceful_rewards?.fragment || 0) : 0) : 1; } ev.push({ t: 'send', target: x.uid, fragment: !!hollow });
-    if (x.boss) this.peaceful = true; if (x.tell) { x.tell = null; } this.afterAction(ev);
+    if (x.boss || this.troop?.peaceful) this.peaceful = true; if (x.tell) { x.tell = null; } this.afterAction(ev);
   }
   peaceful = false; goldPct = 0;
   inviteChance(x: Battler) {

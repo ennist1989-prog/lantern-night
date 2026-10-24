@@ -128,7 +128,7 @@ def build_well():
         say('daigo', 'Daigo', '(He picks up his hammer and scrambles up the rope ladder.)'),
         {'c': 'me', 'name': 'secret'}, sw('daigo_joined'), quest('main', 4), {'c': 'erase'}])], realm='near')
     # Well Spirit encounter trigger
-    # Key only after Kaze + Daigo (story order); nsw:key_got prevents re-grant.
+    # Key only after Kaze + Daigo (story order); nsw:key_got prevents re-grant. The key comes from the Parley battle below.
     # Page order: soft-block first, grant last (runtime picks the last matching page).
     m.event(25, 15, [
         page(cond={'nsw': 'key_got'}, trigger='touch', through=True, list=[
@@ -140,16 +140,25 @@ def build_well():
         {'c': 'checkpoint', 'boss': True},
         say(None, None, 'A cold mist curls through the chamber. Dark water collects into a shape: a spirit with a lantern for a heart.'),
         say(None, 'Ido-no-Kami', '…It was here. I kept it. Nobody came. Nobody drew water. Nobody sang to me.'),
-        say('mio', 'Mio', 'It’s grieving. Don’t strike unless I say. We can Parley with it. Soothe, Remember, and then Send it on.'),
+        say('mio', 'Mio', 'It’s grieving. Don’t strike unless I say. We can Parley with it: Remember, Remember again, and then Send it on.'),
         IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'It isn’t angry, Mio. It’s just… waiting. Like I did.')]),
-        say('mio', 'Mio', 'I’m sorry nobody came. I’m here now. Would you like to hear the festival song?'),
-        {'c': 'flash', 'color': 0xcff6ff, 'ms': 500}, {'c': 'se', 'name': 'magic2'},
-        say(None, None, 'Mio hums the old lantern song. The Lantern warms in her hands, and the dark water stills.'),
-        say(None, 'Ido-no-Kami', 'The old lantern… still burns somewhere. Thank you. Take the key. Ring the Bell for me.'),
-        {'c': 'me', 'name': 'fanfare'}, {'c': 'item', 'id': 'shrine_key'}, {'c': 'exp', 'n': 25}, sw('key_got'), {'c': 'chapter', 'n': 2}, quest('main', 5),
-        IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Gentle beats loud. Remember that when we meet the Bell-Keeper.')],
-           [say('mio', 'Mio', 'Gentle… Remember that, for whatever waits at the Bell.')]),
-        tut('exit', 'Stairs near the south chamber lead back up to the village.', 5000)])])
+        # Parley battle. Win (Send or defeat) grants the key; fleeing steps back so the touch can be retried; losing
+        # offers the boss checkpoint Retry (mapscene handleDefeat). No outcome leaves the key unreachable.
+        # The fight pays the formula 11 EXP (L4 rare); +14 scripted keeps the old 25 total so Bell-Keeper arrival levels hold.
+        {'c': 'battle', 'troop': 'tr_well_spirit', 'boss': True, 'noEscape': False,
+         'win': [IF({'v': ['battle_peaceful', '==', 1]}, [
+                     say('mio', 'Mio', 'I’m sorry nobody came. I’m here now. Would you like to hear the festival song?'),
+                     {'c': 'flash', 'color': 0xcff6ff, 'ms': 500}, {'c': 'se', 'name': 'magic2'},
+                     say(None, None, 'Mio hums the old lantern song. The Lantern warms in her hands, and the dark water stills.'),
+                     say(None, 'Ido-no-Kami', 'The old lantern… still burns somewhere. Thank you. Take the key. Ring the Bell for me.')],
+                    [say(None, None, 'The spirit comes apart like rain on still water. Something small and heavy sinks to the well floor.'),
+                     say('mio', 'Mio', '…I should have listened longer. I’m sorry. I’ll still ring the Bell for you.')]),
+                 {'c': 'me', 'name': 'fanfare'}, {'c': 'item', 'id': 'shrine_key'}, {'c': 'exp', 'n': 14}, sw('key_got'), {'c': 'chapter', 'n': 2}, quest('main', 5),
+                 IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Gentle beats loud. Remember that when we meet the Bell-Keeper.')],
+                    [say('mio', 'Mio', 'Gentle… Remember that, for whatever waits at the Bell.')]),
+                 tut('exit', 'Stairs near the south chamber lead back up to the village.', 5000)],
+         'escape': [say('mio', 'Mio', 'Not like this. I’ll come back when I know what to say.'), {'c': 'move', 'route': ['left']}],
+         'lose': [{'c': 'abort'}]}])])
     m.obj('both', 'stairs_up', 20, 15, fw=1, block=False)
     m.event(20, 15, [page(trigger='touch', through=True, list=[{'c': 'transfer', 'map': 1, 'x': 5, 'y': 24, 'dir': 'up', 'se': 'grass'}])])
     # Far enemies
