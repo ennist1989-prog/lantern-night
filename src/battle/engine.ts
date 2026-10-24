@@ -17,6 +17,8 @@ export interface Battler {
 export interface Ctx { warmth?: number; realm: Realm; lumen: number; lumenMax: number; difficulty: 'gentle' | 'standard' | 'tough'; items: Record<string, number>; itemDB: Record<string, any>; pity: Record<string, number>; flags: Record<string, any>; recLevel?: number; rng?: () => number; ward?: boolean; teachSend?: boolean; }
 const rint = (rng: () => number, n: number) => Math.floor(rng() * n);
 let UID = 1;
+/** Lumen Auto keeps in hand in ordinary fights before paying for a Near→Far Shift. */
+export const AUTO_LUMEN_RESERVE = 10;
 const PARAMS = ['mhp', 'msp', 'atk', 'def', 'mat', 'mdf', 'agi'];
 export const alive = (b: Battler) => b.hp > 0 && !b.gone;
 export function levelStats(e: any, lv: number) {
@@ -465,7 +467,9 @@ export class Battle {
     const heal = b.skills.map((id) => SPEC.skills[id]).find((s) => s && s.id && (s.effects || []).some((e: any) => e.op === 'heal') && s.scope === 'one_ally' && b.sp >= (s.cost.sp || 0));
     if (heal && weakest.hp / weakest.mhp < 0.45) return { type: 'skill', skill: heal.id, targets: [weakest.uid] };
     // Mio: Shift when another shore has a strictly better weakness for a damaging party skill
-    if (b.actorId === 'mio' && this.canUse(b, 'mio_shift').ok) {
+    // Ordinary fights keep a Lumen reserve: Auto only pays the 10◈ Near→Far Shift while at least AUTO_LUMEN_RESERVE would be left (boss fights unchanged).
+    const reserveOk = foes.some((f) => f.boss) || this.realm === 'far' || this.lumen >= 10 + AUTO_LUMEN_RESERVE;
+    if (b.actorId === 'mio' && reserveOk && this.canUse(b, 'mio_shift').ok) {
       const other: Realm = this.realm === 'near' ? 'far' : 'near';
       const partySkills = this.party.filter((p) => p.hp > 0).flatMap((p) => p.skills.map((id) => SPEC.skills[id]).filter((s) => s && s.damage && s.element));
       let bestHere = 0, bestOther = 0;
