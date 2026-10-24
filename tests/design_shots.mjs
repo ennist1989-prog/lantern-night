@@ -41,6 +41,31 @@ SC.bk = async () => {
   const foe = await page.evaluate(() => { const B = window.__game.scene.getScene('Battle').B; const f = B.foes.find((x) => x.boss); return { name: f.name, mhp: f.mhp, atk: f.base.atk, specAtk: window.__S.SPEC.bosses.bell_keeper.stats.atk }; });
   return { foe, shots: [p] };
 };
+// ---- Well Spirit Parley battle: every outcome returns control; only win/Send grants the key
+const wsSetup = async () => {
+  await teleport(page, 4, 24, 15, 'right'); await page.evaluate(() => { const $ = window.__S.$; $.setSw('kaze_joined', true); $.setSw('daigo_joined', true); $.setSw('key_got', false); delete $.items.shrine_key; if (!$.party.includes('kaze')) $.addActor('kaze'); window.__game.scene.getScene('Map').refreshEvents(); });
+  await sleep(300); await page.keyboard.down('ArrowRight'); await sleep(260); await page.keyboard.up('ArrowRight');
+  const seen = await talkUntil(() => window.__game.scene.getScenes(true).some((s) => s.sys.settings.key === 'Battle'), 40); await sleep(2500); return seen;
+};
+const B_ = (fn) => page.evaluate(fn);
+const wsAfter = async (max = 120, snapRe = null, snapName = '') => { const seen = []; let snapped = null; for (let i = 0; i < max; i++) { const s = await st(); if (!(await scenes()).includes('Battle') && !s.busy && !s.msg) break; const t = (await texts('Map')).join(' | '); if (t && seen[seen.length - 1] !== t) seen.push(t.slice(0, 160)); if (snapRe && !snapped && snapRe.test(t)) snapped = await shot(snapName); await press('Enter', 50); await sleep(150); } await sleep(400);
+  const r = await page.evaluate(() => { const $ = window.__S.$; const m = window.__game.scene.getScene('Map'); return { key: !!$.items.shrine_key, key_got: $.sw('key_got'), peaceful: $.v('battle_peaceful'), result: $.v('battle_result'), pos: [m.player.tx, m.player.ty], busy: !!m.interp.busy, quest: $.questStage('main') }; }); return { ...r, seen, snapped }; };
+const mioFoe = () => B_(() => { const B = window.__game.scene.getScene('Battle').B; return { foe: B.foes[0].name, mhp: B.foes[0].mhp, temper: B.foes[0].temper }; });
+SC.well_calm = async () => { const intro = await wsSetup(); const foe = await mioFoe(); const p1 = await shot('wellspirit-battle');
+  const calm = await B_(() => { const B = window.__game.scene.getScene('Battle').B; const m = B.party.find((p) => p.actorId === 'mio'); const f = B.foes[0]; const ev = []; B.parleyVerb(m, f, 'remember', ev); const a = f.calm; B.parleyVerb(m, f, 'remember', ev); const b = f.calm; const orig = B.act.bind(B); B.act = (x) => { if (x.side === 'party') x.action = x.actorId === 'mio' && f.calm ? { type: 'skill', skill: 'mio_send', targets: [f.uid] } : { type: 'guard' }; return orig(x); }; return { calmAfter1: a, calmAfter2: b, mood: f.mood }; });
+  const r = await wsAfter(120, /old lantern song|still burns/, 'wellspirit-calm-song'); const p2 = r.snapped; const p3 = await shot('wellspirit-calm-after'); return { intro: intro.slice(-3), foe, calm, ...r, shots: [p1, p2, p3] }; };
+SC.well_fight = async () => { await wsSetup(); await B_(() => { const B = window.__game.scene.getScene('Battle').B; B.foes[0].hp = 1; }); const r = await wsAfter(); const p = await shot('wellspirit-fight-after'); return { ...r, shots: [p] }; };
+SC.well_flee = async () => { await wsSetup(); await B_(() => { const B = window.__game.scene.getScene('Battle').B; B.tryFlee = function () { this.ended = 'escape'; return { ok: true, ev: [] }; }; });
+  await press('ArrowDown'); await sleep(200); await press('Enter'); await sleep(2500); const r = await wsAfter(40); const p = await shot('wellspirit-flee-after');
+  // re-touch: the spirit is still there
+  await page.keyboard.down('ArrowRight'); await sleep(260); await page.keyboard.up('ArrowRight'); await talkUntil(() => window.__game.scene.getScenes(true).some((s) => s.sys.settings.key === 'Battle'), 40); const again = (await scenes()).includes('Battle');
+  if (again) { await sleep(2500); await B_(() => { window.__game.scene.getScene('Battle').B.foes[0].hp = 1; }); } const r2 = await wsAfter(); return { afterFlee: r, retouchStartsBattle: again, afterRetry: r2, shots: [p] }; };
+SC.well_lose = async () => { await wsSetup(); await B_(() => { const B = window.__game.scene.getScene('Battle').B; for (const p of B.party) p.hp = 1; B.foes[0].base.atk = 999; B.foes[0].base.mat = 999; });
+  const seen = []; for (let i = 0; i < 120 && !(await texts('Map')).some((t) => /Retry the fight/.test(t)); i++) { await press('Enter', 50); await sleep(150); } const p1 = await shot('wellspirit-lose-retry');
+  const offered = (await texts('Map')).some((t) => /Retry the fight/.test(t)); await press('Enter'); await sleep(3000); const r = await wsAfter(20);
+  await page.keyboard.down('ArrowLeft'); await sleep(260); await page.keyboard.up('ArrowLeft'); await sleep(400); await page.keyboard.down('ArrowRight'); await sleep(260); await page.keyboard.up('ArrowRight');
+  await talkUntil(() => window.__game.scene.getScenes(true).some((s) => s.sys.settings.key === 'Battle'), 40); const again = (await scenes()).includes('Battle'); if (again) { await sleep(2500); await B_(() => { window.__game.scene.getScene('Battle').B.foes[0].hp = 1; }); }
+  const r2 = await wsAfter(); return { retryOffered: offered, afterRetry: r, retouchStartsBattle: again, final: r2, seen, shots: [p1] }; };
 export function register(name, fn) { SC[name] = fn; }
 const extra = process.env.EXTRA; if (extra) await import(extra);
 await page.goto(base); await newGame(page); await mashUntil(page, () => window.__S.$.sw('intro_done') && !window.__game.scene.getScene('Map').interp.busy, null, 120);
