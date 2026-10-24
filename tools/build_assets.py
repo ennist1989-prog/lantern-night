@@ -22,6 +22,7 @@ shutil.rmtree(O, ignore_errors=True); os.makedirs(O)
 cp("Backgrounds/Tilesets/TilesetFloor.png", "tiles/floor.png")
 cp("Backgrounds/Tilesets/Interior/TilesetInteriorFloor.png", "tiles/ifloor.png")
 cp("Backgrounds/Tilesets/Interior/TilesetWallSimple.png", "tiles/wallsimple.png")
+cp("Backgrounds/Tilesets/TilesetWater.png", "tiles/water.png")
 
 # ---------- object atlas ----------
 ims = []

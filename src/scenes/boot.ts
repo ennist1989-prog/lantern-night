@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { loadDatabase, DB } from '../core/db';
 import { W, H, FONT } from '../ui/windows';
-const CHARS = 'mio kaze daigo sachi elder ghostman villager1 villager2 villager3 villager4 woman child priest keeper spirit statue eggboy smith noble ghostgirl skeleton kettle wisp wisp2 slime mouse mouse2 lantern lantern2 tsubaki'.split(' ');
+const CHARS = 'mio kaze daigo sachi elder ghostman villager1 villager2 villager3 villager4 woman child priest keeper spirit statue eggboy smith noble ghostgirl skeleton kettle wisp wisp2 slime mouse mouse2 lantern lantern2 oto kappa rustle hisa tsubaki'.split(' ');
 const FACES = CHARS.concat(['tengu', 'gspirit', 'tsubaki_grief', 'tsubaki_anger', 'tsubaki_resolve']);
 /** Art/audio that may not be delivered yet (Tsubaki asset pack, final-boss BGM). These are only queued when
  *  assets/manifest.json (written by tools/art_custom.py) lists them, so a missing file never 404s; create() then
@@ -20,7 +20,7 @@ export class BootScene extends Phaser.Scene {
     this.add.text(W / 2, H / 2 - 40, 'Lantern Night', { fontFamily: FONT, fontSize: '32px', color: '#ffe9a0' }).setOrigin(0.5);
     this.load.on('progress', (p: number) => { bar.width = 400 * p; });
     const L = this.load; L.setPath('assets/'); const dataPath = (u: string) => u; void dataPath;
-    ['floor', 'ifloor', 'wallsimple'].forEach((n) => L.image('tile_' + n, `tiles/${n}.png`));
+    ['floor', 'ifloor', 'wallsimple', 'water'].forEach((n) => L.image('tile_' + n, `tiles/${n}.png`));
     L.image('objects', 'objects.png'); L.json('objectsmeta', 'objects.json'); L.json('iconsmeta', 'icons.json'); L.json('icons2meta', 'icons2.json'); L.spritesheet('icons2', 'icons2.png', { frameWidth: 34, frameHeight: 34 }); L.spritesheet('icons', 'icons.png', { frameWidth: 24, frameHeight: 24 });
     L.image('windowskin', 'ui/windowskin.png');
     CHARS.filter((c) => !isOpt('chars', c)).forEach((c) => L.spritesheet('char_' + c, `chars/${c}.png`, { frameWidth: 16, frameHeight: 16 }));

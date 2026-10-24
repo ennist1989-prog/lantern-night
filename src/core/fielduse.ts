@@ -35,20 +35,23 @@ export function useItemGlobal(id: string): UseResult {
   return { ok: false };
 }
 // ---------------------------------------------------------------- field spells
-export const fieldSpells = (actorId: string) => $.actors[actorId].skills.filter((k) => SPEC.skills[k]?.type === 'field');
+/** Field spells: type 'field', or any skill with a `field` block (e.g. Anchor, which also works in battle). */
+export const isFieldSkill = (sk: any) => !!sk && (sk.type === 'field' || !!sk.field);
+export const fieldCost = (sk: any) => sk.field?.cost || sk.cost || {};
+export const fieldSpells = (actorId: string) => $.actors[actorId].skills.filter((k) => isFieldSkill(SPEC.skills[k]));
 export function canCastField(actorId: string, sid: string): UseResult {
   const sk = SPEC.skills[sid]; const a = $.actors[actorId]; if (!sk) return { ok: false };
-  if (a.sp < (sk.cost.sp || 0)) return { ok: false, msg: 'Not enough SP.' }; if ((sk.cost.lumen || 0) > $.lumen) return { ok: false, msg: 'Not enough Lumen.' }; return { ok: true };
+  const c = fieldCost(sk); if (a.sp < (c.sp || 0)) return { ok: false, msg: 'Not enough SP.' }; if ((c.lumen || 0) > $.lumen) return { ok: false, msg: 'Not enough Lumen.' }; return { ok: true };
 }
 export function castField(actorId: string, sid: string): UseResult {
   const sk = SPEC.skills[sid]; const a = $.actors[actorId]; const f = sk.field || {}; const chk = canCastField(actorId, sid); if (!chk.ok) return chk;
-  const pay = () => { a.sp -= sk.cost.sp || 0; $.lumen = Math.max(0, $.lumen - (sk.cost.lumen || 0)); };
+  const fc = fieldCost(sk); const pay = () => { a.sp -= fc.sp || 0; $.lumen = Math.max(0, $.lumen - (fc.lumen || 0)); };
   switch (f.effect) {
     case 'repel': pay(); $.repel = Math.max($.repel, f.steps || 40); return { ok: true, msg: `${sk.name}: no wandering spirits for ${f.steps || 40} steps.` };
     case 'warp': { if (!$.litPost) return { ok: false, msg: 'You have not lit a Lantern Post yet.' }; if ((DB.system.noWarp || []).includes($.map.id)) return { ok: false, msg: 'Something here refuses to let you leave.' }; pay(); return { ok: true, action: { kind: 'warp' } }; }
     case 'stealth': pay(); $.buffs.stealth = f.seconds || 10; return { ok: true, msg: `${sk.name}: spirits lose track of you for ${f.seconds || 10}s.` };
     case 'light': pay(); $.buffs.light = f.seconds || 180; return { ok: true, msg: `${sk.name}: the lamplight swells.` };
-    default: return { ok: true, action: { kind: 'tile', tile: f.tile, effect: f.effect, range: f.range || 1, realm: f.realm || 'both', spell: sid, actor: actorId, pay: { sp: sk.cost.sp || 0, lumen: sk.cost.lumen || 0 } } };
+    default: return { ok: true, action: { kind: 'tile', tile: f.tile, effect: f.effect, range: f.range || 1, realm: f.realm || 'both', spell: sid, actor: actorId, pay: { sp: fc.sp || 0, lumen: fc.lumen || 0 } } };
   }
 }
 /** Called by the map once a tile spell found a target. */

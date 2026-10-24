@@ -12,7 +12,7 @@ import { MessageSystem } from '../ui/message';
 import { Char, TS, Dir, DV, OPP } from './character';
 import { Interpreter } from './interpreter';
 import { recolorCanvas, farTexture } from './recolor';
-const SHEETS = ['floor', 'ifloor', 'wallsimple'];
+const SHEETS = ['floor', 'ifloor', 'wallsimple', 'water'];
 export interface GEvent { id: number; data: any; char: Char; page: any | null; pageIdx: number; wander: number; erased: boolean; aggro: boolean; stun: number; marker: Phaser.GameObjects.Text | null; home: { x: number; y: number }; running: boolean; }
 export class MapScene extends Phaser.Scene {
   world!: Phaser.GameObjects.Container; ui!: Phaser.GameObjects.Container; fxLayer!: Phaser.GameObjects.Container; msg!: MessageSystem; fader!: Fader; interp!: Interpreter;
@@ -145,7 +145,13 @@ export class MapScene extends Phaser.Scene {
   }
   onInterpEnd() { this.refreshEvents(); }
   // ------------------------------------------------------------ passability
-  tileFree(tx: number, ty: number, realm = $.realm) { const m = this.mapData; if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) return false; return m.col[realm][ty * m.w + tx] === 0; }
+  tileFree(tx: number, ty: number, realm = $.realm) { const m = this.mapData; if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) return false; const d = this.dynAt(tx, ty, realm); if (d !== null) return d; return m.col[realm][ty * m.w + tx] === 0; }
+  /** Map `dyn` rules (mapkit dynwalk): walkability that changes with a switch, e.g. a drifting bridge held by Anchor. */
+  dynAt(tx: number, ty: number, realm: string): boolean | null {
+    const D = this.mapData.dyn; if (!D || !D.length) return null;
+    for (const r of D) { if (r.realm !== 'both' && r.realm !== realm) continue; if (!r.cells.some((c: number[]) => c[0] === tx && c[1] === ty)) continue; if (this.interp.cond(r.cond, { ev: 0, map: this.mapData.id })) return !!r.walk; }
+    return null;
+  }
   region(tx: number, ty: number) { const m = this.mapData; if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) return 0; return m.reg[ty * m.w + tx]; }
   canMove(ch: Char, d: Dir, isPlayer = false) {
     const nx = ch.tx + DV[d][0], ny = ch.ty + DV[d][1];
@@ -319,7 +325,8 @@ export class MapScene extends Phaser.Scene {
     const g = this.add.graphics().setDepth(80); this.fxLayer.add(g); const cx = sx + (this.mapOffset().x), cy = sy + this.mapOffset().y;
     const obj = { r: 0 }; const col = target === 'far' ? 0xcff6ff : 0xffe9b0;
     await new Promise<void>((res) => this.tweens.add({ targets: obj, r: 760, duration: 240 * dm, ease: 'Cubic.easeIn', onUpdate: () => { g.clear(); g.fillStyle(col, 0.92); g.fillCircle(cx, cy, obj.r); }, onComplete: () => res() }));
-    $.realm = target; if (tx !== P.tx || ty !== P.ty) { P.place(tx, ty); } this.trail = [{ x: P.tx, y: P.ty }]; this.followers.forEach((f) => f.place(P.tx, P.ty));
+    $.realm = target; for (const k of Object.keys($.switches)) if (k.startsWith('tmp_')) delete $.switches[k];   // 'tmp_' switches last only until the next Shift
+    if (tx !== P.tx || ty !== P.ty) { P.place(tx, ty); } this.trail = [{ x: P.tx, y: P.ty }]; this.followers.forEach((f) => f.place(P.tx, P.ty));
     $.map.x = P.tx; $.map.y = P.ty; this.applyRealmVisuals(); this.refreshEvents(); Audio.bgm(this.mapBgm(), { fade: 0.9 });
     this.updateCamera(true);
     if (jx) { const tr = this.add.rectangle(W / 2, H / 2, W, H, target === 'far' ? 0x9fe0ff : 0xffd9a0, 0.4).setDepth(79).setScrollFactor(0); this.tweens.add({ targets: tr, alpha: 0, duration: 900 * dm, onComplete: () => tr.destroy() }); Audio.muffle(false, 600 * dm); }

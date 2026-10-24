@@ -39,7 +39,7 @@ export class Interpreter {
         case 'msg': { await S.msg.show(c.face ?? null, c.name ?? null, c.text, c); break; }
         case 'choice': { const i = await S.msg.choice(c.opts, c.cancel ?? -1); if (c.var) $.setV(c.var, i); if (c.br && c.br[i]) await this.exec(c.br[i], ctx); break; }
         case 'if': { if (this.cond(c.cond, ctx)) await this.exec(c.then, ctx); else if (c.else) await this.exec(c.else, ctx); break; }
-        case 'set': $.setSw(c.sw, c.v !== false); S.refreshEvents(); break;
+        case 'set': $.setSw(c.sw, c.v !== false); $.refreshAllSkills(); S.refreshEvents(); break;
         case 'chapter': $.chapter = Math.max($.chapter || 1, c.n); break;   // story chapter: shops stock gear with shopChapter <= chapter; shown on save slots
         case 'var': { const cur = $.v(c.name); const v = c.v; $.setV(c.name, c.op === '+=' ? cur + v : c.op === '-=' ? cur - v : v); break; }
         case 'self': { const id = c.ev ?? ctx.ev; { const sk = $.selfKey(ctx.map ?? $.map.id, id, c.k); if (c.v === false) delete $.selfSwitches[sk]; else $.selfSwitches[sk] = true; } S.refreshEvents(); break; }

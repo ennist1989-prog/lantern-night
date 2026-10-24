@@ -7,7 +7,7 @@ os.makedirs(OUT, exist_ok=True)
 OBJ = json.load(open(os.path.join(ROOT, 'public/assets/objects.json')))
 TS = 16
 def G(sheet, col, row): return (sheet << 16) | (row << 8) | col
-FLOOR, IFLOOR, WALL = 1, 2, 3
+FLOOR, IFLOOR, WALL, WATER = 1, 2, 3, 4
 GRASS = [G(1,11,12)]*6 + [G(1,12,12), G(1,13,12), G(1,14,12)]
 PATH_O = (11, 7)
 INT_FLOOR = [G(2,1,13), G(2,2,13), G(2,1,14), G(2,2,14)]
@@ -26,7 +26,7 @@ class Map:
         self.objs = {'near': [], 'far': []}
         self.events = []; self.lights = []; self.encounter = None; self.counters = []
         self.bgm = {'near': bgm_near, 'far': bgm_far}; self.noShift = False; self._eid = 0
-        self.markers = []
+        self.markers = []; self.dyn = []
     # ---- helpers
     def i(self, x, y): return y * self.w + x
     def inb(self, x, y): return 0 <= x < self.w and 0 <= y < self.h
@@ -55,7 +55,7 @@ class Map:
         for y in range(cy - r, cy + r + 1):
             for x in range(cx - r, cx + r + 1):
                 if self.inb(x, y) and (x - cx) ** 2 + (y - cy) ** 2 <= r * r + 1: self.reg[self.i(x, y)] = v
-    def blob(self, realm, cells, origin=PATH_O, sheet=FLOOR, base=None):
+    def blob(self, realm, cells, origin=PATH_O, sheet=FLOOR, base=None, layer='g', walk=True):
         """Autotile (4-neighbour) a set of cells with the 4x4 blob block starting at origin."""
         S = set(cells); ox, oy = origin
         for (x, y) in S:
@@ -67,8 +67,8 @@ class Map:
                 c = (0, 3) if not w else (2, 3) if not e else (1, 3)
             else:
                 c = (0 if not w else 2 if not e else 1, 0 if not n else 2 if not s else 1)
-            self.tile(realm, x, y, G(sheet, ox + c[0], oy + c[1]))
-            for r in self.rs(realm): self.col[r][self.i(x, y)] = 0
+            self.tile(realm, x, y, G(sheet, ox + c[0], oy + c[1]), layer)
+            for r in self.rs(realm): self.col[r][self.i(x, y)] = 0 if walk else 1
     def obj(self, realm, name, tx, ty, fw=None, fh=1, dx=0, dy=0, block=True, flat=False, blockrect=None):
         w, h = OBJ[name][2], OBJ[name][3]
         tw = fw if fw is not None else max(1, math.ceil(w / 16))
@@ -99,12 +99,15 @@ class Map:
         self.event(x, y, [page(cond=cond, trigger='touch', list=l, through=True)], realm)
     def data(self):
         return dict(id=self.id, name=self.name, w=self.w, h=self.h, bgm=self.bgm, layers=self.layers, col=self.col, reg=self.reg,
-                    objs=self.objs, events=self.events, lights=self.lights, encounter=self.encounter, counters=self.counters, noShift=self.noShift)
+                    objs=self.objs, events=self.events, lights=self.lights, encounter=self.encounter, counters=self.counters, noShift=self.noShift, dyn=self.dyn)
+    def dynwalk(self, realm, cells, cond, walk=True):
+        """Collision that flips when an event condition holds (e.g. an Anchored bridge). Tiles stay as drawn."""
+        self.dyn.append(dict(realm=realm, cells=[list(c) for c in cells], cond=cond, walk=walk))
     def save(self):
         with open(os.path.join(OUT, 'map%03d.json' % self.id), 'w') as f: json.dump(self.data(), f, separators=(',', ':'))
     # ---- preview
     def preview(self, realm, path, debug=False):
-        sheets = {1: Image.open(os.path.join(ROOT, 'public/assets/tiles/floor.png')).convert('RGBA'), 2: Image.open(os.path.join(ROOT, 'public/assets/tiles/ifloor.png')).convert('RGBA'), 3: Image.open(os.path.join(ROOT, 'public/assets/tiles/wallsimple.png')).convert('RGBA')}
+        sheets = {1: Image.open(os.path.join(ROOT, 'public/assets/tiles/floor.png')).convert('RGBA'), 2: Image.open(os.path.join(ROOT, 'public/assets/tiles/ifloor.png')).convert('RGBA'), 3: Image.open(os.path.join(ROOT, 'public/assets/tiles/wallsimple.png')).convert('RGBA'), 4: Image.open(os.path.join(ROOT, 'public/assets/tiles/water.png')).convert('RGBA')}
         objs = Image.open(os.path.join(ROOT, 'public/assets/objects.png')).convert('RGBA')
         im = Image.new('RGBA', (self.w * TS, self.h * TS), (0, 0, 0, 255))
         for lname in ('g', 'o'):

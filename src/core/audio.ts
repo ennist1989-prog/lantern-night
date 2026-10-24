@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { Settings } from './settings';
 /** Optional BGM (see boot.ts OPTIONAL) -> track to play until it is delivered. */
 const BGM_FALLBACK: Record<string, string> = { final: 'boss' };
+/** Chapter 3+ music is fetched on first use (keeps the initial download small); tools/ch_audio.py encodes it. */
+const LAZY = new Set(['forest', 'forest_far', 'grove', 'crossing', 'crossing_far', 'willow', 'willow_far']);
 class AudioClass {
   game!: Phaser.Game; cur: Phaser.Sound.BaseSound | null = null; curName = ''; fadeTween: any = null;
   init(g: Phaser.Game) { this.game = g; }
@@ -12,6 +14,7 @@ class AudioClass {
     const old = this.cur; this.curName = name;
     const mgr = this.mgr();
     let key = 'bgm_' + name; if (!this.game.cache.audio.exists(key) && BGM_FALLBACK[name]) key = 'bgm_' + BGM_FALLBACK[name];   // optional track not delivered yet
+    if (!this.game.cache.audio.exists(key) && LAZY.has(name)) { this.lazyLoad(name, opts); }
     if (!this.game.cache.audio.exists(key)) { if (old) { old.stop(); old.destroy(); } this.cur = null; return; }
     const s = mgr.add(key, { loop: true, volume: 0 });
     this.cur = s; s.play();
@@ -31,6 +34,14 @@ class AudioClass {
       const t = ctx.currentTime; this.lp.frequency.cancelScheduledValues(t); this.lp.frequency.setValueAtTime(this.lp.frequency.value, t);
       this.lp.frequency.exponentialRampToValueAtTime(on ? 600 : 22000, t + ms / 1000);
     } catch (e) { /* ignore */ }
+  }
+  private loading = new Set<string>();
+  private lazyLoad(name: string, opts: any) {
+    if (this.loading.has(name)) return; this.loading.add(name);
+    const sc: any = this.game.scene.getScenes(true)[0]; if (!sc) return;
+    sc.load.audio('bgm_' + name, `bgm/${name}.ogg`);
+    sc.load.once('complete', () => { this.loading.delete(name); if (this.curName === name && !this.cur) { this.curName = ''; this.bgm(name, opts); } });
+    sc.load.start();
   }
   applyVol() { if (this.cur) (this.cur as any).volume = Settings.data.bgm; }
   stopBgm(fade = 0.5) { const o = this.cur; this.cur = null; this.curName = ''; if (!o) return; const sc = this.game.scene.scenes[0]; if (sc) sc.tweens.add({ targets: o, volume: 0, duration: fade * 1000, onComplete: () => { o.stop(); o.destroy(); } }); else { o.stop(); o.destroy(); } }
