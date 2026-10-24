@@ -8,6 +8,9 @@ OBJ = json.load(open(os.path.join(ROOT, 'public/assets/objects.json')))
 TS = 16
 def G(sheet, col, row): return (sheet << 16) | (row << 8) | col
 FLOOR, IFLOOR, WALL, WATER = 1, 2, 3, 4
+CH3FIX = 5   # art/custom/tiles/ch3fix.png (Ch3 Far-readability edits of pack tiles); only used when that file exists
+CH3FIX_PNG = os.path.join(ROOT, 'art/custom/tiles/ch3fix.png')
+def has_ch3fix(): return os.path.exists(CH3FIX_PNG)
 GRASS = [G(1,11,12)]*6 + [G(1,12,12), G(1,13,12), G(1,14,12)]
 PATH_O = (11, 7)
 INT_FLOOR = [G(2,1,13), G(2,2,13), G(2,1,14), G(2,2,14)]
@@ -108,6 +111,7 @@ class Map:
     # ---- preview
     def preview(self, realm, path, debug=False):
         sheets = {1: Image.open(os.path.join(ROOT, 'public/assets/tiles/floor.png')).convert('RGBA'), 2: Image.open(os.path.join(ROOT, 'public/assets/tiles/ifloor.png')).convert('RGBA'), 3: Image.open(os.path.join(ROOT, 'public/assets/tiles/wallsimple.png')).convert('RGBA'), 4: Image.open(os.path.join(ROOT, 'public/assets/tiles/water.png')).convert('RGBA')}
+        if os.path.exists(CH3FIX_PNG): sheets[CH3FIX] = Image.open(CH3FIX_PNG).convert('RGBA')
         objs = Image.open(os.path.join(ROOT, 'public/assets/objects.png')).convert('RGBA')
         im = Image.new('RGBA', (self.w * TS, self.h * TS), (0, 0, 0, 255))
         for lname in ('g', 'o'):

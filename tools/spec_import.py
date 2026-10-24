@@ -46,6 +46,13 @@ SPRITE_OVERRIDES = {
     # #7 redesign slot (Ember, straw-warden-asset-pack.md): 384x64 strip; until it lands the GiantBamboo strip stays.
     # No tint, and the Far recolour stays ON (no noFar): the Far form is the engine's #cfe8ff multiply.
     'straw_warden': {'custom': 'art/custom/boss/straw_warden.png', 'frame': [64, 64], 'n': 6, 'tint': None},
+    # Ch3 redo (ch3-art-spec.md, ch3-redo-v2): Willow Mother is a 72x72 x6 strip, exempt from the Far recolour, and the old
+    # '#6fa070' tint is dropped (it would multiply-darken the new art; the placeholder flame is already hue-shifted green).
+    # phaseStrips: boss phase name -> alternate strip in boss/ (shown while that phase is the latest one entered and, for a
+    # phase entered by a state, while the state is on; Calm always shows the base strip). A missing strip falls back to the base.
+    'willow_mother': {'custom': 'art/custom/boss/willow_mother.png', 'frame': [72, 72], 'n': 6, 'tint': None, 'noFar': True,
+                      'phaseStrips': {'Rootstorm': 'willow_mother_strained', 'Heart Break': 'willow_mother_strained'}},
+    'kappa_toll': {'phaseStrips': {'Dish Spilled': 'kappa_toll_spilled'}},
 }
 for bid, ov in SPRITE_OVERRIDES.items():
     if bid not in bosses: continue
@@ -66,7 +73,7 @@ for bid, b in bosses.items():
             if not os.path.exists(shipped): continue
             p = shipped   # pack not downloaded in this checkout: keep the shipped image but still (re)derive its meta
     if os.path.abspath(p) != os.path.abspath(os.path.join(BOSSD, bid + '.png')): shutil.copy(p, os.path.join(BOSSD, bid + '.png'))
-    meta[bid] = {**frame_meta(p, sp, custom=bool(custom)), 'sheet': bid}
+    meta[bid] = {**frame_meta(p, sp, custom=bool(custom)), 'sheet': bid, **({'fd': sp['fd']} if sp.get('fd') else {})}   # fd: frame delay (ms), battlescene uses meta.fd ?? 150
 json.dump(meta, open(os.path.join(BOSSD, 'meta.json'), 'w'))
 print('missing sprites:', missing)
 
