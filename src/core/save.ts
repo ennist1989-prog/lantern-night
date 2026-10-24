@@ -26,7 +26,8 @@ export const SaveManager = {
   any(): boolean { for (let i = 0; i <= 10; i++) if (this.read(i)) return true; return false; },
   latestSlot(): number { let best = -1, ts = 0; for (let i = 0; i <= 10; i++) { const m = this.meta(i); if (m && m.ts > ts) { ts = m.ts; best = i; } } return best; },
   snapshotString() { return JSON.stringify(snapshot()); },
-  restoreString(s: string) { const d = JSON.parse(s); $.load(d.game); },
+  // Boss Retry restores the pre-fight checkpoint; keep the loss counts so the Lantern Warmth/hint offer can appear on the retry.
+  restoreString(s: string) { const losses = { ...$.bossLosses }; const d = JSON.parse(s); $.load(d.game); for (const k in losses) $.bossLosses[k] = Math.max($.bossLosses[k] || 0, losses[k]); },
   exportSlot(slot: number) {
     const d = this.read(slot) || snapshot();
     const blob = new Blob([JSON.stringify({ game: 'lantern-night', slot, ...d }, null, 1)], { type: 'application/json' });
