@@ -70,13 +70,20 @@ try {
   const auto0 = await page.evaluate(() => { const d = window.__S.SaveManager.read(0); return d && d.game && d.game.map && d.game.map.id; });
   ok(!wipe.done && wipe.map === 112 && wipe.realm === 'near' && wipe.full && !wipe.title && wipe.mapOn && wipe.cp && auto0 === 112, 'Willow wipe -> retry at the Near Shore, healed, no title/game over, autosaved (' + JSON.stringify(wipe) + ' auto0=' + auto0 + ')');
   ok(L.some((l) => l[1] === 'Whisper Wick' && /Parley/.test(l[2] || '')), 'after the wipe the Whisper Wick points at Parley');
+  { // the wipe-retry Wick line teaches the same route as the other hints, and fits one page of the message window (face + 4 lines)
+    const WICK = 'She does not need to be beaten, little lantern. She needs to be remembered. Parley: Remember her children three times until she is Calm, then Send her home.';
+    const wl = (L.find((l) => l[1] === 'Whisper Wick' && /Parley/.test(l[2] || '')) || [])[2] || '';
+    const fit = await page.evaluate((t) => { const m = window.__game.scene.getScene('Map').msg; const hasFace = window.__game.textures.exists('face_lantern'); const tx = hasFace ? 150 : 28 + 12; const W = window.__game.scale.width; const lines = m.wrapIdx(t, W - 16 - tx - 28); return { hasFace, lines: lines.length }; }, wl);
+    ok(wl === WICK && fit.lines >= 1 && fit.lines <= 4, 'wipe-retry Whisper Wick line matches the other hints and fits one message page ' + JSON.stringify({ wl, ...fit }));
+  }
   { // every Willow hint gives the real route (Remember x3 -> Calm -> Send) and never the Marigold Petal (she has no liked item; Offer only wastes Mio's turn)
     const tip = (L.find((l) => l[1] === 'Tip' && /Willow Mother/.test(l[2] || '')) || [])[2] || '';
     const H = await page.evaluate(() => { const { DB, SPEC } = window.__S; const w = SPEC.bosses.willow_mother; return { hint: w.parleyOnly.hintText, key: w.parley.key.note, note: DB.system.notes.find((n) => n.unlock === 'willow_tip').text, boss: window.__game.scene.getScene('Battle').bossHint({ id: 'willow_mother', name: 'Willow Mother' }) }; });
     const wl = L.filter((l) => (l[1] === 'Kaze' && /grieving/.test(l[2] || '')) || l[1] === 'Whisper Wick').map((l) => l[2]);
     const all = { tip, ...H, lines: wl.join(' / ') };
     ok(!/petal|offer/i.test(JSON.stringify(all)), 'no Willow hint mentions Offer / a Marigold Petal ' + (/petal|offer/i.test(JSON.stringify(all)) ? JSON.stringify(all) : ''));
-    ok([tip, H.hint, H.key, H.note, H.boss].every((t) => /Remember/.test(t) && /Calm/.test(t) && /Send/.test(t)) && [tip, H.hint, H.key, H.note, H.boss].every((t) => /three times/.test(t)), 'Tip, in-battle hint, boss hint, Notes and key note all teach Remember three times -> Calm -> Send');
+    const wick = (L.find((l) => l[1] === 'Whisper Wick' && /Parley/.test(l[2] || '')) || [])[2] || '';
+    ok([tip, H.hint, H.key, H.note, H.boss, wick].every((t) => /Remember/.test(t) && /Calm/.test(t) && /Send/.test(t)) && [tip, H.hint, H.key, H.note, H.boss, wick].every((t) => /three times/.test(t)), 'Tip, in-battle hint, boss hint, Notes, key note and wipe-retry Wick line all teach Remember three times -> Calm -> Send');
   }
   await run(28, 4, 'near'); ok(await S('willow_done') && await page.evaluate(() => window.__S.$.has('willow_sprig')), 'Willow Mother is laid to rest on the retry (sprig)');
   L = await log(); ok(L.some((l) => l[0] === 'battle' && l[1] === 'boss_willow_mother'), 'Willow Mother fight is boss_willow_mother');
@@ -112,11 +119,13 @@ try {
       await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); b.log(window.__S.SPEC.bosses.willow_mother.parleyOnly.hintText, 0); }); await sleep(300); await shot('08_willow_hint_fit');
       // follow the advice with the real Parley skills: Mio uses Remember three times, then Send (Kaze only Guards)
       const pw = await page.evaluate(() => { const B = window.__game.scene.getScene('Battle').B; const w = B.foes.find((f) => f.boss); const mio = B.party.find((p) => p.actorId === 'mio') || B.party[0];
-        mio.sp = Math.max(mio.sp, 18); const mood = [];
+        mio.sp = Math.max(mio.sp, 18); const mood = []; if (!B.foes.some((f) => f.add && f.hp > 0 && !f.gone)) B.summon(w, 'willow_bud', 2, 3, [], true); const buds0 = B.foes.filter((f) => f.add && f.hp > 0 && !f.gone).length;
         for (let i = 0; i < 3; i++) { mio.action = { type: 'skill', skill: 'mio_remember', targets: [w.uid] }; B.act(mio); mood.push(w.calm ? 'calm' : w.mood); }
-        const calm = w.calm; const send = B.canSend(w); mio.action = { type: 'skill', skill: 'mio_send', targets: [w.uid] }; B.act(mio);
-        return { mood, calm, send, gone: w.gone, end: B.checkEnd(), budsCalm: B.foes.filter((f) => f.add && f.hp > 0 && !f.gone).every((f) => f.calm) }; });
+        const calm = w.calm; const send = B.canSend(w); const budsCalm = B.foes.filter((f) => f.add && f.hp > 0 && !f.gone).every((f) => f.calm); mio.action = { type: 'skill', skill: 'mio_send', targets: [w.uid] }; const res = B.act(mio);
+        const evs = JSON.stringify(res && res.ev ? res.ev.map((e) => e.t) : (res || []).map ? (res || []).map((e) => e.t) : []);
+        return { mood, calm, send, gone: w.gone, buds0, budsCalm, budsLeft: B.foes.filter((f) => f.add && f.hp > 0 && !f.gone).length, budsSent: B.foes.filter((f) => f.add && f.gone === 'sent').length, ended: B.ended, end: B.checkEnd(), evs }; });
       ok(pw.calm && pw.send && pw.gone === 'sent' && pw.end === 'win' && pw.budsCalm, 'Willow: following the hint (Remember x3 -> Calm -> Send) wins the battle ' + JSON.stringify(pw));
+      ok(pw.buds0 >= 1 && pw.budsLeft === 0 && pw.budsSent >= pw.buds0 && pw.ended === 'win', 'Willow: her calm buds leave with her on the Send and the battle ends right there (no extra turns) ' + JSON.stringify(pw));
     }
     await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); for (const f of b.B.foes) f.hp = 0; }); await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); b.endCheck(); });
     const t0 = Date.now(); while (Date.now() - t0 < 25000 && await page.evaluate(() => window.__game.scene.isActive('Battle'))) { await press(page, 'Enter', 50); await sleep(200); }

@@ -391,7 +391,7 @@ def build_hollow():
     # health (mapscene.handleDefeat, 'wipe') and the Whisper Wick, calling from the glade beyond, points at Parley.
     willow_wipe = {'realm': 'near', 'lines': [
         {'face': None, 'name': None, 'text': 'The hollow goes dark… and then a small, warm light flickers from the glade beyond the river.'},
-        {'face': 'lantern', 'name': 'Whisper Wick', 'text': 'She does not need to be beaten, little lantern. She needs to be remembered. Parley: Remember her children, then Send her home.'},
+        {'face': 'lantern', 'name': 'Whisper Wick', 'text': 'She does not need to be beaten, little lantern. She needs to be remembered. Parley: Remember her children three times until she is Calm, then Send her home.'},
         {'face': 'kaze', 'name': 'Kaze', 'text': 'You heard it. Words, not blades. Let’s try again.'}]}
     m.event(28, 4, [page(cond={'nsw': 'willow_done'}, g=NPC('willow', 'down', nofar=True), list=[
         say('willow', 'Willow Mother', 'Who are you? Are you one of mine? I had so many. I have forgotten their names. I sing them, and they slip into the water.'),
