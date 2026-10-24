@@ -1,4 +1,4 @@
-# Lantern Night: The Far Shore — playable slice (Chapters 1–2)
+# Lantern Night: The Far Shore — playable slice (Chapters 1–3)
 
 A browser RPG that looks and plays like an RPG Maker MV/MZ game. Phaser 4.2.1 + TypeScript + Vite, fully static.
 
