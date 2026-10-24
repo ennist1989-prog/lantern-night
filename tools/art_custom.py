@@ -14,7 +14,16 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CUSTOM = os.path.join(ROOT, 'art', 'custom')
 ASSETS = os.path.join(ROOT, 'public', 'assets')
 SKIP = {'README.md', '.gitkeep'}
-EXT = {'chars': '.png', 'faces': '.png', 'boss': '.png', 'bgm': '.ogg', 'se': '.ogg', 'me': '.ogg'}
+EXT = {'chars': '.png', 'faces': '.png', 'boss': '.png', 'tiles': '.png', 'bgm': '.ogg', 'se': '.ogg', 'me': '.ogg'}
+# art/custom/objects/<name>.png are cell overrides consumed by build_assets.py when it packs objects.png (not copied as files).
+NO_COPY = {'objects'}
+# Delivered files whose name differs from what the game loads: also copied under the old name until the repo switches over
+# (ch3-redo-v2: the Willow Mother face ships as faces/willow_final.png, the game loads faces/willow.png). The field sprite
+# chars/willow_final.png is on HOLD, so its alias only takes effect once that file is added to art/custom/chars/.
+ALIASES = {os.path.join('faces', 'willow_final.png'): os.path.join('faces', 'willow.png'),
+           os.path.join('chars', 'willow_final.png'): os.path.join('chars', 'willow.png')}
+# boss/meta.json keys that are not derived from the image (e.g. 'fd' = per-boss frame delay in ms) survive a re-derive.
+META_KEEP = ('fd',)
 
 WARNINGS = []   # frame-layout warnings of the last run (printed as they happen; tests read this list)
 
@@ -85,10 +94,16 @@ def overlay(log=True):
     for dp, _dn, fns in os.walk(CUSTOM):
         for fn in sorted(fns):
             if fn in SKIP or fn.startswith('.'): continue
-            src = os.path.join(dp, fn); rel = os.path.relpath(src, CUSTOM); dst = os.path.join(ASSETS, rel)
-            os.makedirs(os.path.dirname(dst), exist_ok=True); shutil.copyfile(src, dst); done.append(rel)
+            src = os.path.join(dp, fn); rel = os.path.relpath(src, CUSTOM)
+            if rel.split(os.sep)[0] in NO_COPY: continue
+            for r2 in [rel] + ([ALIASES[rel]] if rel in ALIASES else []):
+                dst = os.path.join(ASSETS, r2); os.makedirs(os.path.dirname(dst), exist_ok=True); shutil.copyfile(src, dst); done.append(r2)
             if rel.startswith('boss' + os.sep) and fn.endswith('.png'):
-                bid = fn[:-4]; m = frame_meta(src, meta.get(bid) and {'frame': [meta[bid]['fw'], meta[bid]['fh']]}, custom=True); m['sheet'] = bid; meta[bid] = m
+                bid = fn[:-4]; old = meta.get(bid) or {}
+                m = frame_meta(src, old and {'frame': [old['fw'], old['fh']]}, custom=True); m['sheet'] = bid
+                for k in META_KEEP:
+                    if k in old: m[k] = old[k]
+                meta[bid] = m
     if any(r.startswith('boss' + os.sep) for r in done): json.dump(meta, open(meta_p, 'w'))
     if log: print('art/custom overlay:', done or 'nothing to copy')
     return done
