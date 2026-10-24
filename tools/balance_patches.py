@@ -22,6 +22,17 @@ bk['stats']['atk'] = 25
 # recLevel) in the 55-65% band instead of letting it climb. HP/ATK/skills unchanged; paying the toll / Offering a cucumber
 # is still the easy out. Seeded n=300 sims (Mio+Kaze, default gear): /workspace/ln-pm/kappa-retune-spec.md.
 kt = bosses['kappa_toll']; kt['stats']['mat'] = 22; kt['stats']['def'] = 14
+# Ch3 Willow Mother is Parley-only (per-boss flag, global battle rules unchanged): below 35% HP her roots drink the river and
+# she regrows to full, Send needs real Calm (no low-HP/Unveiled/Heart Break shortcut), and when she turns Calm her buds settle too.
+# The first hit shows a one-time hint. Because the fight can no longer be won, her output is retuned so the Parley is a fair
+# survival-and-talk puzzle on both Shores (QA bot, Mio+Kaze, n=300: Near ~83% / Far ~79% at L9, ~99% at L10; was Near 36%/91%,
+# Far 0%/14%). Bud Far phys resist 0.5 -> 0.75 (Kaze could not clear them on the Far Shore at all).
+wm = bosses['willow_mother']
+wm['parleyOnly'] = {'floorPct': 35, 'regrowPct': 100, 'calmAdds': True, 'hint': 'willow_parley',
+                    'regrowText': 'The Willow Mother drinks from the river. Her wounds close as if they were never there.',
+                    'hintText': 'Hint: blades can’t end a grief this deep. Choose Parley and Remember her children three times. Once she is Calm, Send her home.'}
+wm['forms']['near']['outputMult'] = 0.8; wm['forms']['far']['outputMult'] = 0.75
+wm['parley']['key']['note'] = 'Parley only: blades can’t end her grief. Remember three times until she is Calm, then Send her home.'
 dump(bp, bosses)
 
 # Well Spirit (Ido-no-Kami): the Old Well key used to be a cutscene. It is now a short Parley battle. It is a slice-only
@@ -46,5 +57,6 @@ troops['tr_well_spirit'] = {'id': 'tr_well_spirit', 'name': 'Ido-no-Kami', 'enem
                             'exp': 25, 'gold': 0, 'events': [], 'peaceful': True}
 # Battle art: reuse the Dust Wisp crop (tinted water-blue and drawn larger at runtime); boot loads mon/<id>.png.
 MON = os.path.join(ROOT, 'public', 'assets', 'mon'); shutil.copyfile(os.path.join(MON, 'dust_wisp.png'), os.path.join(MON, 'well_spirit.png'))
+bud = enemies['willow_bud']; bud['forms']['far']['outputMult'] = 0.8; bud['forms']['far']['rates']['phys'] = 0.75   # Willow Parley-only retune (above)
 dump(ep, enemies); dump(tp, troops)
 print('balance patches ok: warden mhp', w['stats']['mhp'], 'exp', w['exp'], '| bell_keeper atk', bk['stats']['atk'], '| bell_keeper rewards', r['items'], r['unlock'], '| kappa_toll', kt['stats'])

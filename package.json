@@ -11,6 +11,7 @@
     "data": "python3 tools/gen_game.py",
     "art": "python3 tools/art_custom.py",
     "test:art": "python3 tests/test_frame_meta.py",
+    "test:willow": "node tests/willow_sim.cjs",
     "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {
