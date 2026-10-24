@@ -1,4 +1,5 @@
 import { payField } from '../core/fielduse';
+import { setGameTag } from '../sentry';
 import Phaser from 'phaser';
 import { Input } from '../core/input';
 import { Audio } from '../core/audio';
@@ -57,7 +58,7 @@ export class MapScene extends Phaser.Scene {
     this.objs.forEach((o) => o.destroy()); this.objs = []; Object.values(this.groundImgs).forEach((g) => g.destroy()); this.groundImgs = {}; this.glows.forEach((g) => g.destroy()); this.glows = [];
     for (const r of ['near', 'far']) { const k = `ground_${r}`; if (this.textures.exists(k)) this.textures.remove(k); }
     if (opts.resetDefeated) { for (const k of Object.keys($.defeated)) if (k.startsWith(id + ':')) delete $.defeated[k]; }
-    $.map = { id, x, y, dir };
+    $.map = { id, x, y, dir }; setGameTag('map', id); setGameTag('realm', $.realm); setGameTag('chapter', $.chapter);
     this.bakeGround(md);
     this.buildObjects(); this.player = new Char(this, x, y); this.player.setSheet('mio', false, dir); this.world.add(this.player.spr);
     this.trail = [{ x, y }]; this.refreshFollowers();

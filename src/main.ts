@@ -1,4 +1,4 @@
-import './sentry'; // must stay first: init Sentry before Phaser boots
+import { setGameTag, setGameContextProvider } from './sentry'; // must stay first: init Sentry before Phaser boots
 import Phaser from 'phaser';
 import { Input } from './core/input';
 import { Audio } from './core/audio';
@@ -32,6 +32,11 @@ async function start() {
   });
   (window as any).__game = game; (window as any).__S = { $, DB, Input, SaveManager, Settings, Field, Gear, Locks, migrateGame, SPEC };
   Audio.init(game); Input.init();
+  // Sentry tags: the top active scene is updated on scene start/wake/resume; map/realm/chapter are set in MapScene.loadMap and
+  // the interpreter's chapter op. All are re-read right before an event is sent.
+  const topScene = () => { const a = game.scene.getScenes(true); return a.length ? a[a.length - 1].sys.settings.key : null; };
+  setGameContextProvider(() => ({ scene: topScene(), map: $.map?.id, realm: $.realm, chapter: $.chapter }));
+  game.events.once('ready', () => { for (const sc of game.scene.scenes) for (const ev of ['start', 'wake', 'resume']) sc.sys.events.on(ev, () => setGameTag('scene', sc.sys.settings.key)); });
   game.events.on('prestep', () => Input.update());
   // resume audio on first gesture
   const unlock = () => { const s: any = game.sound; if (s.context && s.context.state === 'suspended') s.context.resume(); };
