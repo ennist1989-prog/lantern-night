@@ -9,7 +9,7 @@ on the next run.** Put finished art here instead; the pipeline never deletes thi
 |---|---|---|
 | `boss/<id>.png` | `public/assets/boss/<id>.png` | Battler **strip**: N square frames side by side, e.g. 384×64 = 6×64². `boss/meta.json` is derived from the strip (or from the spec's `frame`/`n` when the boss sprite has a `custom` field). Displayed at an integer scale `round(215 / fh)` (64 px → ×3). |
 | `chars/<id>.png` | `public/assets/chars/` | 64×112 Ninja Adventure layout (4 cols down/up/left/right × 7 rows of 16×16). |
-| `faces/<id>.png` | `public/assets/faces/` | 38×38, transparent background. |
+| `faces/<id>.png` | `public/assets/faces/` | 38×38, **opaque dark background `#141b1b`** (same convention as the shipped Ninja Adventure faces; the message window draws them as-is). |
 | `bgm/<id>.ogg` | `public/assets/bgm/` | OGG Vorbis (loop tags welcome). |
 
 Boss sprites can point at custom art from the spec: in `tools/spec_import.py` → `SPRITE_OVERRIDES`
@@ -25,6 +25,6 @@ never requests a file that isn't there. **Always re-run one of the commands abov
 
 ### Currently expected (Tsubaki asset pack v1, §4.1)
 - `boss/tsubaki_forge.png`, `boss/tsubaki_final.png` — 384×64 (6 × 64×64)
-- `chars/tsubaki.png` — 64×112 (on the Far map she is not recoloured)
+- `chars/tsubaki.png` — 64×112 (not recoloured on the Far Shore: map via `NO_FAR` in `src/game/character.ts`, battle via the `noFar` sprite flag)
 - `faces/tsubaki.png`, `faces/tsubaki_grief.png`, `faces/tsubaki_anger.png`, `faces/tsubaki_resolve.png` — 38×38
 - `bgm/final.ogg` — final-boss theme (until then the game falls back to `boss`)
