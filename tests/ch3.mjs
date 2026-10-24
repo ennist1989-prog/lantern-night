@@ -56,7 +56,20 @@ try {
   await teleport(page, 113, 6, 17, 'up'); await idle(); await run(6, 16, 'far');          // memory 2 (grove mist)
   await teleport(page, 111, 26, 13, 'right'); await idle(); await run(27, 14, 'far');     // Yoshi remembers -> toll token
   ok(await S('cord_tied') && await page.evaluate(() => window.__S.$.v('pil_mem')) >= 3 && await page.evaluate(() => window.__S.$.has('toll_token')), 'Yoshi remembers (cord tied, 3 memories, toll token)');
+  // Kappa's field sprite must not be drawn under the tree belt (v3 grading: only his dish showed): no visible non-flat object
+  // drawn in front of him (higher depth) may cover more than 15% of his sprite box, in Near or Far.
+  const kappaCover = () => page.evaluate(() => { const m = window.__game.scene.getScene('Map'); const out = [];
+    for (const e of m.evs) { const c = e.char; if (!c || !c.spr || !c.spr.visible || !(e.page && e.page.g && e.page.g.sheet === 'kappa')) continue;
+      const b = c.spr.getBounds(); let worst = 0, by = '';
+      for (const o of m.objs) { if (!o.visible || o.depth <= c.spr.depth) continue; const q = o.getBounds();
+        const w = Math.min(b.right, q.right) - Math.max(b.left, q.left), h = Math.min(b.bottom, q.bottom) - Math.max(b.top, q.top);
+        if (w > 0 && h > 0 && (w * h) / (b.width * b.height) > worst) { worst = (w * h) / (b.width * b.height); by = `${o.frame.name}@${o.x},${o.y}`; } }
+      out.push({ x: e.data.x, y: e.data.y, cover: +worst.toFixed(2), by }); }
+    return out; });
+  for (const r of ['near', 'far']) { await realm(r); await sleep(200); const k = await kappaCover(); ok(k.length > 0 && k.every((q) => q.cover <= 0.15), `Kappa (ford, ${r}) is not drawn under the tree belt ${JSON.stringify(k)}`); }
   await run(31, 12, 'far', ['Pay']); ok(await S('kappa_passed'), 'Kappa Toll-Keeper lets the party pass (toll paid)');
+  for (const r of ['near', 'far']) { await realm(r); await sleep(200); const k = await kappaCover(); ok(k.length > 0 && k.every((q) => q.cover <= 0.15), `Kappa (stepped aside, ${r}) is not drawn under the tree belt ${JSON.stringify(k)}`); }
+  await realm('far');
   await run(41, 19, 'far'); await fast(false); await realm('far'); await teleport(page, 111, 16, 12, 'right'); await sleep(900); await shot('05_crossing_far'); await realm('near'); await sleep(900); await shot('06_crossing_near'); await fast(true);
   // Willow Hollow
   await realm('near'); await teleport(page, 112, 2, 20, 'right'); await idle(); await log();

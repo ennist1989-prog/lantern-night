@@ -13,7 +13,9 @@ STONE_STEP = G(2, 12, 7)
 CH3FIX_ON = has_ch3fix()
 STONE_W = G(CH3FIX, 0, 0)             # 2a: stepping stone on a transparent tile (water/bank shows between the stones)
 WATER_P_FIX = (4, 1)                  # 2b: violet-river blob with a #584b46 land-side lip, ch3fix (4..7,1..4)
-DIRT_O_FIX = (0, 1)                   # 3: rimmed dirt-trail blob, ch3fix (0..3,1..4); Misty Grove only (build_grove)
+DIRT_O_FIX = (0, 1)                   # 3: rimmed dirt-trail blob, ch3fix (0..3,1..4); every Ch3 trail (Area.carve)
+PLANK_TOP, PLANK_BOT = G(CH3FIX, 1, 0), G(CH3FIX, 2, 0)   # 2c: Far bridge planks with a #7b473c top / bottom rim row (Near stubs stay PLANK)
+POST_LIGHT = 4                        # 4e: Ch3 lantern-post glow radius (was mapkit's 6 = 77 px; 4 = ~51 px). Ch1/Ch2 posts keep 6.
 NEAR_TREES = ['tree_big', 'tree_l2', 'tree_big', 'tree_orange', 'tree_big', 'tree_pink']
 FAR_TREES = ['tree_white', 'pine_l', 'deadtree_l', 'tree_white', 'pine_l']
 
@@ -26,14 +28,18 @@ class Area:
                 for x in range(x0, x1 + 1):
                     self.cells[r].add((x, y))
                     if trail: self.trail[r].add((x, y))
-    def carve(self, m, origin=DIRT_O, sheet=FLOOR):
+    def carve(self, m, origin=None, sheet=None):
+        # fix 3: with ch3fix present every Ch3 trail gets the #7b473c trodden rim (the spec's recommended scope: the same
+        # collapse is measured on maps 10/111/112). Ch1/Ch2 maps don't use Area, so PATH_O there is untouched.
+        if origin is None: origin, sheet = (DIRT_O_FIX, CH3FIX) if CH3FIX_ON else (DIRT_O, FLOOR)
         for r in ('near', 'far'):
             for (x, y) in self.cells[r]: m.walk(r, x, y, True)
             if self.trail[r]: m.blob(r, self.trail[r], origin=origin, sheet=sheet)
 
-def woods(m, A, seed=0, far_only=False, clear=()):
+def woods(m, A, seed=0, far_only=False, clear=(), low=()):
     """Trees on blocked ground so every blocked cell reads as forest: big canopies on a staggered 3-grid, then small pines
-    and bushes in the gaps next to paths (canopies may overhang paths a little)."""
+    and bushes in the gaps next to paths (canopies may overhang paths a little). Cells in `low` only get 1-tile bushes (no
+    canopy reaching into the row above), e.g. under a path tile where an NPC stands, so the NPC is not drawn under a tree."""
     for r in ('near', 'far'):
         open_ = A.cells[r]; cov = set()
         pal = FAR_TREES if r == 'far' else NEAR_TREES
@@ -42,7 +48,7 @@ def woods(m, A, seed=0, far_only=False, clear=()):
             off = (y // 2) % 2
             for x in range(-1 - off, m.w + 1, 3):
                 base = [(x + i, y) for i in range(3)] + [(x + i, y - 1) for i in range(3)]
-                if any(c in open_ or c in clear for c in base + [(x + i, y + 1) for i in range(3)]): continue
+                if any(c in open_ or c in clear or c in low for c in base + [(x + i, y + 1) for i in range(3)]): continue
                 k = pal[(x * 7 + y * 3 + seed) % len(pal)]
                 m.obj(r, k, x, y, fw=3 if k in ('tree_big', 'tree_pink', 'tree_white', 'tree_orange') else 4, block=False)
                 cov.update((x + i, y - j) for i in range(3) for j in range(3))
@@ -50,7 +56,7 @@ def woods(m, A, seed=0, far_only=False, clear=()):
         for y in range(0, m.h):
             for x in range(0, m.w):
                 if not free((x, y)): continue
-                if free((x + 1, y)) and (x + 1) < m.w:
+                if free((x + 1, y)) and (x + 1) < m.w and (x, y) not in low and (x + 1, y) not in low:
                     m.obj(r, small[(x + y + seed) % 2], x, y, fw=2, block=False); cov.update([(x, y), (x + 1, y), (x, y - 1), (x + 1, y - 1)])
                 else:
                     m.obj(r, 'bush1' if r == 'near' else 'deadtree_s', x, y, fw=1, block=False); cov.add((x, y))
@@ -150,7 +156,7 @@ def build_forest():
     for x in (24, 25, 26):
         m.event(x, 3, [page(cond={'nsw': 'chorus_done'}, g=dict(obj='tree_trunk'), list=[say(None, None, 'Thick roots knot across the path. They tremble whenever the statues hum.')])])
     # ---- junction Post
-    m.post(28, 20)
+    m.post(28, 20, light=POST_LIGHT)
     # ---- Rustle Sprite (sq06 start): trades the Remembrance Cord for a Flower Bundle
     m.event(39, 9, [
         page(cond={'nsw': 'cord_got'}, g=NPC('rustle', 'down'), list=[
@@ -191,13 +197,12 @@ def build_grove():
     A.rect(26, 6, 27, 8, 'far', trail=True); A.rect(22, 2, 29, 5, 'far')             # Heron keeper clearing
     A.rect(15, 4, 16, 8, 'far', trail=True); A.rect(13, 1, 18, 3, 'far')             # north guide stone
     A.rect(8, 11, 9, 16, 'far', trail=True); A.rect(4, 15, 9, 18, 'far')             # SW hollow (memory)
-    if CH3FIX_ON: A.carve(m, origin=DIRT_O_FIX, sheet=CH3FIX)                     # trail rim (fix 3), map113 only
-    else: A.carve(m)
+    A.carve(m)
     woods(m, A, 5)
     deco(m, A, 'far', ['fern', 'tuft2', 'tuft3', 'flower_w'], 26, 4); deco(m, A, 'near', ['fern', 'tuft1'], 6, 5)
     m.region(0, 0, 31, 18, 3); m.encounter = dict(region=3, zone='z07')
     for x in (14, 15, 16): m.door_touch(x, 25, 10, 25, 2, 'down', se=None)
-    m.post(13, 21)
+    m.post(13, 21, light=POST_LIGHT)
     m.event(15, 23, [page(cond={'nsw': 'grove_intro'}, trigger='auto', list=[
         say(None, None, 'Mist hangs between the trees, so thick the Near Shore seems to end a few steps ahead.'),
         kz('On this Shore the paths stop. Shift, and they appear. Stay close.'), sw('grove_intro')])])
@@ -251,16 +256,20 @@ def build_crossing():
     river = [(x, y) for x in range(20, 25) for y in range(0, 26)]
     m.blob('both', river, origin=WATER_G, sheet=WATER, walk=False)
     for x in range(20, 25):
-        for y in (12, 13): m.tile('far', x, y, PLANK, 'o')
+        for y in (12, 13): m.tile('far', x, y, (PLANK_TOP if y == 12 else PLANK_BOT) if CH3FIX_ON else PLANK, 'o')   # 2c: #7b473c rims on the long edges
     for x in (20, 24): m.tile('near', x, 12, PLANK, 'o')                 # broken Near bridge stubs
     m.dynwalk('far', [(x, y) for x in range(20, 25) for y in (12, 13)], {'sw': 'bridge_held'})
-    woods(m, A, 7, clear=set(river))
+    # Kappa's gate (events at (31,12) on the ford and (31,11) once he steps aside): no tree trunk on his aside tile, and only
+    # low bushes on the row under the ford, whose pine canopies used to overhang (31,12) and hide his body (grading/v3
+    # map111_kappa_occlusion_v3.txt). Walkability is unchanged: these cells were and stay blocked ground.
+    # Nothing directly under the Kappa ford tile (31,12): row-13 cells x30-32 stay clear so no bush/dead tree is drawn over the Kappa; neighbours stay low.
+    woods(m, A, 7, clear=set(river) | {(31, 11)} | {(x, 13) for x in (30, 31, 32)}, low={(x, 13) for x in (29, 33)})
     deco(m, A, 'near', ['flower_y', 'flower_r', 'tuft1', 'clover'], 26, 6); deco(m, A, 'far', ['tuft2', 'fern', 'flower_w'], 24, 7)
     m.region(0, 0, 45, 25, 3); m.encounter = dict(region=3, zone='z08')
     m.region(2, 5, 14, 15, 6)                                            # Hisa's yard is safe
     for y in (12, 13): m.door_touch(0, y, 10, 48, 18, 'left', se=None)
     for y in (11, 12, 13): m.door_touch(45, y, 112, 1, 20, 'right', se=None)
-    m.post(11, 12)
+    m.post(11, 12, light=POST_LIGHT)
     # ---- Old Hisa's ferry shop + inn (Near)
     m.obj('both', 'shop', 6, 8, fh=3); m.obj('near', 'barrel', 10, 8, fw=1); m.obj('near', 'pot_big', 4, 9, fw=1)
     m.light(7, 9, 4, 'near')
@@ -379,7 +388,7 @@ def build_hollow():
     m.region(0, 0, 33, 27, 3); m.encounter = dict(region=3, zone='z09')
     m.region(25, 2, 32, 11, 0); m.region(26, 16, 32, 24, 6)
     for y in (19, 20, 21): m.door_touch(0, y, 111, 44, 12, 'left', se=None)
-    m.post(4, 22); m.post(22, 9)
+    m.post(4, 22, light=POST_LIGHT); m.post(22, 9, light=POST_LIGHT)
     m.event(3, 20, [page(cond={'nsw': 'hollow_intro'}, trigger='auto', list=[
         say(None, None, 'Willow branches hang to the ground like curtains. A slow violet river cuts the hollow in two, and everything near it is very quiet.'),
         mio('I can hear singing. Names again, like the forest. But she keeps losing her place.'),
