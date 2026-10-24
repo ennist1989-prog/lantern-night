@@ -33,6 +33,14 @@ SC.charm3 = async () => {
   const sq = await page.evaluate(() => window.__S.DB.sidequests.quests.sq04.reward.items);
   return { shopHasCharm3: items.includes('charm3'), shopListShowsBellCharm: shopTexts.some((t) => /Bell Charm/.test(t)), wellChestGained: gained, sq04Reward: sq, shots: [p1, p2] };
 };
+// ---- Bell-Keeper L5 retune: the live boss uses the patched stats (fight starts, no errors)
+SC.bk = async () => {
+  await teleport(page, 6, 8, 6, 'up'); await page.evaluate(() => { const $ = window.__S.$; for (const id of ['mio', 'kaze']) { if (!$.party.includes(id)) $.addActor(id); } });
+  await page.evaluate(() => { window.__bkP = window.__game.scene.getScene('Map').startBattle('boss_bell_keeper', { boss: true, noEscape: true }); });
+  await waitScene(page, 'Battle', 10000); await sleep(3500); const p = await shot('bk-l5-retune');
+  const foe = await page.evaluate(() => { const B = window.__game.scene.getScene('Battle').B; const f = B.foes.find((x) => x.boss); return { name: f.name, mhp: f.mhp, atk: f.base.atk, specAtk: window.__S.SPEC.bosses.bell_keeper.stats.atk }; });
+  return { foe, shots: [p] };
+};
 export function register(name, fn) { SC[name] = fn; }
 const extra = process.env.EXTRA; if (extra) await import(extra);
 await page.goto(base); await newGame(page); await mashUntil(page, () => window.__S.$.sw('intro_done') && !window.__game.scene.getScene('Map').interp.busy, null, 120);

@@ -1,10 +1,13 @@
 // Headless balance/behaviour sim of the battle engine (no browser). Usage: node tests/sim.cjs
+// Env: SEED=<int> makes runs reproducible; SIM_OUT=<dir> compiles the engine somewhere other than /tmp/eng (parallel checkouts).
+if (process.env.SEED) { let a = +process.env.SEED >>> 0; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const OUT = process.env.SIM_OUT || '/tmp/eng';
 const { execSync } = require('child_process'); const fs = require('fs'); const path = require('path');
-try { execSync('npx tsc src/battle/engine.ts src/battle/party.ts src/battle/spec.ts --rootDir src --outDir /tmp/eng --module commonjs --target es2022 --skipLibCheck --esModuleInterop --ignoreConfig', { stdio: 'pipe', cwd: path.join(__dirname, '..') }); } catch (e) { /* strictness diagnostics only; JS is still emitted */ }
-const { Battle } = require('/tmp/eng/battle/engine.js'); const { partyBattler } = require('/tmp/eng/battle/party.js'); const { setSpec, SPEC } = require('/tmp/eng/battle/spec.js');
+try { execSync('npx tsc src/battle/engine.ts src/battle/party.ts src/battle/spec.ts --rootDir src --outDir ' + OUT + ' --module commonjs --target es2022 --skipLibCheck --esModuleInterop --ignoreConfig', { stdio: 'pipe', cwd: path.join(__dirname, '..') }); } catch (e) { /* strictness diagnostics only; JS is still emitted */ }
+const { Battle } = require(OUT + '/battle/engine.js'); const { partyBattler } = require(OUT + '/battle/party.js'); const { setSpec, SPEC } = require(OUT + '/battle/spec.js');
 const D = path.join(__dirname, '../public/data'); const J = (f) => JSON.parse(fs.readFileSync(path.join(D, f)));
 const spec = {}; for (const n of ['enemies', 'skills', 'states', 'troops', 'bosses', 'zones', 'parley', 'bonds', 'elements', 'progression', 'summons', 'learn']) spec[n] = J('spec/' + n + '.json'); setSpec(spec);
-const ACT = J('actors.json'), ITEMS = J('items.json'); const { DB } = require('/tmp/eng/core/db.js'); DB.items = ITEMS; DB.equipment = J('equipment.json');
+const ACT = J('actors.json'), ITEMS = J('items.json'); const { DB } = require(OUT + '/core/db.js'); DB.items = ITEMS; DB.equipment = J('equipment.json');
 function mkParty(ids, lv) { return ids.map((id) => { const a = { id, level: lv, exp: 0, hp: 9999, sp: 9999, equips: { ...ACT[id].equip, bond: null }, skills: [], states: [] }; for (const [l, s] of ACT[id].skills) if (lv >= l) a.skills.push(s); return partyBattler(a, ACT[id], ITEMS, {}); }); }
 // simple bot: mixes weakness hunting, parley on calm-able foes optionally
 function bot(B, p, style) {
@@ -26,6 +29,6 @@ function run(troop, ids, lv, { realm = 'near', style = 'auto', difficulty = 'sta
 module.exports = { run, mkParty, Battle, SPEC, ITEMS, ACT };
 if (require.main === module) {
   const cases = [['tr_dust_wisp', ['mio'], 1, { realm: 'far' }], ['tr_moss_slimeling', ['mio'], 2], ['tr_straw_hound', ['mio'], 3], ['tr_dust_wisp_moss_slimeling', ['mio'], 2, { realm: 'far' }], ['boss_straw_warden', ['mio'], 3, { style: 'shift' }], ['boss_straw_warden', ['mio', 'kaze'], 3, { style: 'shift' }],
-    ['tr_well_newt', ['mio', 'kaze'], 4], ['tr_gloam_bat_ofuda_moth', ['mio', 'kaze'], 5, { realm: 'far' }], ['tr_bell_mouse_ofuda_moth', ['mio', 'kaze'], 5, { realm: 'far' }], ['boss_bell_keeper', ['mio', 'kaze'], 5, { style: 'shift' }], ['boss_bell_keeper', ['mio', 'kaze'], 6, { style: 'shift' }], ['boss_bell_keeper', ['mio', 'kaze'], 5, { style: 'auto' }]];
+    ['tr_well_newt', ['mio', 'kaze'], 4], ['tr_gloam_bat_ofuda_moth', ['mio', 'kaze'], 5, { realm: 'far' }], ['tr_bell_mouse_ofuda_moth', ['mio', 'kaze'], 5, { realm: 'far' }], ['boss_bell_keeper', ['mio', 'kaze'], 5, { style: 'shift' }], ['boss_bell_keeper', ['mio', 'kaze'], 6, { style: 'shift' }], ['boss_bell_keeper', ['mio', 'kaze'], 7, { style: 'shift' }], ['boss_bell_keeper', ['mio', 'kaze'], 5, { style: 'auto' }]];
   for (const [t, ids, lv, o] of cases) { try { console.log(JSON.stringify(run(t, ids, lv, o || {}))); } catch (e) { console.log('ERR', t, e.stack.split('\n').slice(0, 3).join(' | ')); } }
 }
