@@ -11,6 +11,8 @@ on the next run.** Put finished art here instead; the pipeline never deletes thi
 | `chars/<id>.png` | `public/assets/chars/` | 64×112 Ninja Adventure layout (4 cols down/up/left/right × 7 rows of 16×16). |
 | `faces/<id>.png` | `public/assets/faces/` | 38×38, **opaque dark background `#141b1b`** (same convention as the shipped Ninja Adventure faces; the message window draws them as-is). |
 | `bgm/<id>.ogg` | `public/assets/bgm/` | OGG Vorbis (loop tags welcome). |
+| `tiles/ch3fix.png` | `public/assets/tiles/ch3fix.png` | Ch3 readability tile sheet (16×16 grid, sheet index 5). When present, `tools/maps_ch3.py` remaps the Willow Hollow ford stones/river and the Misty Grove trail to it (gids per `far-readability-fixes.md`); when absent the maps stay as they are. |
+| `objects/<name>.png` | packed into `public/assets/objects.png` | **Not copied**: `tools/build_assets.py` (`npm run assets`) replaces the extracted object cell `<name>` with this image before packing (e.g. the redrawn chest). |
 
 Boss sprites can point at custom art from the spec: in `tools/spec_import.py` → `SPRITE_OVERRIDES`
 (applied on top of `/workspace/rpg-research/data/bosses.json`) set `{"custom": "art/custom/boss/<id>.png", "frame": [64, 64], "n": 6}`.
@@ -28,3 +30,9 @@ never requests a file that isn't there. **Always re-run one of the commands abov
 - `chars/tsubaki.png` — 64×112 (not recoloured on the Far Shore: map via `NO_FAR` in `src/game/character.ts`, battle via the `noFar` sprite flag)
 - `faces/tsubaki.png`, `faces/tsubaki_grief.png`, `faces/tsubaki_anger.png`, `faces/tsubaki_resolve.png` — 38×38
 - `bgm/final.ogg` — final-boss theme (until then the game falls back to `boss`)
+
+### Ch3 redo v2 hooks (engine)
+- **Custom art wins:** `npm run data` runs the overlay right after `ch3_assets.py` (and `ch3_assets` never writes a file that exists here), so v2 art is not overwritten by the generated Ch3 placeholders.
+- **Aliases:** `faces/willow_final.png` / `chars/willow_final.png` also land as `faces/willow.png` / `chars/willow.png` (the names the maps use).
+- **Frame delay:** a boss sprite may set `fd` (ms per frame) in `SPRITE_OVERRIDES`; it goes into `boss/meta.json` and survives a re-overlay. Default 150.
+- **Per-state strips:** `SPRITE_OVERRIDES[id].phaseStrips = {"<phase name>": "<strip id>"}` swaps to `boss/<strip id>.png` while that phase is active (a `stateOn` phase only while its state is on) and back to the base strip on Calm. If the second strip is missing the base strip is used. Wired: Willow `Rootstorm`/`Heart Break` → `willow_mother_strained`, Kappa `Dish Spilled` → `kappa_toll_spilled`.

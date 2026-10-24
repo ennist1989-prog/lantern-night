@@ -8,6 +8,12 @@ WATER_G = (0, 6)        # grass-edged water blob (tiles/water.png)
 WATER_P = (13, 6)       # violet 'forgetting river' blob
 PLANK = G(4, 1, 13)
 STONE_STEP = G(2, 12, 7)
+# Far-readability fixes (far-readability-fixes.md): tile sheet 5 'ch3fix' = art/custom/tiles/ch3fix.png. Every remap below is
+# gated on that file, so until the hand-checked art lands the maps stay byte-identical to the pack-tile versions.
+CH3FIX_ON = has_ch3fix()
+STONE_W = G(CH3FIX, 0, 0)             # 2a: stepping stone on a transparent tile (water/bank shows between the stones)
+WATER_P_FIX = (4, 1)                  # 2b: violet-river blob with a #584b46 land-side lip, ch3fix (4..7,1..4)
+DIRT_O_FIX = (0, 1)                   # 3: rimmed dirt-trail blob, ch3fix (0..3,1..4); Misty Grove only (build_grove)
 NEAR_TREES = ['tree_big', 'tree_l2', 'tree_big', 'tree_orange', 'tree_big', 'tree_pink']
 FAR_TREES = ['tree_white', 'pine_l', 'deadtree_l', 'tree_white', 'pine_l']
 
@@ -20,10 +26,10 @@ class Area:
                 for x in range(x0, x1 + 1):
                     self.cells[r].add((x, y))
                     if trail: self.trail[r].add((x, y))
-    def carve(self, m):
+    def carve(self, m, origin=DIRT_O, sheet=FLOOR):
         for r in ('near', 'far'):
             for (x, y) in self.cells[r]: m.walk(r, x, y, True)
-            if self.trail[r]: m.blob(r, self.trail[r], origin=DIRT_O)
+            if self.trail[r]: m.blob(r, self.trail[r], origin=origin, sheet=sheet)
 
 def woods(m, A, seed=0, far_only=False, clear=()):
     """Trees on blocked ground so every blocked cell reads as forest: big canopies on a staggered 3-grid, then small pines
@@ -185,7 +191,9 @@ def build_grove():
     A.rect(26, 6, 27, 8, 'far', trail=True); A.rect(22, 2, 29, 5, 'far')             # Heron keeper clearing
     A.rect(15, 4, 16, 8, 'far', trail=True); A.rect(13, 1, 18, 3, 'far')             # north guide stone
     A.rect(8, 11, 9, 16, 'far', trail=True); A.rect(4, 15, 9, 18, 'far')             # SW hollow (memory)
-    A.carve(m); woods(m, A, 5)
+    if CH3FIX_ON: A.carve(m, origin=DIRT_O_FIX, sheet=CH3FIX)                     # trail rim (fix 3), map113 only
+    else: A.carve(m)
+    woods(m, A, 5)
     deco(m, A, 'far', ['fern', 'tuft2', 'tuft3', 'flower_w'], 26, 4); deco(m, A, 'near', ['fern', 'tuft1'], 6, 5)
     m.region(0, 0, 31, 18, 3); m.encounter = dict(region=3, zone='z07')
     for x in (14, 15, 16): m.door_touch(x, 25, 10, 25, 2, 'down', se=None)
@@ -358,8 +366,8 @@ def build_hollow():
     A.rect(26, 16, 32, 24); A.rect(33, 20, 33, 22, trail=True)         # wick glade (beyond the forgetting river)
     A.carve(m)
     river = [(x, y) for x in range(0, 34) for y in range(12, 16)]
-    m.blob('both', river, origin=WATER_P, sheet=WATER, walk=False)
-    for y in range(12, 16): m.tile('far', 8, y, STONE_STEP, 'o'); m.walk('far', 8, y, True)          # Far stepping stones
+    m.blob('both', river, origin=WATER_P_FIX if CH3FIX_ON else WATER_P, sheet=CH3FIX if CH3FIX_ON else WATER, walk=False)
+    for y in range(12, 16): m.tile('far', 8, y, STONE_W if CH3FIX_ON else STONE_STEP, 'o'); m.walk('far', 8, y, True)   # Far stepping stones
     for y in (6, 7):                                                                             # Near willow curtains
         for x in (13, 14): m.walk('near', x, y, False)
     m.obj('near', 'tree_l', 12, 8, fw=4, block=False); m.obj('near', 'pine_s', 13, 7, fw=2, block=False)

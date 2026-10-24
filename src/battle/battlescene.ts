@@ -66,9 +66,19 @@ export class BattleScene extends Phaser.Scene {
   buildBackground() { for (const r of ['near', 'far'] as const) { const im = this.add.image(0, 0, this.makeBack(r)).setOrigin(0, 0).setDepth(0); this.bgImgs[r] = im; } this.setBackRealm(); this.add.rectangle(0, 400, W, 224, 0x05081a, 1).setOrigin(0, 0).setDepth(1); }
   setBackRealm() { this.bgImgs.near.setVisible(this.B.realm === 'near'); this.bgImgs.far.setVisible(this.B.realm === 'far'); }
   foeTex(f: Battler) {
-    if (f.boss) { const k = 'boss_' + f.id; const meta = this.bossMeta[f.id]; const tex = this.textures.get(k); for (let i = 0; i < meta.n; i++) if (!tex.has(String(i))) tex.add(String(i), 0, i * meta.fw, 0, meta.fw, meta.fh); return k; }
+    if (f.boss) { const k = this.bossStrip(f); const meta = this.bossMeta[k.slice(5)]; const tex = this.textures.get(k); for (let i = 0; i < meta.n; i++) if (!tex.has(String(i))) tex.add(String(i), 0, i * meta.fw, 0, meta.fw, meta.fh); return k; }
     let k = 'mon_' + f.id; const t = this.textures.get(k); if (!t.has('0')) t.add('0', 0, 0, 0, t.getSourceImage().width, t.getSourceImage().height);
     if (this.B.realm === 'far') { k = farTexture(this, k); const t2 = this.textures.get(k); if (!t2.has('0')) t2.add('0', 0, 0, 0, t2.getSourceImage().width, t2.getSourceImage().height); } return k;
+  }
+  /** Boss battler strip for the current state (ch3-redo-v2 phase strips): sprite.phaseStrips maps a phase name to an alternate
+   *  strip (e.g. Willow 'Rootstorm' -> willow_mother_strained, Kappa 'Dish Spilled' -> kappa_toll_spilled). The latest entered
+   *  phase with an entry wins; a phase entered by a state (enter.stateOn) only while that state is on; Calm shows the base strip.
+   *  Falls back to the single base strip whenever the alternate strip (image or meta) is missing. */
+  bossStrip(f: Battler): string {
+    const base = 'boss_' + f.id; const ps = f.sprite?.phaseStrips; if (!ps || f.calm) return base;
+    let alt: string | null = null;
+    for (const p of f.def?.phases || []) { if (!f.phasesDone?.has(p.id) || !ps[p.name]) continue; const st = p.enter?.stateOn; if (st && !f.states[st]) continue; alt = ps[p.name]; }
+    return alt && this.bossMeta[alt] && this.textures.exists('boss_' + alt) ? 'boss_' + alt : base;
   }
   foeTint(f: Battler): number { if (f.gilded) return 0xffe08a; if (f.boss && f.tint && this.B.realm === 'near') return parseInt(f.tint.replace('#', ''), 16); if (f.boss && this.B.realm === 'far') return f.sprite?.noFar ? 0xffffff : 0xcfe8ff; /* noFar (SPRITE_OVERRIDES, e.g. Tsubaki) skips the Far recolour in battle too, matching NO_FAR on the map */ if (this.B.realm === 'near' && f.tint) return parseInt(f.tint.replace('#', ''), 16); return 0xffffff; }
   layoutFoes(initial = false) {
@@ -79,15 +89,18 @@ export class BattleScene extends Phaser.Scene {
         s = this.add.sprite(x, y, this.foeTex(f), f.boss ? '0' : '0').setOrigin(0.5, 1).setDepth(10 + y); this.spr.set(f.uid, s); s.setScale(f.boss ? (this.bossMeta[f.id]?.fh <= 16 ? 10 : Math.max(1, Math.round(215 / (this.bossMeta[f.id]?.fh || 50)))) : (f.scale || 5) * (f.elite ? 1.25 : 1.2) * (f.add ? 0.85 : 1));
         (s as any).bx = x; (s as any).by = y; s.setAlpha(0); this.tweens.add({ targets: s, alpha: 1, duration: 400, delay: initial ? f.slot * 120 : 0 }); this.tweens.add({ targets: s, y: y - 3, duration: 700 + f.slot * 90, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         if (f.boss) this.bossAnim(s, f); this.applyForm(f);
-        const gl = this.add.ellipse(x, y - s.displayHeight * 0.45, s.displayWidth * 1.15, s.displayHeight * 0.95, 0x9fdcff, 0.2).setDepth(9 + y); (s as any).glow = gl; gl.setVisible(this.B.realm === 'far'); this.tweens.add({ targets: gl, alpha: 0.1, duration: 900, yoyo: true, repeat: -1 });
+        // Far glow under regular foes only: bosses get none (the large pale disc read as a halo behind Willow; ch3-redo-v2 must-fix #6, no halos/discs)
+        if (!f.boss) { const gl = this.add.ellipse(x, y - s.displayHeight * 0.45, s.displayWidth * 1.15, s.displayHeight * 0.95, 0x9fdcff, 0.2).setDepth(9 + y); (s as any).glow = gl; gl.setVisible(this.B.realm === 'far'); this.tweens.add({ targets: gl, alpha: 0.1, duration: 900, yoyo: true, repeat: -1 }); }
         const t = f.boss ? this.add.text(W / 2, 112, f.name, { fontFamily: FONT, fontSize: '19px', color: '#ffe9a0', stroke: '#101030', strokeThickness: 4 }).setOrigin(0.5, 0).setDepth(45) : this.add.text(x, y + 6, f.name, { fontFamily: FONT, fontSize: '17px', color: '#fff', stroke: '#101030', strokeThickness: 4 }).setOrigin(0.5, 0).setDepth(45); this.lab.set(f.uid, t);
       } else { (s as any).bx = x; (s as any).by = y; this.tweens.add({ targets: s, x, duration: 300 }); (s as any).glow?.setPosition(x, y - s.displayHeight * 0.45); if (!f.boss) this.lab.get(f.uid)?.setPosition(x, y + 6); }
     };
     if (boss) { place(boss, W / 2, 384); const adds = others.filter((f) => alive(f) || this.spr.get(f.uid)); adds.forEach((f, i) => place(f, i % 2 === 0 ? 118 : W - 118, 268 + Math.floor(i / 2) * 40)); }
     else { const n = others.length; others.forEach((f, i) => { const span = Math.min(W - 280, 190 * (n - 1)); const x = n === 1 ? W / 2 : W / 2 - span / 2 + (i * span) / (n - 1); place(f, x, 262 + (i % 2) * 22); }); }
   }
-  bossAnim(spr: Phaser.GameObjects.Sprite, f: Battler) { const meta = this.bossMeta[f.id]; let fr = 0; this.time.addEvent({ delay: 150, loop: true, callback: () => { if (!spr.active) return; fr = (fr + 1) % meta.n; spr.setFrame(String(fr)); } }); }
-  applyForm(f: Battler) { const s = this.spr.get(f.uid); if (!s) return; (s as any).glow?.setVisible(this.B.realm === 'far' && alive(f)); const k = this.foeTex(f); s.setTexture(k, f.boss ? s.frame.name : '0'); s.setTint(this.foeTint(f)); }
+  /** Idle loop. Frame delay is per boss: boss/meta.json `fd` (ms, from SPRITE_OVERRIDES) or 150. The frame count follows the strip
+   *  currently shown (a phase strip may have a different length). */
+  bossAnim(spr: Phaser.GameObjects.Sprite, f: Battler) { const meta = this.bossMeta[f.id]; let fr = 0; this.time.addEvent({ delay: meta.fd ?? 150, loop: true, callback: () => { if (!spr.active) return; const m = this.bossMeta[spr.texture.key.slice(5)] || meta; fr = (fr + 1) % m.n; spr.setFrame(String(fr)); } }); }
+  applyForm(f: Battler) { const s = this.spr.get(f.uid); if (!s) return; (s as any).glow?.setVisible(this.B.realm === 'far' && alive(f)); const k = this.foeTex(f); s.setTexture(k, f.boss ? String((Number(s.frame.name) || 0) % (this.bossMeta[k.slice(5)]?.n || 1)) : '0'); s.setTint(this.foeTint(f)); }
   buildPartySprites() { this.B.party.forEach((a, i) => { const x = 250 + i * 100, y = 392; const s = this.add.sprite(x, y, 'char_' + a.id, 1).setOrigin(0.5, 1).setScale(4).setDepth(60); (s as any).bx = x; (s as any).by = y; this.spr.set(a.uid, s); }); }
   refreshRealmVisuals() { this.setBackRealm(); this.B.foes.forEach((f) => this.applyForm(f)); this.drawRealm(); }
   posOf(b: Battler) { const s = this.spr.get(b.uid)!; return { x: (s as any).bx as number, y: (s as any).by as number }; }
@@ -130,6 +143,7 @@ export class BattleScene extends Phaser.Scene {
   drawBars() {
     const g = this.barG; g.clear();
     for (const e of this.B.foes) { const s = this.spr.get(e.uid)!; const lab = this.lab.get(e.uid); if (!s || !s.active) continue; const gone = !alive(e) && s.alpha < 0.05; if (gone) { lab?.setVisible(false); continue; } lab?.setVisible(s.alpha > 0.3 && alive(e)); if (!alive(e)) continue;
+      if (e.boss && s.texture.key !== this.bossStrip(e)) this.applyForm(e);   // phase strip swap (Rootstorm / Dish Spilled / Calm)
       const w = e.boss ? 300 : 84; const x = e.boss ? W / 2 - 150 : (s as any).bx - w / 2, y = e.boss ? 138 : (s as any).by + 28; const hp = e.dispHp;
       g.fillStyle(0x000000, 0.8); g.fillRect(x - 1, y - 1, w + 2, 9); g.fillStyle(0x3a2030, 1); g.fillRect(x, y, w, 7); g.fillStyle(hp / e.mhp < 0.3 ? 0xff7a5a : 0xff5a6a, 1); g.fillRect(x, y, w * Math.max(0, hp / e.mhp), 7);
       const my = y + 10; g.fillStyle(0x000000, 0.8); g.fillRect(x - 1, my - 1, w + 2, 9); g.fillStyle(0x2a2f55, 1); g.fillRect(x, my, w, 7); const mr = Math.min(1, e.mood / e.calmAt); g.fillStyle(e.calm ? 0x7fffe0 : e.mood >= 150 ? 0xffe08a : 0xff9ed8, 1); g.fillRect(x, my, w * mr, 7);

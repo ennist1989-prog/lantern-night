@@ -26,8 +26,10 @@ cp("Backgrounds/Tilesets/TilesetWater.png", "tiles/water.png")
 
 # ---------- object atlas ----------
 ims = []
+OBJ_CUSTOM = os.path.join(ROOT, "art", "custom", "objects")   # hand-edited cell overrides (e.g. Ch3 Far-readability chest)
 for n in OBJS:
-    im = extract(*OBJS[n])
+    ov = os.path.join(OBJ_CUSTOM, n + ".png")
+    im = Image.open(ov).convert("RGBA") if os.path.exists(ov) else extract(*OBJS[n])   # size changes flow into objects.json
     if im is not None: ims.append((n, im))
 ims.sort(key=lambda t: -t[1].height)
 W = 512; x = y = rh = 0; frames = {}

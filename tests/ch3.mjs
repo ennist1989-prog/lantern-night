@@ -105,6 +105,16 @@ try {
   for (const [t, n] of [['boss_kappa_toll', 'battle_kappa'], ['boss_willow_mother', 'battle_willow']]) {
     await page.evaluate((t) => { window.__game.scene.getScene('Map').startBattle(t, { boss: true, noEscape: true }); }, t); await waitScene(page, 'Battle', 15000); await waitInput(page, 40000); await sleep(700); await shot('08_' + n);
     const st = await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); return b.B.foes.map((f) => f.name); }); ok(st.length > 0, t + ' starts: ' + st.join(', '));
+    // ch3-redo-v2 engine hooks: no Far glow disc behind the boss; per-state strip swap with a fallback to the single strip
+    const eng = await page.evaluate(async () => { const b = window.__game.scene.getScene('Battle'); const B = b.B; const f = B.foes.find((x) => x.boss); const s = b.spr.get(f.uid); const fr = () => new Promise((r) => setTimeout(r, 120));
+      const discs = b.children.list.filter((o) => o.type === 'Ellipse' && o.fillColor === 0x9fdcff && Math.abs(o.x - s.x) < 4 && o.width >= s.displayWidth).length;
+      const ps = f.sprite.phaseStrips || {}; const [pname, alt] = Object.entries(ps)[0] || []; const ph = f.def.phases.find((p) => p.name === pname); const out = { boss: f.id, glow: !!s.glow, discs, fd: b.bossMeta[f.id].fd ?? 150, base: s.texture.key, alt };
+      if (!ph) return out; const st = ph.enter?.stateOn; const had = b.textures.exists('boss_' + alt) && !!b.bossMeta[alt];
+      f.phasesDone.add(ph.id); if (st) f.states[st] = { n: 1, turns: 9 }; await fr(); out.missing = had ? null : s.texture.key;   // strip not delivered -> stays on the base strip
+      let injected = false; if (!had) { const c = document.createElement('canvas'); const m = b.bossMeta[f.id]; c.width = m.fw * 2; c.height = m.fh; b.textures.addCanvas('boss_' + alt, c); b.bossMeta[alt] = { fw: m.fw, fh: m.fh, n: 2, sc: 1, sheet: alt }; injected = true; }
+      await fr(); out.swapped = s.texture.key; f.calm = true; await fr(); out.calm = s.texture.key; f.calm = false; if (st) delete f.states[st]; f.phasesDone.delete(ph.id); await fr(); out.back = s.texture.key;
+      if (injected) { b.textures.remove('boss_' + alt); delete b.bossMeta[alt]; } return out; });
+    ok(!eng.glow && eng.discs === 0 && (!eng.alt || ((eng.missing === null || eng.missing === eng.base) && eng.swapped === 'boss_' + eng.alt && eng.calm === eng.base && eng.back === eng.base)), t + ': no Far glow disc behind the boss; phase strip swaps in (and back on Calm / phase over), single strip when the second is missing ' + JSON.stringify(eng));
     if (t === 'boss_willow_mother') {   // Parley-only in the real engine: blades can't end her, the hint shows once, Remember x3 -> Calm -> Send wins
       const po = await page.evaluate(async () => { const b = window.__game.scene.getScene('Battle'); const B = b.B; const w = B.foes.find((f) => f.boss); const ev = [];
         B.hurt(B.party[B.party.length - 1], w, w.hp, ev, {}); const after = w.hp; const send1 = B.canSend(w); const hint = ev.some((e) => e.t === 'tutorial'); b.play(ev); return { after, mhp: w.mhp, send1, hint, alive: w.hp > 0 }; });
