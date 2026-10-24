@@ -4,7 +4,7 @@ import { Audio } from '../core/audio';
 import { W, H, FONT, Fader } from '../ui/windows';
 import { fmtTime } from '../core/save';
 const LINES = (d: any) => [
-  ...(d.ending ? ['@Chapters 1–2 complete', 'The Bell-Keeper rests, and the Far Shore is open.', 'Mio, Kaze and Daigo have only reached the first shore…', `Play time ${fmtTime(d.stats?.time || 0)}   ·   Party level ${d.stats?.level || 1}   ·   Fadings ${d.stats?.fades || 0}`, '', 'Chapters 3–8 — To be continued.', ''] : []),
+  ...(d.ending ? [...(d.done >= 3 ? ['@Chapters 1–3 complete', 'The first wick burns, and the Whispering Forest remembers.', 'Six wick holders still wait in the dark…'] : ['@Chapters 1–2 complete', 'The Bell-Keeper rests, and the Far Shore is open.', 'Mio, Kaze and Daigo have only reached the first shore…']), `Play time ${fmtTime(d.stats?.time || 0)}   ·   Party level ${d.stats?.level || 1}   ·   Fadings ${d.stats?.fades || 0}`, '', d.done >= 3 ? 'Chapters 4–8 — To be continued.' : 'Chapters 3–8 — To be continued.', ''] : []),
   '@LANTERN NIGHT: THE FAR SHORE', '',
   '@Design, code & writing', 'Grok Bot (built with Phaser 4 + TypeScript + Vite)', '',
   '@Art, music & sound effects', 'The Ninja Adventure Asset Pack', 'by Pixel-Boy and AAA', 'Licence: CC0 1.0 Universal (public domain)', 'https://pixel-boy.itch.io/ninja-adventure-asset-pack', '',

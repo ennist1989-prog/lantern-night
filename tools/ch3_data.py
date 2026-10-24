@@ -1,5 +1,5 @@
 """Chapter 3 data (run by gen_game.py after the importers): main-quest log for Ch3, Anchor as a story spell with a field
-use, map names / dungeon exits for maps 7-10."""
+use, map names / dungeon exits for maps 10, 111-113."""
 import json, os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 P = lambda *a: os.path.join(ROOT, 'public', 'data', *a)
@@ -25,7 +25,9 @@ Q['ch3'] = {'name': 'The Whisper Wick', 'desc': 'Night 3. The Bell rang, then fe
 json.dump(Q, open(P('quests.json'), 'w'), ensure_ascii=False, indent=1)
 # ---- system: map names, dungeon exits (Origami Crane / Escape)
 Y = load(P('system.json'))
-Y['mapNames'].update({'7': 'Whispering Forest', '8': 'Misty Grove', '9': 'The Crossing', '10': 'Willow Hollow'})
-Y['dungeonExit']['10'] = {'map': 9, 'x': 40, 'y': 14, 'dir': 'left'}
+# map ids: 10 Whispering Forest (both realms), 111 The Crossing (Far map per the bible), 112 Willow Hollow, 113 Misty Grove
+for k in ('7', '8', '9'): Y['mapNames'].pop(k, None); Y['dungeonExit'].pop(k, None)
+Y['mapNames'].update({'10': 'Whispering Forest', '111': 'The Crossing', '112': 'Willow Hollow', '113': 'Misty Grove'})
+Y['dungeonExit'].pop('10', None); Y['dungeonExit']['112'] = {'map': 111, 'x': 43, 'y': 12, 'dir': 'left'}
 json.dump(Y, open(P('system.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
 print('ch3 data ok')

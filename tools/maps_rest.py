@@ -17,7 +17,7 @@ def build_sachi():
     m.fill('both', 1, 2, 10, 8, INT_FLOOR); m.fill('both', 6, 9, 6, 9, INT_FLOOR)
     m.region(1, 2, 10, 9, 6)
     m.obj('both', 'bookshelf_w', 1, 1, fw=4, block=False); m.obj('both', 'dresser', 6, 1, fw=3, block=False); m.obj('both', 'cupboard', 9, 1, fw=1, block=False)
-    m.obj('both', 'table3', 3, 3, fw=3); m.obj('both', 'stool', 2, 3, fw=1, block=False); m.obj('both', 'stool', 6, 3, fw=1, block=False)
+    m.obj('both', 'table3', 3, 3, fw=3); m.obj('both', 'stool', 2, 3, fw=1, block=False); m.obj('near', 'stool', 6, 3, fw=1, block=False)
     m.obj('both', 'rug_red', 5, 6, fw=2, block=False, flat=True); m.obj('both', 'pot_big', 9, 3, fw=1); m.obj('both', 'plant_pot', 1, 7, fw=1); m.obj('both', 'jar', 10, 7, fw=1)
     # ---- wall calendar: nights to Lantern Night (changes after the Straw Warden falls)
     m.event(5, 1, [page(cond={'nsw': 'warden_done'}, trigger='action', list=[say(None, None, 'A paper calendar by the door. Seven days are crossed out in Sachi’s hand, and the last is circled: LANTERN NIGHT. Seven nights left.')]),
@@ -43,18 +43,42 @@ def build_sachi():
                 say('sachi', 'Granny Sachi', 'You faced the Warden and came back whole. Good. Listen, child — not every spirit on the Far Shore wants to fight.'),
                 say('sachi', 'Granny Sachi', 'Parley lets you talk: Soothe, Hum, Remember, Offer something they love. Fill their Mood and they turn Calm. Then you may Send them onward — or Invite one to walk beside you as a Bond.'),
                 tut('send', 'Send unlocks at Lv 3 · Invite at Lv 4. Calm spirits drop Wish Scraps; hollowed ones leave Name Fragments.', 8000), sw('parley_taught')])]),
-            IF({'nsw': 'post_lit'}, [say('sachi', 'Granny Sachi', 'The square’s post is the first. Light it with the Lantern. It’ll wake the old light.')],
+            IF({'sw': 'ch3_started'}, [IF({'sw': 'wick_got'}, [say('sachi', 'Granny Sachi', 'One wick lit. I felt it, child, like sun on the back of my neck.')],
+                [say('sachi', 'Granny Sachi', 'East road, through the Whispering Forest, to the Crossing. The first wick is past the river. Old Hisa keeps the ferry shop; tell her Sachi sends her love.')])],
+            [IF({'nsw': 'post_lit'}, [say('sachi', 'Granny Sachi', 'The square’s post is the first. Light it with the Lantern. It’ll wake the old light.')],
                [IF({'nsw': 'kaze_joined'}, [say('sachi', 'Granny Sachi', 'Now press Q, child, and look at the world through the Lantern. There’s a friend on the other shore; I can feel it.')],
                   [IF({'nsw': 'elder_told'}, [say('sachi', 'Granny Sachi', 'A fox, you say? That sounds like Kaze. Go and see Elder Matsu. He’ll want to hear about it.')],
                      [IF({'sw': 'key_got'}, [say('sachi', 'Granny Sachi', 'The Shrine is north of the square, past the torii. Take your friends. And mind the Bell-Keeper.')],
                         [IF({'nsw': 'daigo_joined'}, [say('sachi', 'Granny Sachi', 'The Well is south-west past the boulder. Don’t push at it; Lantern-bearers go around.')],
-                           [say('sachi', 'Granny Sachi', 'Daigo’s safe! Bless you. Now: the key, and the Shrine.')])])])])])],
+                           [say('sachi', 'Granny Sachi', 'Daigo’s safe! Bless you. Now: the key, and the Shrine.')])])])])])])],
         [{'c': 'fade', 'dir': 'out', 'ms': 500}, {'c': 'heal', 'lumen': True}, {'c': 'wait', 'ms': 700}, {'c': 'fade', 'dir': 'in', 'ms': 500}, say('sachi', 'Granny Sachi', 'There. Warm tea and a warm blanket. HP, SP, and the Lantern are all topped up.')],
         [{'c': 'save'}], []])]
     m.event(6, 4, [page(g=NPC('sachi', 'down'), cond={'sw': 'intro_done'}, list=sachi_talk)], realm='near')
     m.event(6, 4, [page(g=NPC('ghostman', 'down'), list=[
         IF({'nsw': 'grandpa_oil'}, [say('ghostman', 'Grandfather’s Echo', 'Mio. You hold the Lantern the way I did: too tightly. Loosen your grip; light likes room.'), say('ghostman', 'Grandfather’s Echo', 'Take this oil. Far Shore light burns fast.'), {'c': 'item', 'id': 'lantern_oil', 'n': 2}, sw('grandpa_oil')],
            [say('ghostman', 'Grandfather’s Echo', 'Posts and rooms like this one hold steady light. Rest when you need to.')])])], realm='far')
+    m.event(6, 3, [page(cond={'nsw': 'ch3_done'}, g=dict(obj='stool'), through=True, list=[])], realm='far')
+    # ---- Ch3 opener (after the Bell-Keeper handoff) and Ch3 close (after the Whisper Wick)
+    m.event(5, 6, [page(cond={'sw': 'boss_done', 'nsw': 'ch3_started'}, trigger='auto', list=[
+        narr('Chapter 3 · The Whispering Forest', 'Night 3. The Bell rang, and fell silent again.'),
+        say('sachi', 'Granny Sachi', 'You’re home. Sit, sit. I heard the Bell. The whole valley heard it. And then I heard it stop.'),
+        say('mio', 'Mio', 'There was a seal on the rope, Granny. It tied itself shut. Kaze says it’s like a hand holding it.'),
+        say('sachi', 'Granny Sachi', 'Then ringing it once will not be enough. Look at the Lantern, child. Look at the little wick holders inside. How many are there?'),
+        say('mio', 'Mio', 'Seven. And they’re all empty.'),
+        say('sachi', 'Granny Sachi', 'Seven wicks, seven nights. Your grandfather said the first one grows past the Crossing, east, through the Whispering Forest. Light them all, and the Lantern will be strong enough for whatever is holding that rope.'),
+        say('sachi', 'Granny Sachi', 'Old Hisa keeps the ferry shop at the river. Go carefully. The water there makes people forget.'),
+        {'c': 'chapter', 'n': 3}, sw('ch3_started'), quest('ch3', 0),
+        tut('ch3', 'New area: the east road out of Ashiro now leads to the Whispering Forest. Shops stock new Chapter 3 gear.', 6000)])], realm='near')
+    m.event(5, 5, [page(cond={'sw': 'wick_got', 'nsw': 'ch3_done'}, trigger='auto', list=[
+        say('sachi', 'Granny Sachi', 'Let me see it. Oh… it’s warm. Your grandfather’s hands were always warm like that after a wick.'),
+        say('sachi', 'Granny Sachi', 'Before you sleep, trim it. A Lantern burns better with a trimmed wick, child. Wick Trim from Tama’s shelf will do.'),
+        tut('trim', 'Wick Trim (Items) restores Lumen in the field. Lumen above 50 makes Lantern skills stronger; keep the light trimmed before big fights.', 7000),
+        {'c': 'shift', 'to': 'far'}, {'c': 'wait', 'ms': 600},
+        say(None, None, 'On the Far Shore the room is the same, lamp and table and calendar. Only Granny Sachi’s stool is missing. Not moved. Gone, as if there had never been one.'),
+        say('mio', 'Mio', '…Granny?'), {'c': 'shift', 'to': 'near'},
+        say('sachi', 'Granny Sachi', 'Hm? Go to bed, child. Four more nights.'),
+        narr('Night 4. One wick burns in the Lantern, and six holders wait in the dark.', 'Somewhere past the mountains, a bell-rope tightens one more knot.'),
+        sw('ch3_done'), quest('ch3', 6, True), {'c': 'chapter', 'n': 4}, {'c': 'checkpoint'}, {'c': 'end', 'done': 3}])], realm='near')
     m.event(9, 1, [page(g=dict(obj='cupboard'), trigger='action', list=[say(None, None, 'Granny’s cupboard.'), IF({'nself': 'A'}, [{'c': 'item', 'id': 'rice_ball', 'n': 2}, self_sw('A')], [say(None, None, 'Empty now, but it smells of rice.')])])], realm='near')
     return m
 def build_tea():
@@ -268,7 +292,9 @@ def build_summit():
                [say('mio', 'Mio', 'That isn’t a broken bell… that’s a hand.')]),
             narr('Night 3. Six nights have become five, and the calendar by Sachi’s door has one more day crossed out.'),
             narr('Mio and Kaze had only reached the first shore.', 'But the Bell was ringing again, and that was enough to begin.'),
-            {'c': 'end'}], []])])], realm='near')
+            {'c': 'fade', 'dir': 'out', 'ms': 800}, {'c': 'transfer', 'map': 2, 'x': 6, 'y': 6, 'dir': 'up', 'se': None}], []])])], realm='near')
+    # saves made after the Bell-Keeper but before the handoff (autosave on win) still reach Ch3
+    m.event(1, 1, [page(cond={'sw': 'boss_done', 'nsw': 'ch3_started'}, trigger='auto', list=[{'c': 'fade', 'dir': 'out', 'ms': 600}, {'c': 'transfer', 'map': 2, 'x': 6, 'y': 6, 'dir': 'up', 'se': None}])])
     m.event(8, 4, [page(g=NPC('keeper', 'down', nofar=True), trigger='action', list=[say('keeper', 'Bell-Keeper', 'You… are not the ones I wait for. Go. Shift. See what I cannot.')])], realm='far') if False else None
     foe(m, 6, 10, 'tr_candle_spirit_candle_spirit_bell_mouse', 'lantern2', aggro=3, range=1); foe(m, 13, 9, 'tr_gloam_bat_ofuda_moth', 'kettle', aggro=3, range=1)
     sq03_summit(m); sq04_summit(m)

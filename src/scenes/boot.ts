@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { loadDatabase, DB } from '../core/db';
 import { W, H, FONT } from '../ui/windows';
-const CHARS = 'mio kaze daigo sachi elder ghostman villager1 villager2 villager3 villager4 woman child priest keeper spirit statue eggboy smith noble ghostgirl skeleton kettle wisp wisp2 slime mouse mouse2 lantern lantern2 oto kappa rustle hisa tsubaki'.split(' ');
+const CHARS = 'mio kaze daigo sachi elder ghostman villager1 villager2 villager3 villager4 woman child priest keeper spirit statue eggboy smith noble ghostgirl skeleton kettle wisp wisp2 slime mouse mouse2 lantern lantern2 oto kappa rustle hisa tsubaki willow'.split(' ');
 const FACES = CHARS.concat(['tengu', 'gspirit', 'tsubaki_grief', 'tsubaki_anger', 'tsubaki_resolve']);
 /** Art/audio that may not be delivered yet (Tsubaki asset pack, final-boss BGM). These are only queued when
  *  assets/manifest.json (written by tools/art_custom.py) lists them, so a missing file never 404s; create() then

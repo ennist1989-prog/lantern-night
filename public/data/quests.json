@@ -66,5 +66,46 @@
   "reward": "Bell Charm, Offerings ×3",
   "doneText": "The 'wrong' notes are the Near bells; the Far bells are right. The puzzle makes Shift a listening tool, using audio as information.",
   "sq": "sq04"
+ },
+ "sq05": {
+  "name": "Oto Waits at the Door",
+  "desc": "Hisa says a stray dog sits outside her door every night and is gone by morning; she has never been able to pet him.",
+  "stages": [
+   "Hisa says a stray dog sits outside her door every night and is gone by morning; she has never been able to pet him.",
+   "Oto is waiting at the Crossing shop door. He will not cross until she says goodbye.",
+   "Mio places a Lantern Anchor on the shop doorstep: the Far Shore image holds for one scene so Hisa sees Oto. The Anchor costs Lumen but the quest has a Lantern Post right next to it.",
+   "Hisa says goodbye. Oto does not cross; he tells Mio (via bark/ring) that he'll guide others instead."
+  ],
+  "reward": "",
+  "doneText": "The player expects 'return the lost dog'; instead Oto chooses to stay as a guide because he knows other spirits cannot find the way. The reward is a friend, not a pet.",
+  "sq": "sq05"
+ },
+ "sq06": {
+  "name": "The Pilgrim Who Never Paid",
+  "desc": "Rustle Sprite trades the Remembrance Cord for a Flower Bundle (Marigold Moth Offer or buy in Misty Grove).",
+  "stages": [
+   "Rustle Sprite trades the Remembrance Cord for a Flower Bundle (Marigold Moth Offer or buy in Misty Grove).",
+   "Tie the cord to the Pilgrim (Lumen 2). A glowing thread leads to three short Far-only memory vignettes. His name comes back piece by piece.",
+   "At the Kappa Toll Gate the Pilgrim presses a coin on Mio (toll_token). The Kappa remembers him: he never paid, but the Kappa never collected either.",
+   "Mio chooses: pay the toll (the debt ends, the Kappa forgets him), or leave the debt unpaid (the Kappa keeps the memory but the Pilgrim stays tethered here as a guard)."
+  ],
+  "reward": "Pilgrim Token, Kappa Ointment, Name Fragment ×1",
+  "doneText": "The unpaid toll is the Kappa's only memory of the Pilgrim. Paying releases him but erases that memory. The choice is a miniature of the final Remember/Release question.",
+  "sq": "sq06"
+ },
+ "ch3": {
+  "name": "The Whisper Wick",
+  "desc": "Night 3. The Bell rang, then fell silent. The first wick of the Lantern waits somewhere past the Whispering Forest, east of Ashiro.",
+  "stages": [
+   "Take the east road out of Ashiro into the Whispering Forest.",
+   "Follow Kaze to the old stump in the forest clearing.",
+   "Wake the two Resonance statues together: one sings on each Shore. (Hum, then Anchor.)",
+   "Reach the Crossing. The Far Shore bridge drifts; the Anchor Stone may hold it.",
+   "Get past the Kappa Toll-Keeper at the ford: pay, Parley or bout.",
+   "Find the Willow Mother at the heart of Willow Hollow.",
+   "Carry the Whisper Wick back across the forgetting river."
+  ],
+  "reward": "Whisper Wick (+10 max Lumen)",
+  "doneText": "The first wick is lit. Its warmth reached all the way back to Ashiro."
  }
 }

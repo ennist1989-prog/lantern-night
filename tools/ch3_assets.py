@@ -18,9 +18,9 @@ def hue(im, shift, keep=(0.0, 0.14)):
     return im
 def dog():
     src = Image.open(R + 'Animal/Dog/SpriteSheet.png').convert('RGBA'); f = [src.crop((i * 16, 0, i * 16 + 16, 16)) for i in range(2)]
-    out = Image.new('RGBA', (64, 32))
-    for row in range(2):
-        fr = f[row]; fl = ImageOps.mirror(fr)
+    out = Image.new('RGBA', (64, 112))       # NA 64x112 layout (4 dirs x 7 rows); placeholder until the 4-dir Oto sheet lands
+    for row in range(7):
+        fr = f[row % 2]; fl = ImageOps.mirror(fr)
         for col, im in enumerate([fr, fl, fl, fr]): out.alpha_composite(im, (col * 16, row * 16))   # down, up, left, right
     return out
 def build():
@@ -29,5 +29,16 @@ def build():
     for k, p, sheet in [('kappa', 'Monster/KappaGreen', 'SpriteSheet.png'), ('rustle', 'Monster/Mushroom', 'mushroom.png')]:
         save(Image.open(R + p + '/' + sheet).convert('RGBA'), 'chars', k); save(Image.open(R + p + '/Faceset.png').convert('RGBA'), 'faces', k)
     save(hue(Image.open(R + 'Character/OldWoman/SpriteSheet.png'), 0.42), 'chars', 'hisa'); save(hue(Image.open(R + 'Character/OldWoman/Faceset.png'), 0.42), 'faces', 'hisa')
-    print('ch3_assets: oto kappa rustle hisa')
+    # Willow Mother face: placeholder (pale, blue-shifted Spirit) until the redesigned face drops in as faces/willow.png
+    if not os.path.exists(A + 'faces/willow_final.png'): save(hue(Image.open(A + 'faces/spirit.png'), 0.55, keep=(2, 2)), 'faces', 'willow')
+    if not os.path.exists(A + 'chars/willow_final.png'): save(hue(Image.open(A + 'chars/spirit.png'), 0.55, keep=(2, 2)), 'chars', 'willow')   # field sprite placeholder
+    # Willow Mother battler: a sorrowful, non-monstrous placeholder (soft willow-green Giant Spirit flame) until the
+    # redesigned battler lands as art/custom/boss/willow_mother.png (art_custom then owns the image and its meta entry).
+    if not os.path.exists(os.path.join(ROOT, 'art/custom/boss/willow_mother.png')):
+        import json
+        g = hue(Image.open(A + 'boss/gspirit.png'), 0.83, keep=(2, 2)); sheet = Image.new('RGBA', (62 * 6, 62))   # same 62x62 x6 layout as the pack sheet
+        for i in range(6): sheet.paste(g.crop(((i % 5) * 50, 0, (i % 5) * 50 + 50, 50)), (i * 62 + 6, 12))
+        save(sheet, 'boss', 'willow_mother')
+        mp = A + 'boss/meta.json'; meta = json.load(open(mp)); meta['willow_mother'] = {'fw': 62, 'fh': 62, 'n': 6, 'sc': 1, 'sheet': 'willow_mother'}; json.dump(meta, open(mp, 'w'))
+    print('ch3_assets: oto kappa rustle hisa willow(face placeholder)')
 if __name__ == '__main__': build()

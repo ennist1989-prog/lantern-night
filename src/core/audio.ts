@@ -39,7 +39,7 @@ class AudioClass {
   private lazyLoad(name: string, opts: any) {
     if (this.loading.has(name)) return; this.loading.add(name);
     const sc: any = this.game.scene.getScenes(true)[0]; if (!sc) return;
-    sc.load.audio('bgm_' + name, `bgm/${name}.ogg`);
+    const prev = sc.load.path; sc.load.setPath('assets/'); sc.load.audio('bgm_' + name, `bgm/${name}.ogg`); sc.load.setPath(prev);
     sc.load.once('complete', () => { this.loading.delete(name); if (this.curName === name && !this.cur) { this.curName = ''; this.bgm(name, opts); } });
     sc.load.start();
   }

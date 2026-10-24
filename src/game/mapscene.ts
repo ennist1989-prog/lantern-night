@@ -454,7 +454,7 @@ export class MapScene extends Phaser.Scene {
     for (const id of $.party) { const a = $.actors[id]; const r = $.gainExp(a, n); if (r.leveled) { Audio.me('levelup'); await this.msg.show(null, null, `${DB.actors[id].name} reached level ${r.to}!` + (r.learned.length ? `\nLearned: ${r.learned.map((s) => DB.skills[s].name).join(', ')}` : '')); } }
     this.msg.toast(`Gained ${n} EXP`, 2000, 14, '#ffe9a0');
   }
-  async endGame(c: any) { Audio.stopBgm(); this.interp.running++; await this.fader.out(this, 800); this.scene.stop('Map'); this.scene.start('Credits', { ending: true, stats: { time: $.playtime, level: Math.max(...$.party.map((p) => $.actors[p].level)), fades: $.fades } }); void c; }
+  async endGame(c: any) { Audio.stopBgm(); this.interp.running++; await this.fader.out(this, 800); this.scene.stop('Map'); this.scene.start('Credits', { ending: true, done: c?.done || 2, stats: { time: $.playtime, level: Math.max(...$.party.map((p) => $.actors[p].level)), fades: $.fades } }); void c; }
   async gameOver() { await this.fadeOutOfFar(); }
   async startBattle(troopId: string, o: any = {}): Promise<'win' | 'escape' | 'lose' | 'calm'> {
     const troop = SPEC.troops[troopId]; if (!troop) throw new Error('unknown troop ' + troopId); const boss = !!(o.boss || troop.boss);
