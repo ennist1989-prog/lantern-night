@@ -292,9 +292,9 @@ def build_summit():
                [say('mio', 'Mio', 'That isn’t a broken bell… that’s a hand.')]),
             narr('Night 3. Six nights have become five, and the calendar by Sachi’s door has one more day crossed out.'),
             narr('Mio and Kaze had only reached the first shore.', 'But the Bell was ringing again, and that was enough to begin.'),
-            {'c': 'fade', 'dir': 'out', 'ms': 800}, {'c': 'transfer', 'map': 2, 'x': 6, 'y': 6, 'dir': 'up', 'se': None}], []])])], realm='near')
+            {'c': 'fade', 'dir': 'out', 'ms': 800}, {'c': 'transfer', 'map': 2, 'x': 6, 'y': 6, 'dir': 'up', 'se': None, 'realm': 'near'}], []])])], realm='near')
     # saves made after the Bell-Keeper but before the handoff (autosave on win) still reach Ch3
-    m.event(1, 1, [page(cond={'sw': 'boss_done', 'nsw': 'ch3_started'}, trigger='auto', list=[{'c': 'fade', 'dir': 'out', 'ms': 600}, {'c': 'transfer', 'map': 2, 'x': 6, 'y': 6, 'dir': 'up', 'se': None}])])
+    m.event(1, 1, [page(cond={'sw': 'boss_done', 'nsw': 'ch3_started'}, trigger='auto', list=[{'c': 'fade', 'dir': 'out', 'ms': 600}, {'c': 'transfer', 'map': 2, 'x': 6, 'y': 6, 'dir': 'up', 'se': None, 'realm': 'near'}])])
     m.event(8, 4, [page(g=NPC('keeper', 'down', nofar=True), trigger='action', list=[say('keeper', 'Bell-Keeper', 'You… are not the ones I wait for. Go. Shift. See what I cannot.')])], realm='far') if False else None
     foe(m, 6, 10, 'tr_candle_spirit_candle_spirit_bell_mouse', 'lantern2', aggro=3, range=1); foe(m, 13, 9, 'tr_gloam_bat_ofuda_moth', 'kettle', aggro=3, range=1)
     sq03_summit(m); sq04_summit(m)
