@@ -90,9 +90,9 @@ class Map:
         d = {'x': x, 'y': y, 'r': r}
         if realm: d['realm'] = realm
         self.lights.append(d)
-    def post(self, tx, ty, rad=3):
+    def post(self, tx, ty, rad=3, light=6):
         self.obj('both', 'lantern_post', tx, ty)
-        self.region_circle(tx, ty, rad, 6); self.light(tx, ty, 6)
+        self.region_circle(tx, ty, rad, 6); self.light(tx, ty, light)
         self.event(tx, ty, [page(g=dict(obj='lantern_post'), trigger='action', list=[{'c': 'post'}], marker=True)])
     def event(self, x, y, pages, realm='both'):
         self._eid += 1
