@@ -24,7 +24,12 @@ export class BattleScene extends Phaser.Scene {
   init(d: any) { this.d = d; this.ended = false; this.wins = []; this.spr = new Map(); this.lab = new Map(); this.tellIcons = new Map(); this.orderIcons = []; this.bgImgs = {}; }
   speed() { return Settings.data.battleSpeed; }
   t(ms: number) { return sleep(this, ms / this.speed()); }
+  /** Auto for this battle: null follows Settings; in boss fights toggles stay local (temporary) so the player's saved setting survives. */
+  autoLocal: boolean | null = null;
+  get autoOn(): boolean { return this.autoLocal ?? Settings.data.autoBattle; }
+  setAuto(v: boolean) { if (this.B.bossDef) this.autoLocal = v; else { this.autoLocal = null; Settings.data.autoBattle = v; Settings.save(); } }
   create() {
+    this.autoLocal = null;
     this.fxMeta = this.cache.json.get('fxmeta'); this.bossMeta = this.cache.json.get('bossmeta');
     const zone = this.d.zone ? SPEC.zones[this.d.zone] : null;
     const items = $.items; const ctx: any = { realm: this.d.realm, lumen: $.lumen, lumenMax: $.lumenMax, difficulty: Settings.data.difficulty, warmth: Settings.data.warmth, items, itemDB: DB.items, pity: $.pity, flags: { fragments: $.fragments }, recLevel: this.d.recLevel ?? zone?.recLevel, ward: $.party.some((id) => hasWard($.actors[id])) };
@@ -208,12 +213,13 @@ export class BattleScene extends Phaser.Scene {
     return new Promise((resolve) => {
       const party = () => {
         this.statusWin.setVisible(true); this.subWin.setVisible(false); this.descWin.setVisible(false); this.cmdWin.keepIndexOnSet = true; this.hideTarget(); this.refreshStatus(); this.drawOrder();
-        if (Settings.data.autoBattle && this.B.bossDef) { Settings.data.autoBattle = false; Settings.save(); }
-        if (Settings.data.autoBattle) { if (Input.isTriggered('cancel')) { Settings.data.autoBattle = false; Settings.save(); } else { this.autoPlan(); resolve('ok'); return; } }
-        this.setCmd([{ label: 'Fight', data: 'fight' }, { label: 'Flee', data: 'escape', enabled: !B.noEscape || $.items.smoke_ball > 0 }, { label: 'Auto: ' + (Settings.data.autoBattle ? 'ON' : 'OFF'), data: 'auto' }, { label: 'Speed: ×' + this.speed(), data: 'speed' }], (it) => {
+        // B3: bosses suspend Auto for this fight only; the saved Auto Battle setting is left alone
+        if (this.B.bossDef && this.autoLocal === null && Settings.data.autoBattle) this.autoLocal = false;
+        if (this.autoOn) { if (Input.isTriggered('cancel')) { this.setAuto(false); } else { this.autoPlan(); resolve('ok'); return; } }
+        this.setCmd([{ label: 'Fight', data: 'fight' }, { label: 'Flee', data: 'escape', enabled: !B.noEscape || $.items.smoke_ball > 0 }, { label: 'Auto: ' + (this.autoOn ? 'ON' : 'OFF'), data: 'auto' }, { label: 'Speed: ×' + this.speed(), data: 'speed' }], (it) => {
           if (it.data === 'fight') { this.cmdWin.active = false; actorCmd(0); }
           else if (it.data === 'escape') { this.cmdWin.active = false; this.doFlee().then((ok) => { if (ok) resolve('escape'); else { B.party.forEach((p) => { if (p.hp > 0) p.action = { type: 'wait' }; }); resolve('ok'); } }); }
-          else if (it.data === 'auto') { Settings.data.autoBattle = !Settings.data.autoBattle; Settings.save(); if (Settings.data.autoBattle) { this.cmdWin.active = false; this.autoPlan(); resolve('ok'); } else party(); }
+          else if (it.data === 'auto') { this.setAuto(!this.autoOn); if (this.autoOn) { this.cmdWin.active = false; this.autoPlan(); resolve('ok'); } else party(); }
           else if (it.data === 'speed') { Settings.data.battleSpeed = this.speed() === 1 ? 2 : 1; Settings.save(); party(); }
         }, null);
       };
@@ -333,7 +339,7 @@ export class BattleScene extends Phaser.Scene {
       let r = B.act(b); await this.play(r.ev); this.refreshStatus(); if (this.B.checkEnd()) break;
       if (b.side === 'party' && B.canEcho(b, r)) {
         await this.log(`Echo! ${b.name} can act again.`, 500); let act: any = null;
-        if (Settings.data.autoBattle) act = B.autoAction(b); else { this.cmdWin.setVisible(true); act = await this.chooseAction(b, true, null); this.cmdWin.active = false; }
+        if (this.autoOn) act = B.autoAction(b); else { this.cmdWin.setVisible(true); act = await this.chooseAction(b, true, null); this.cmdWin.active = false; }
         this.hideLog(); if (act) { await this.play(B.spendEcho(b)); this.drawEcho(); b.action = act; r = B.act(b); await this.play(r.ev); this.refreshStatus(); if (this.B.checkEnd()) break; }
       }
       this.drawOrder();
