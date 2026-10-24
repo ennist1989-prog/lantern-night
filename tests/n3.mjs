@@ -31,9 +31,14 @@ try {
   ok(kp0 === 0 && kp1 === 1, `Keeper arena gated by clapper (page ${kp0} -> ${kp1})`);
   // ---- field spell: Clearing Gust on the sand drift (summit, Near)
   await page.evaluate(() => { window.__S.$.repel = 999; window.__S.$.setSw('drift_gone', false); mapScene().refreshEvents(); }); await teleport(page, 6, 4, 4, 'up');   // repel: a random encounter on arrival used to eat the cast (CI flake)
-  await page.screenshot({ path: SS + '/n3-sand.png' });
-  const gusted = await page.evaluate(() => { const { $, Field } = window.__S; const r = Field.castField('kaze', 'sp_gust_clear'); window.__fa = mapScene().fieldAction(r.action); return r.ok; });
-  await mash(() => window.__S.$.sw('drift_gone'), null, 40); ok(gusted && await page.evaluate(() => window.__S.$.sw('drift_gone')), 'Clearing Gust clears the sand drift (field spell on the map)');
+  // An encounter that was already rolling can still open a Battle after the teleport (seen on CI): win it (foes at 1 HP, mash Enter) and re-teleport before casting.
+  const clearBattle = async () => { for (let i = 0; i < 400 && await page.evaluate(() => window.__game.scene.isActive('Battle')); i++) { await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); b?.B?.foes.forEach((f) => { f.hp = Math.min(f.hp, 1); }); }); await press(page, 'Enter', 40); await sleep(150); } };
+  let gusted = false;
+  for (let attempt = 0; attempt < 3 && !(await page.evaluate(() => window.__S.$.sw('drift_gone'))); attempt++) {
+    await sleep(600); await clearBattle(); await page.evaluate(() => { window.__S.$.repel = 999; }); await teleport(page, 6, 4, 4, 'up'); await sleep(400); await clearBattle();
+    if (attempt === 0) await page.screenshot({ path: SS + '/n3-sand.png' });
+    gusted = await page.evaluate(() => { const { $, Field } = window.__S; const r = Field.castField('kaze', 'sp_gust_clear'); window.__fa = mapScene().fieldAction(r.action); return r.ok; });
+    await mash(() => window.__S.$.sw('drift_gone'), null, 40); } ok(gusted && await page.evaluate(() => window.__S.$.sw('drift_gone')), 'Clearing Gust clears the sand drift (field spell on the map)');
   await sleep(500); await page.screenshot({ path: SS + '/n3-sand-cleared.png' });
   // ---- no target -> no cost
   const sp0 = await page.evaluate(() => window.__S.$.actors.kaze.sp); await teleport(page, 6, 10, 9, 'up');

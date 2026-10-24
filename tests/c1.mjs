@@ -1,5 +1,5 @@
 // Cursor sweep: screenshot every selectable screen; verifies shared heartbeat cursor is drawn (pixel check on title at first load)
-import { launch, press, sleep, newGame, mashUntil, waitScene, teleport, SSDIR } from './lib.mjs';
+import { launch, press, sleep, newGame, mashUntil, waitScene, teleport, activeScenes, SSDIR } from './lib.mjs';
 import { execSync } from 'child_process';
 const SS = SSDIR + '/cursor'; execSync('mkdir -p ' + SS);
 const { browser, page, errors } = await launch();
@@ -19,7 +19,9 @@ try {
   await page.evaluate(() => { window.__S.Settings.data.juice = 'off'; }); await sleep(300); await shot('03b-options-juice-off'); await page.evaluate(() => { window.__S.Settings.data.juice = 'full'; });
   await press(page, 'x'); await sleep(400);
   { const ci = await page.evaluate(() => window.__game.scene.getScene('Title').menu.index); for (let k = 0; k < ci; k++) await press(page, 'ArrowUp', 40); await sleep(200); }
-  await press(page, 'Enter'); await waitScene(page, 'Map', 15000); await sleep(500);
+  // the first Enter on Title was dropped on a slow CI runner (stuck on Title); re-press only while Title is the only active scene
+  for (let k = 0; k < 4; k++) { if (k === 0 || (await activeScenes(page)).join() === 'Title') await press(page, 'Enter'); try { await waitScene(page, 'Map', 15000); break; } catch (e) { if (k === 3) throw e; } }
+  await sleep(500);
   await mashUntil(page, () => window.__S.$.sw('intro_done'), null, 80);
   await page.evaluate(() => { const { $ } = window.__S; $.repel = 99999; $.buffs.stealth = 99999; $.setSw('post_lit', true); $.setSw('kaze_joined', true); $.addActor('kaze'); $.gold = 500; for (const [k, n] of Object.entries({ honey: 3, herbal_tea: 2, charm1: 1, mio_w2: 1, smith_tongs: 1, collectors_book: 1, elder_seal: 1, lantern_oil: 2, mochi: 2 })) $.gain(k, n); for (const id of $.party) { const a = $.actors[id]; while (a.level < 5) $.gainExp(a, 20 * a.level); } });
   // choice box
