@@ -28,10 +28,10 @@ export function bkFlow(page) {
   return {
     seen,
     async step() {
-      const p = await page.evaluate(() => { const g = window.__game, $ = window.__S.$, m = g.scene.getScene('Map'); const txt = (o) => (o?.list || o?.children?.list || []).flatMap((c) => c.text ? [c.text] : txt(c.content || c)); let t = ''; try { t = txt(m?.msg?.layer).join('|'); } catch (e) {}
-        return { credits: g.scene.isActive('Credits'), map: $.map?.id, boss: $.sw('boss_done'), ch3: $.sw('ch3_started'), t }; });
+      const p = await page.evaluate(() => { const g = window.__game, $ = window.__S.$, m = g.scene.getScene('Map'); if (m?.msg && !m.msg.__bk) { const o = m.msg.show.bind(m.msg); m.msg.__bk = true; window.__shown = window.__shown || []; m.msg.show = (f, n, t, op) => { window.__shown.push(String(t)); return o(f, n, t, op); }; } const txt = (o) => (o?.list || o?.children?.list || []).flatMap((c) => c.text ? [c.text] : txt(c.content || c)); let t = ''; try { t = txt(m?.msg?.layer).join('|'); } catch (e) {}
+        return { credits: g.scene.isActive('Credits'), map: $.map?.id, boss: $.sw('boss_done'), ch3: $.sw('ch3_started'), t, shown: (window.__shown || []).join('|') }; });
       if (p.credits) mark('credits');
-      if (p.boss) { if (/Key Item: Wellkeeper/.test(p.t)) mark('toast_pebble'); if (/Quest complete/.test(p.t)) mark('toast_quest'); if (/Lantern-bearer|kettle on|work out that knot/.test(p.t) && p.map === 6) mark('epilogue'); }
+      if (p.boss) { if (/Key Item: Wellkeeper/.test(p.t)) mark('toast_pebble'); if (/Quest complete/.test(p.t)) mark('toast_quest'); if (/Thank you, Lantern-bearer/.test(p.shown) && /work out that knot/.test(p.shown) && p.map === 6) mark('epilogue'); }
       if (p.boss && p.map === 2) mark('sachi'); if (p.ch3) mark('ch3_opener');
       return p;
     },
