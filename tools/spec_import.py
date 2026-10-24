@@ -52,7 +52,7 @@ SPRITE_OVERRIDES = {
     # phase entered by a state, while the state is on; Calm always shows the base strip). A missing strip falls back to the base.
     'willow_mother': {'custom': 'art/custom/boss/willow_mother.png', 'frame': [72, 72], 'n': 6, 'tint': None, 'noFar': True,
                       'phaseStrips': {'Rootstorm': 'willow_mother_strained', 'Heart Break': 'willow_mother_strained'}},
-    'kappa_toll': {'phaseStrips': {'Dish Spilled': 'kappa_toll_spilled'}},
+    'kappa_toll': {'custom': 'art/custom/boss/kappa_toll.png', 'frame': [64, 64], 'n': 6, 'tint': None, 'phaseStrips': {'Dish Spilled': 'kappa_toll_spilled'}},   # ch3-redo-v3 battler (64x64 x6; art byte-identical to v2)
 }
 for bid, ov in SPRITE_OVERRIDES.items():
     if bid not in bosses: continue

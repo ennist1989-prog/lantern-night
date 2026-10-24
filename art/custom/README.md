@@ -36,3 +36,10 @@ never requests a file that isn't there. **Always re-run one of the commands abov
 - **Aliases:** `faces/willow_final.png` / `chars/willow_final.png` also land as `faces/willow.png` / `chars/willow.png` (the names the maps use).
 - **Frame delay:** a boss sprite may set `fd` (ms per frame) in `SPRITE_OVERRIDES`; it goes into `boss/meta.json` and survives a re-overlay. Default 150.
 - **Per-state strips:** `SPRITE_OVERRIDES[id].phaseStrips = {"<phase name>": "<strip id>"}` swaps to `boss/<strip id>.png` while that phase is active (a `stateOn` phase only while its state is on) and back to the base strip on Calm. If the second strip is missing the base strip is used. Wired: Willow `Rootstorm`/`Heart Break` → `willow_mother_strained`, Kappa `Dish Spilled` → `kappa_toll_spilled`.
+
+### Installed: ch3-redo v3 (Lantern Night original pixel art, CC0)
+- `boss/kappa_toll.png`, `boss/kappa_toll_spilled.png` (384×64, 6 × 64²; `Dish Spilled` phase strip), `chars/kappa.png`, `faces/kappa.png`, `faces/kappa_bowed.png`
+- `chars/oto.png`, `faces/oto.png`
+- `boss/willow_mother.png` (432×72, 6 × 72², Calm) and `boss/willow_mother_strained.png` (`Rootstorm` / `Heart Break` phase strip; she is Parley-only, so it shows only if the party attacks her below 60%)
+- `chars/willow_final.png` (→ `chars/willow.png`, field sapling), `faces/willow_final.png` (→ `faces/willow.png`), `faces/willow_final_calm.png`, `faces/willow_final_strained.png`
+- Not installed: `boss/willow_mother_dream.png` (no phase/state uses it yet) and `icons/oto_bell.png` (there is no icon overlay pipeline; the item uses the icon sheet)
