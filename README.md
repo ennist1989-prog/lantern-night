@@ -38,6 +38,36 @@ zones (encounter tables per realm, steps, grace, BGM), parley table, bonds, elem
 * A new boss = bosses.json entry + `boss_<id>` troop + one `{'c':'battle','troop':'boss_<id>'}` event command.
 * `python3 tools/gen_game.py` regenerates DB + maps + spec import in one go.
 
+## Source of truth & data pipeline (read this before editing JSON)
+Almost everything under `public/data/` is **generated**. Hand edits there are overwritten by the next `npm run data`.
+
+| Layer | Edit here | Writes |
+|---|---|---|
+| Design spec (outside this repo) | `/workspace/rpg-research/_gen/*.py` → `gen.py` + `emit.py` | `/workspace/rpg-research/data/*.json` (enemies, skills, states, troops, bosses, zones, parley, bonds, elements, progression, items_v2, equipment, keyitems, spells, summons, sidequests) |
+| Legacy DB + quests/system | `tools/gen_db.py` | `public/data/actors.json`, `items.json` (base), `quests.json`, `system.json` (+ legacy files, see below) |
+| Battle spec import | `tools/spec_import.py` (incl. `SPRITE_OVERRIDES`) | `public/data/spec/*.json`, `public/assets/boss/*.png` + `boss/meta.json`, monster sprites |
+| Items / gear / magic import | `tools/items_import.py` | `items.json` (merged), `equipment.json`, `keyitems.json`, `spec/skills.json`, `spec/summons.json`, `spec/states.json`, `spec/learn.json`, `actors.json` skills |
+| Side quests | `tools/sq_import.py` + `tools/sidequests_maps.py` | `sidequests.json`, quest-log entries in `quests.json` |
+| Balance / content patches | `tools/balance_patches.py` (runs **last**, after every importer) | in-place tweaks to `spec/*.json` (boss stats, rewards, slice-only enemies/troops) |
+| Maps & events | `tools/maps_village.py`, `tools/maps_rest.py`, `tools/sidequests_maps.py` (helpers: `mapkit.py`, `objdefs.py`, `contact_objs.py`) | `public/data/maps/map00N.json`, previews in `screenshots/maps/` |
+| Art drop-in | `art/custom/{boss,chars,faces,bgm}/` (see `art/custom/README.md`) → `tools/art_custom.py` | overlays `public/assets/**`, `public/assets/manifest.json` |
+| Base assets | `tools/build_assets.py` (needs the asset pack in `_dl/` or `LN_DL`) | wipes and rebuilds `public/assets/` |
+
+Rule of thumb: tune numbers in `tools/balance_patches.py`; change story and events in the `tools/maps_*.py` generators; fix spec bugs at the source in rpg-research `_gen` (then re-emit). Never hand-edit `public/data/**`.
+
+**npm scripts**
+- `npm run data` = `tools/gen_game.py`: gen_db → spec_import → items_import → sq_import → balance_patches → maps. Run after any generator edit and commit the regenerated JSON.
+- `npm run art` = `tools/art_custom.py`: copies `art/custom/**` over the built assets and refreshes `manifest.json`. `npm run data` also does this.
+- `npm run test:art` = `tests/test_frame_meta.py`: boss sprite-sheet frame layout regression test.
+- `node tests/sim.cjs`: headless battle balance sim (unseeded, small N, so it is noisy). For tuning, use the seeded/high-N scripts in `/workspace/ln-sim/` (`matrix.cjs`, `cliff.cjs`).
+- `npm run build` / `npx tsc --noEmit`: bundle / typecheck. `npm run deploy` publishes `dist/` to GitHub Pages (see above).
+
+**Legacy / unused files (kept for reference; nothing at runtime reads them)**
+- `public/data/enemies.json`, `public/data/troops.json`, `public/data/skills.json`: old pre-spec DB written by `tools/gen_db.py` (`en(...)`, `tr(...)`, `sk(...)`). The game loads `public/data/spec/{enemies,troops,skills}.json` instead (`src/core/db.ts`, `loadSpec`). Their texts (for example the "Try Parley → Soothe!" troop intro, or the old Ido-no-Kami/Bell-Keeper stat lines) never appear in game. Change the spec or `balance_patches.py`, not these.
+- `spec/zones.json → z02.tables.far`: never rolled. Ashiro Well (map 4) uses `zones: {near: 'z02', far: 'z03'}` (`tools/maps_rest.py`), and no other map uses z02.
+- `spec/*` entries for chapters that have no maps yet (later zones, bosses, enemies, side quests): imported so those chapters can be built from data, but no map event references them until the chapter lands. Check `tools/maps_*.py` for what is actually reachable.
+- `tools/__pycache__/`: tracked by accident; ignore it.
+
 ## Items, gear, key items, magic, summons (data in `public/data/`, imported by `tools/items_import.py`)
 * `items.json` (295) — consumables with effect ops (`hp, hpPct, sp, lumen, lumenMax, revive, cure, cureAll, removeStack, escape, repel, perm, states, damage, mood, echo, vp, escapeDungeon, warp, peek`), gear with `rarity`, `tier`, `set`, `traits`, `realm:{near,far}` (stats swap with the shore) and `iconV2` (34 px sheet `assets/icons2.png`, 496 CC0 icons).
 * `equipment.json` — slots (weapon, armor, charm, 2nd charm [needs Charm Cord, ch4], keepsake, bond), rarity colours, sets (2/3-piece bonuses), forge rules (+1…+3 by tier; gold + materials by rarity family; relics/charms cannot be forged).
