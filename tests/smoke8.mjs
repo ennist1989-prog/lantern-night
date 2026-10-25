@@ -13,7 +13,10 @@ try {
   let seen = new Set(); const flow = bkFlow(page);
   const t0 = Date.now();   // boss fights suspend Auto (#21), so the Keeper fight is menu-driven and needs more than the old 200 presses
   for (let i = 0; Date.now() - t0 < 360000; i++) {
-    if (i % 2 === 0) await press(page, 'ArrowUp', 250); else await press(page, 'Enter', 60);
+    // a map choice (e.g. "Face the Bell-Keeper" / "Wait") opens on option 0: confirm it instead of pressing Up, which wrapped to
+    // "Wait" whenever the dialogue parity lined the choice up with an Up press (timing-dependent; looped the summit forever)
+    const choiceOpen = await page.evaluate(() => !!window.__game.scene.getScene('Map')?.msg?.choiceWin);
+    if (i % 2 === 0 && !choiceOpen) await press(page, 'ArrowUp', 250); else await press(page, 'Enter', 60);
     const a = (await activeScenes(page)).join('+'); if (!seen.has(a)) { seen.add(a); console.log(i, a); await shot('30-' + a.replace(/\+/g, '_')); }
     await flow.step(); if (flow.done()) { await sleep(1500); await flow.step(); break; }   // was: Credits; now epilogue -> Sachi's house -> Ch3 opener
   }
