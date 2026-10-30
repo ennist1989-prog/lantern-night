@@ -16,11 +16,12 @@ function parleyBot(B, p) {
   if (adds.length) return { type: 'skill', skill: 'p_attack', targets: [adds[0].uid] };
   return { type: 'guard' };
 }
+let sentN = 0, linger = 0;   // battles where the Willow was Sent / where the fight went on after the Send
 function parley(realm, lv) {
   let wins = 0;
   for (let i = 0; i < N; i++) {
     const B = new Battle({ realm, lumen: 60, lumenMax: 60, difficulty: 'standard', items: {}, itemDB: ITEMS, pity: {}, flags: {} }, mkParty(['mio', 'kaze'], lv), 'boss_willow_mother');
-    let g = 0; while (!B.ended && g++ < 60) { B.startRound(); for (const p of B.party) if (p.hp > 0) p.action = parleyBot(B, p); B.buildOrder(); for (const b of B.order.slice()) { if (B.ended) break; if (b.hp <= 0 || b.gone) continue; B.act(b); } if (!B.ended) B.endRound(); B.checkEnd(); }
+    let g = 0; while (!B.ended && g++ < 60) { B.startRound(); for (const p of B.party) if (p.hp > 0) p.action = parleyBot(B, p); B.buildOrder(); for (const b of B.order.slice()) { if (B.ended) break; if (b.hp <= 0 || b.gone) continue; B.act(b); if (B.foes.some((f) => f.boss && f.gone === 'sent')) { sentN++; if (!B.ended) linger++; break; } } if (!B.ended) B.endRound(); B.checkEnd(); }
     if (B.ended === 'win') wins++;
   }
   return Math.round((wins / N) * 100);
@@ -29,6 +30,8 @@ function parley(realm, lv) {
 const band = { near: [9, 72, 10, 85], far: [9, 70, 10, 80] };   // [lv, min%, lv, min%]  (tuned: Near ~80-83/99, Far ~78-80/99 at N=300; floors leave room for seed noise)
 for (const realm of ['near', 'far']) { const [l1, m1, l2, m2] = band[realm]; const a = parley(realm, l1), b = parley(realm, l2);
   ok(a >= m1, `parley ${realm} L${l1}: ${a}% (>= ${m1}%)`); ok(b >= m2, `parley ${realm} L${l2}: ${b}% (>= ${m2}%)`); }
+// 1b) when she is Sent home her buds go with her: the battle ends on the Send itself (no calm buds left to Send one by one)
+ok(sentN > 0 && linger === 0, `Willow Sent -> buds leave with her, battle ends on the Send (${sentN} Sends, ${linger} went on)`);
 // 2) blades never win, even far over-levelled, with either bot, on either Shore
 for (const realm of ['near', 'far']) for (const style of ['auto', 'shift']) for (const lv of [9, 10, 12, 15]) {
   const r = run('boss_willow_mother', ['mio', 'kaze'], lv, { realm, style, n: Math.min(N, 100) }); ok(r.win === '0%', `fight ${realm} ${style} L${lv}: ${r.win} wins (must be 0%)`);

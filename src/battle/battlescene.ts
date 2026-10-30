@@ -66,9 +66,19 @@ export class BattleScene extends Phaser.Scene {
   buildBackground() { for (const r of ['near', 'far'] as const) { const im = this.add.image(0, 0, this.makeBack(r)).setOrigin(0, 0).setDepth(0); this.bgImgs[r] = im; } this.setBackRealm(); this.add.rectangle(0, 400, W, 224, 0x05081a, 1).setOrigin(0, 0).setDepth(1); }
   setBackRealm() { this.bgImgs.near.setVisible(this.B.realm === 'near'); this.bgImgs.far.setVisible(this.B.realm === 'far'); }
   foeTex(f: Battler) {
-    if (f.boss) { const k = 'boss_' + f.id; const meta = this.bossMeta[f.id]; const tex = this.textures.get(k); for (let i = 0; i < meta.n; i++) if (!tex.has(String(i))) tex.add(String(i), 0, i * meta.fw, 0, meta.fw, meta.fh); return k; }
+    if (f.boss) { const k = this.bossStrip(f); const meta = this.bossMeta[k.slice(5)]; const tex = this.textures.get(k); for (let i = 0; i < meta.n; i++) if (!tex.has(String(i))) tex.add(String(i), 0, i * meta.fw, 0, meta.fw, meta.fh); return k; }
     let k = 'mon_' + f.id; const t = this.textures.get(k); if (!t.has('0')) t.add('0', 0, 0, 0, t.getSourceImage().width, t.getSourceImage().height);
     if (this.B.realm === 'far') { k = farTexture(this, k); const t2 = this.textures.get(k); if (!t2.has('0')) t2.add('0', 0, 0, 0, t2.getSourceImage().width, t2.getSourceImage().height); } return k;
+  }
+  /** Boss battler strip for the current state (ch3-redo-v2 phase strips): sprite.phaseStrips maps a phase name to an alternate
+   *  strip (e.g. Willow 'Rootstorm' -> willow_mother_strained, Kappa 'Dish Spilled' -> kappa_toll_spilled). The latest entered
+   *  phase with an entry wins; a phase entered by a state (enter.stateOn) only while that state is on; Calm shows the base strip.
+   *  Falls back to the single base strip whenever the alternate strip (image or meta) is missing. */
+  bossStrip(f: Battler): string {
+    const base = 'boss_' + f.id; const ps = f.sprite?.phaseStrips; if (!ps || f.calm) return base;
+    let alt: string | null = null;
+    for (const p of f.def?.phases || []) { if (!f.phasesDone?.has(p.id) || !ps[p.name]) continue; const st = p.enter?.stateOn; if (st && !f.states[st]) continue; alt = ps[p.name]; }
+    return alt && this.bossMeta[alt] && this.textures.exists('boss_' + alt) ? 'boss_' + alt : base;
   }
   foeTint(f: Battler): number { if (f.gilded) return 0xffe08a; if (f.boss && f.tint && this.B.realm === 'near') return parseInt(f.tint.replace('#', ''), 16); if (f.boss && this.B.realm === 'far') return f.sprite?.noFar ? 0xffffff : 0xcfe8ff; /* noFar (SPRITE_OVERRIDES, e.g. Tsubaki) skips the Far recolour in battle too, matching NO_FAR on the map */ if (this.B.realm === 'near' && f.tint) return parseInt(f.tint.replace('#', ''), 16); return 0xffffff; }
   layoutFoes(initial = false) {
@@ -76,18 +86,50 @@ export class BattleScene extends Phaser.Scene {
     const place = (f: Battler, x: number, y: number) => {
       let s = this.spr.get(f.uid);
       if (!s) {
-        s = this.add.sprite(x, y, this.foeTex(f), f.boss ? '0' : '0').setOrigin(0.5, 1).setDepth(10 + y); this.spr.set(f.uid, s); s.setScale(f.boss ? (this.bossMeta[f.id]?.fh <= 16 ? 10 : Math.max(1, Math.round(215 / (this.bossMeta[f.id]?.fh || 50)))) : (f.scale || 5) * (f.elite ? 1.25 : 1.2) * (f.add ? 0.85 : 1));
+        s = this.add.sprite(x, y, this.foeTex(f), f.boss ? '0' : '0').setOrigin(0.5, 1).setDepth(10 + y); this.spr.set(f.uid, s); s.setScale(f.boss ? this.bossFit(f).scale : (f.scale || 5) * (f.elite ? 1.25 : 1.2) * (f.add ? 0.85 : 1));
         (s as any).bx = x; (s as any).by = y; s.setAlpha(0); this.tweens.add({ targets: s, alpha: 1, duration: 400, delay: initial ? f.slot * 120 : 0 }); this.tweens.add({ targets: s, y: y - 3, duration: 700 + f.slot * 90, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         if (f.boss) this.bossAnim(s, f); this.applyForm(f);
-        const gl = this.add.ellipse(x, y - s.displayHeight * 0.45, s.displayWidth * 1.15, s.displayHeight * 0.95, 0x9fdcff, 0.2).setDepth(9 + y); (s as any).glow = gl; gl.setVisible(this.B.realm === 'far'); this.tweens.add({ targets: gl, alpha: 0.1, duration: 900, yoyo: true, repeat: -1 });
+        // Far glow under regular foes only: bosses get none (the large pale disc read as a halo behind Willow; ch3-redo-v2 must-fix #6, no halos/discs)
+        if (!f.boss) { const gl = this.add.ellipse(x, y - s.displayHeight * 0.45, s.displayWidth * 1.15, s.displayHeight * 0.95, 0x9fdcff, 0.2).setDepth(9 + y); (s as any).glow = gl; gl.setVisible(this.B.realm === 'far'); this.tweens.add({ targets: gl, alpha: 0.1, duration: 900, yoyo: true, repeat: -1 }); }
         const t = f.boss ? this.add.text(W / 2, 112, f.name, { fontFamily: FONT, fontSize: '19px', color: '#ffe9a0', stroke: '#101030', strokeThickness: 4 }).setOrigin(0.5, 0).setDepth(45) : this.add.text(x, y + 6, f.name, { fontFamily: FONT, fontSize: '17px', color: '#fff', stroke: '#101030', strokeThickness: 4 }).setOrigin(0.5, 0).setDepth(45); this.lab.set(f.uid, t);
       } else { (s as any).bx = x; (s as any).by = y; this.tweens.add({ targets: s, x, duration: 300 }); (s as any).glow?.setPosition(x, y - s.displayHeight * 0.45); if (!f.boss) this.lab.get(f.uid)?.setPosition(x, y + 6); }
     };
-    if (boss) { place(boss, W / 2, 384); const adds = others.filter((f) => alive(f) || this.spr.get(f.uid)); adds.forEach((f, i) => place(f, i % 2 === 0 ? 118 : W - 118, 268 + Math.floor(i / 2) * 40)); }
+    if (boss) { place(boss, W / 2, this.bossFit(boss).y); const adds = others.filter((f) => alive(f) || this.spr.get(f.uid)); adds.forEach((f, i) => place(f, i % 2 === 0 ? 118 : W - 118, 268 + Math.floor(i / 2) * 40)); }
     else { const n = others.length; others.forEach((f, i) => { const span = Math.min(W - 280, 190 * (n - 1)); const x = n === 1 ? W / 2 : W / 2 - span / 2 + (i * span) / (n - 1); place(f, x, 262 + (i % 2) * 22); }); }
   }
-  bossAnim(spr: Phaser.GameObjects.Sprite, f: Battler) { const meta = this.bossMeta[f.id]; let fr = 0; this.time.addEvent({ delay: 150, loop: true, callback: () => { if (!spr.active) return; fr = (fr + 1) % meta.n; spr.setFrame(String(fr)); } }); }
-  applyForm(f: Battler) { const s = this.spr.get(f.uid); if (!s) return; (s as any).glow?.setVisible(this.B.realm === 'far' && alive(f)); const k = this.foeTex(f); s.setTexture(k, f.boss ? s.frame.name : '0'); s.setTint(this.foeTint(f)); }
+  /** Idle loop. Frame delay is per boss: boss/meta.json `fd` (ms, from SPRITE_OVERRIDES) or 150. The frame count follows the strip
+   *  currently shown (a phase strip may have a different length). */
+  bossAnim(spr: Phaser.GameObjects.Sprite, f: Battler) { const meta = this.bossMeta[f.id]; let fr = 0; this.time.addEvent({ delay: meta.fd ?? 150, loop: true, callback: () => { if (!spr.active) return; const m = this.bossMeta[spr.texture.key.slice(5)] || meta; fr = (fr + 1) % m.n; spr.setFrame(String(fr)); } }); }
+  applyForm(f: Battler) { const s = this.spr.get(f.uid); if (!s) return; (s as any).glow?.setVisible(this.B.realm === 'far' && alive(f)); const k = this.foeTex(f); s.setTexture(k, f.boss ? String((Number(s.frame.name) || 0) % (this.bossMeta[k.slice(5)]?.n || 1)) : '0'); s.setTint(this.foeTint(f)); }
+  /** Party row as drawn by buildPartySprites (x = 250 + i*100, baseline 392, 16x16 frames at x4). */
+  partyZone() { const n = Math.max(1, this.B.party.length); return { x0: 250 - 32, x1: 250 + (n - 1) * 100 + 32, y0: 392 - 64, y1: 392 }; }
+  /** Opaque box (frame px) over every frame of a boss strip, cached per texture. */
+  stripBox(key: string, m: any): number[] | null {
+    const c = ((this as any).__sb ||= new Map<string, number[] | null>()); if (c.has(key)) return c.get(key); let u: number[] | null = null;
+    try { const img: any = this.textures.get(key).getSourceImage(); const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const x = cv.getContext('2d', { willReadFrequently: true })!;
+      x.drawImage(img, 0, 0); const d = x.getImageData(0, 0, cv.width, cv.height).data; const fw = m.fw || cv.width, fh = Math.min(m.fh || cv.height, cv.height);
+      for (let yy = 0; yy < fh; yy++) for (let xx = 0; xx < cv.width; xx++) if (d[(yy * cv.width + xx) * 4 + 3] > 16) { const fx = xx % fw; if (!u) u = [fx, yy, fx + 1, yy + 1]; else { u[0] = Math.min(u[0], fx); u[1] = Math.min(u[1], yy); u[2] = Math.max(u[2], fx + 1); u[3] = Math.max(u[3], yy + 1); } }
+    } catch { u = null; }
+    c.set(key, u); return u;
+  }
+  /** Layout rule (no overlap): a boss keeps its preferred scale on the usual baseline (384) when its opaque pixels clear the
+   *  party row; otherwise it stands just above the party row (6 px gap) and, if it would then reach the boss name/HP block
+   *  (y < 172, idle bob included), its integer scale steps down until it fits. Never touches the panel (y >= 400).
+   *  Covers every strip the boss can show (base + phase strips). Battle rules are untouched; this is layout only. */
+  bossFit(f: Battler): { scale: number; y: number } {
+    const c = ((this as any).__bf ||= new Map<number, { scale: number; y: number }>()); if (c.has(f.uid)) return c.get(f.uid);
+    const m = this.bossMeta[f.id] || { fw: 50, fh: 50 }; const fw = m.fw || 50, fh = m.fh || 50; const pref = fh <= 16 ? 10 : Math.max(1, Math.round(215 / fh));
+    const keys = [this.foeTex(f), ...Object.values((f as any).sprite?.phaseStrips || {}).map((k) => 'boss_' + k)].filter((k) => this.textures.exists(k));
+    let bb: number[] = [0, 0, fw, fh]; const boxes = keys.map((k) => this.stripBox(k, this.bossMeta[k.slice(5)] || m)).filter(Boolean) as number[][];
+    if (boxes.length) bb = [Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1])), Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))];
+    const pz = this.partyZone(); const TOP = 172, GAP = 6, BOB = 3, BASE = 384; let out = { scale: 1, y: Math.min(BASE, pz.y0 - GAP + (fh - bb[3])) };
+    for (let sc = pref; sc >= 1; sc--) {
+      const x0 = W / 2 + (bb[0] - fw / 2) * sc, x1 = W / 2 + (bb[2] - fw / 2) * sc; const clearX = x1 <= pz.x0 - 4 || x0 >= pz.x1 + 4;
+      const y = clearX ? BASE : Math.min(BASE, pz.y0 - GAP + (fh - bb[3]) * sc); const top = y - (fh - bb[1]) * sc - BOB;
+      if (top >= TOP || sc === 1) { out = { scale: sc, y }; break; }
+    }
+    c.set(f.uid, out); return out;
+  }
   buildPartySprites() { this.B.party.forEach((a, i) => { const x = 250 + i * 100, y = 392; const s = this.add.sprite(x, y, 'char_' + a.id, 1).setOrigin(0.5, 1).setScale(4).setDepth(60); (s as any).bx = x; (s as any).by = y; this.spr.set(a.uid, s); }); }
   refreshRealmVisuals() { this.setBackRealm(); this.B.foes.forEach((f) => this.applyForm(f)); this.drawRealm(); }
   posOf(b: Battler) { const s = this.spr.get(b.uid)!; return { x: (s as any).bx as number, y: (s as any).by as number }; }
@@ -130,6 +172,7 @@ export class BattleScene extends Phaser.Scene {
   drawBars() {
     const g = this.barG; g.clear();
     for (const e of this.B.foes) { const s = this.spr.get(e.uid)!; const lab = this.lab.get(e.uid); if (!s || !s.active) continue; const gone = !alive(e) && s.alpha < 0.05; if (gone) { lab?.setVisible(false); continue; } lab?.setVisible(s.alpha > 0.3 && alive(e)); if (!alive(e)) continue;
+      if (e.boss && s.texture.key !== this.bossStrip(e)) this.applyForm(e);   // phase strip swap (Rootstorm / Dish Spilled / Calm)
       const w = e.boss ? 300 : 84; const x = e.boss ? W / 2 - 150 : (s as any).bx - w / 2, y = e.boss ? 138 : (s as any).by + 28; const hp = e.dispHp;
       g.fillStyle(0x000000, 0.8); g.fillRect(x - 1, y - 1, w + 2, 9); g.fillStyle(0x3a2030, 1); g.fillRect(x, y, w, 7); g.fillStyle(hp / e.mhp < 0.3 ? 0xff7a5a : 0xff5a6a, 1); g.fillRect(x, y, w * Math.max(0, hp / e.mhp), 7);
       const my = y + 10; g.fillStyle(0x000000, 0.8); g.fillRect(x - 1, my - 1, w + 2, 9); g.fillStyle(0x2a2f55, 1); g.fillRect(x, my, w, 7); const mr = Math.min(1, e.mood / e.calmAt); g.fillStyle(e.calm ? 0x7fffe0 : e.mood >= 150 ? 0xffe08a : 0xff9ed8, 1); g.fillRect(x, my, w * mr, 7);
@@ -141,12 +184,15 @@ export class BattleScene extends Phaser.Scene {
   /** Battle log / tutorial line. Measured fit (Ember §3.2 #3): one line at 21px if it fits, else wrapped to 656px (680 − 2×12) at 17px,
    *  stepping down to 15/13px until it fits; the window grows 72→96px for 3+ lines. */
   async log(s: string, ms = 650) {
-    const w = this.logWin; w.clear(); w.setVisible(true); const maxW = 680 - 24; const t = w.txt(s, 340, 0, { size: 21, align: 'center' });
+    const w = this.logWin; w.clear(); w.setVisible(true); this.dockLog(); const maxW = 680 - 24; const t = w.txt(s, 340, 0, { size: 21, align: 'center' });
     t.setWordWrapWidth(maxW, true); if (t.height > 30) fitBlock(t, maxW, 96 - 14, [17, 15, 13]);
     const h = t.height + 14 <= 72 ? 72 : 96; w.resize(680, h); t.setY(Math.round((h - t.height) / 2));
     const long = s.length > 52; await this.t(ms + (long ? s.length * 14 : 0));
   }
   hideLog() { this.logWin.setVisible(false); }
+  /** With a boss on the field the message window docks over the top HUD row (y 8, up to 96 px tall -> ends at y 104) so it no
+   *  longer hides the boss name (y 112) and HP/Mood bars; other fights keep it at y 66. */
+  dockLog() { const boss = this.B.foes.some((f) => f.boss && !f.gone); this.logWin.setY(boss ? 8 : 66).setDepth(boss ? 58 : 50); }   // 58: above the Order portraits (56) it covers while docked; below the party sprites (60), which it never reaches
   popup(x: number, y: number, s: string, color = '#fff', size = 30) { const t = this.add.text(x, y, s, { fontFamily: FONT, fontSize: size + 'px', color, stroke: '#101030', strokeThickness: 5 }).setOrigin(0.5).setDepth(100); this.tweens.add({ targets: t, y: y - 40, duration: 700 / this.speed(), ease: 'Cubic.easeOut' }); this.tweens.add({ targets: t, alpha: 0, duration: 300, delay: 600 / this.speed(), onComplete: () => t.destroy() }); }
   fx(name: string | null | undefined, x: number, y: number, scale = 4, tint?: number): Promise<void> {
     const m = name ? this.fxMeta[name] : null; if (!m) return Promise.resolve(); const key = 'fx_' + name; const tex = this.textures.get(key);
@@ -395,6 +441,10 @@ export class BattleScene extends Phaser.Scene {
       case 'calmwait': { const a = T(e.actor); await this.log(`${a.name} watches quietly.`, 400); break; }
       case 'leave': { const t = T(e.target); const s = this.spr.get(t.uid)!; await this.log(`${t.name} gets restless and wanders off.`, 700); await new Promise<void>((r) => this.tweens.add({ targets: s, alpha: 0, x: (s as any).bx + 80, duration: 400, onComplete: () => r() })); this.lab.get(t.uid)?.setVisible(false); (s as any).glow?.setVisible(false); break; }
       case 'sendfail': { Audio.se('buzzer'); const t = T(e.target); await this.log(`${t.name} isn't ready to be Sent. (Calm it, weaken it, or Unveil it.)`, 1100); break; }
+      case 'sendwith': { const ts = (e.targets as number[]).map((u) => T(u)).filter(Boolean); const boss = T(e.boss); Audio.se('bell');
+        await Promise.all(ts.map((t) => { const s = this.spr.get(t.uid)!; const p = this.posOf(t); this.fx('spirit', p.x, p.y - 30, 4); return new Promise<void>((r) => this.tweens.add({ targets: s, alpha: 0, y: (s as any).by - 80, duration: 700 / this.speed(), onComplete: () => r() })); }));
+        for (const t of ts) { this.lab.get(t.uid)?.setVisible(false); this.clearTell(t); $.bst(t.id).calmed++; }
+        await this.log(`${ts.length > 1 ? 'Her buds' : 'Her last bud'} settle and drift home with the ${boss ? boss.name : 'Willow Mother'}.`, 900); break; }
       case 'send': { const t = T(e.target); const p = this.posOf(t); const s = this.spr.get(t.uid)!; Audio.se('bell'); await this.fx('spirit', p.x, p.y - 40, 6); await new Promise<void>((r) => this.tweens.add({ targets: s, alpha: 0, y: (s as any).by - 80, duration: 700 / this.speed(), onComplete: () => r() })); this.lab.get(t.uid)?.setVisible(false); this.clearTell(t); $.bst(t.id).calmed++; await this.log(`${t.name} is guided onward. ${e.fragment ? 'A Name Fragment remains.' : 'A Wish Scrap remains.'}`, 900); break; }
       case 'invitefail': { Audio.se('buzzer'); const t = T(e.target); await this.log(e.why === 'calm' ? `${t.name} must be Calm before you can Invite it.` : `${t.name} can't be invited.`, 900); break; }
       case 'invite': { const t = T(e.target); const p = this.posOf(t); const s = this.spr.get(t.uid)!; await this.log(`Mio holds out her hand… (${Math.round(e.chance * 100)}%)`, 700);

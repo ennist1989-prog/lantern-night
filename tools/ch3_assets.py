@@ -5,7 +5,12 @@ from PIL import Image, ImageOps
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 R = os.path.join(os.environ.get('LN_DL', os.path.join(ROOT, '_dl')), 'pack/Ninja Adventure - Asset Pack/Actor') + '/'
 A = os.path.join(ROOT, 'public/assets') + '/'
-def save(im, sub, name): im.save(A + f'{sub}/{name}.png')
+CUSTOM = os.path.join(ROOT, 'art/custom') + '/'
+def save(im, sub, name):
+    # Hand-made art in art/custom/<sub>/<name>.png owns that file (tools/art_custom.py copies it, also as the last step of
+    # gen_game.py): never overwrite it with the pack placeholder, so `npm run data` alone keeps the delivered art.
+    if os.path.exists(CUSTOM + f'{sub}/{name}.png'): return
+    im.save(A + f'{sub}/{name}.png')
 def hue(im, shift, keep=(0.0, 0.14)):
     im = im.convert('RGBA'); px = im.load()
     for y in range(im.height):
@@ -30,8 +35,8 @@ def build():
         save(Image.open(R + p + '/' + sheet).convert('RGBA'), 'chars', k); save(Image.open(R + p + '/Faceset.png').convert('RGBA'), 'faces', k)
     save(hue(Image.open(R + 'Character/OldWoman/SpriteSheet.png'), 0.42), 'chars', 'hisa'); save(hue(Image.open(R + 'Character/OldWoman/Faceset.png'), 0.42), 'faces', 'hisa')
     # Willow Mother face: placeholder (pale, blue-shifted Spirit) until the redesigned face drops in as faces/willow.png
-    if not os.path.exists(A + 'faces/willow_final.png'): save(hue(Image.open(A + 'faces/spirit.png'), 0.55, keep=(2, 2)), 'faces', 'willow')
-    if not os.path.exists(A + 'chars/willow_final.png'): save(hue(Image.open(A + 'chars/spirit.png'), 0.55, keep=(2, 2)), 'chars', 'willow')   # field sprite placeholder
+    if not os.path.exists(A + 'faces/willow_final.png') and not os.path.exists(CUSTOM + 'faces/willow_final.png'): save(hue(Image.open(A + 'faces/spirit.png'), 0.55, keep=(2, 2)), 'faces', 'willow')
+    if not os.path.exists(A + 'chars/willow_final.png') and not os.path.exists(CUSTOM + 'chars/willow_final.png'): save(hue(Image.open(A + 'chars/spirit.png'), 0.55, keep=(2, 2)), 'chars', 'willow')   # field sprite placeholder
     # Willow Mother battler: a sorrowful, non-monstrous placeholder (soft willow-green Giant Spirit flame) until the
     # redesigned battler lands as art/custom/boss/willow_mother.png (art_custom then owns the image and its meta entry).
     if not os.path.exists(os.path.join(ROOT, 'art/custom/boss/willow_mother.png')):
