@@ -1,6 +1,6 @@
 // Polish: boss intro (letterbox + epithet, skippable), assist offer after 2 losses, Lantern Warmth, realm-shift fx, ma/story events
-import { launch, press, sleep, waitScene, newGame, mashUntil, teleport, activeScenes } from './lib.mjs';
-const SS = '/workspace/lantern-night/screenshots';
+import { launch, press, sleep, waitScene, newGame, mashUntil, teleport, activeScenes, SSDIR } from './lib.mjs';
+const SS = SSDIR;
 const { browser, page, errors } = await launch();
 let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 try {

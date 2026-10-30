@@ -12,6 +12,9 @@
     "art": "python3 -B tools/art_custom.py",
     "test:art": "python3 -B tests/test_frame_meta.py",
     "test:overlap": "node tests/overlap.mjs",
+    "test": "tsc --noEmit && node tests/sim.cjs --assert && node tests/sim.cjs",
+    "test:sim": "node tests/sim.cjs --assert && node tests/sim.cjs",
+    "test:e2e": "node tests/e2e.mjs",
     "test:willow": "node tests/willow_sim.cjs",
     "deploy": "bash scripts/deploy.sh"
   },

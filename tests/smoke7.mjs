@@ -1,6 +1,6 @@
-import { launch, sleep, press, waitScene, waitFor, activeScenes, newGame, mashUntil, teleport } from './lib.mjs';
+import { launch, sleep, press, waitScene, waitFor, activeScenes, newGame, mashUntil, teleport, SSDIR } from './lib.mjs';
 const { browser, page, errors } = await launch();
-const shot = (n) => page.screenshot({ path: `screenshots/${n}.png` });
+const shot = (n) => page.screenshot({ path: `${SSDIR}/${n}.png` });
 const st = () => page.evaluate(() => { const S = window.__S, m = window.__game.scene.getScene('Map'); return { map: S.$.map?.id ?? S.$.mapId, x: m.player?.tx, y: m.player?.ty, realm: S.$.realm, lumen: Math.round(S.$.lumen), gold: S.$.gold, party: S.$.party.slice(), sw: Object.keys(S.$.switches || {}).filter(k => S.$.switches[k]).sort().join(','), items: JSON.stringify(S.$.items), q: JSON.stringify(S.$.quests).length }; });
 try {
   await newGame(page);
@@ -25,7 +25,7 @@ try {
   for (let i = 0; i < 12 && (await cur()) !== 3; i++) { await press(page, 'ArrowDown'); await sleep(120); }
   if ((await cur()) !== 3) throw new Error('could not put the load cursor on slot 3');
   await press(page, 'Enter'); await sleep(300); await shot('24-load-confirm'); if (await page.evaluate(() => window.__game.scene.isActive('SaveLoad'))) await press(page, 'Enter');
-  await waitScene(page, 'Map', 15000); await sleep(1200);
+  await waitScene(page, 'Map', 45000); await sleep(1200);   // loading a save is slow on CI runners
   const after = await st(); console.log('after ', JSON.stringify(after));
   // Lumen keeps regenerating on the map after the load, so allow it to have risen by a few points; everything else must match exactly.
   const strip = (o) => ({ ...o, lumen: 0 }); const lumenOk = after.lumen >= before.lumen && after.lumen <= before.lumen + 5;

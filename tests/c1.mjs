@@ -1,7 +1,7 @@
 // Cursor sweep: screenshot every selectable screen; verifies shared heartbeat cursor is drawn (pixel check on title at first load)
-import { launch, press, sleep, newGame, mashUntil, waitScene, teleport } from './lib.mjs';
+import { launch, press, sleep, newGame, mashUntil, waitScene, teleport, activeScenes, SSDIR } from './lib.mjs';
 import { execSync } from 'child_process';
-const SS = '/workspace/lantern-night/screenshots/cursor'; execSync('mkdir -p ' + SS);
+const SS = SSDIR + '/cursor'; execSync('mkdir -p ' + SS);
 const { browser, page, errors } = await launch();
 let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 const shot = (n) => page.screenshot({ path: `${SS}/${n}.png` });
@@ -19,7 +19,9 @@ try {
   await page.evaluate(() => { window.__S.Settings.data.juice = 'off'; }); await sleep(300); await shot('03b-options-juice-off'); await page.evaluate(() => { window.__S.Settings.data.juice = 'full'; });
   await press(page, 'x'); await sleep(400);
   { const ci = await page.evaluate(() => window.__game.scene.getScene('Title').menu.index); for (let k = 0; k < ci; k++) await press(page, 'ArrowUp', 40); await sleep(200); }
-  await press(page, 'Enter'); await waitScene(page, 'Map', 15000); await sleep(500);
+  // the first Enter on Title was dropped on a slow CI runner (stuck on Title); re-press only while Title is the only active scene
+  for (let k = 0; k < 4; k++) { if (k === 0 || (await activeScenes(page)).join() === 'Title') await press(page, 'Enter'); try { await waitScene(page, 'Map', 15000); break; } catch (e) { if (k === 3) throw e; } }
+  await sleep(500);
   await mashUntil(page, () => window.__S.$.sw('intro_done'), null, 80);
   await page.evaluate(() => { const { $ } = window.__S; $.repel = 99999; $.buffs.stealth = 99999; $.setSw('post_lit', true); $.setSw('kaze_joined', true); $.addActor('kaze'); $.gold = 500; for (const [k, n] of Object.entries({ honey: 3, herbal_tea: 2, charm1: 1, mio_w2: 1, smith_tongs: 1, collectors_book: 1, elder_seal: 1, lantern_oil: 2, mochi: 2 })) $.gain(k, n); for (const id of $.party) { const a = $.actors[id]; while (a.level < 5) $.gainExp(a, 20 * a.level); } });
   // choice box
@@ -42,16 +44,18 @@ try {
   await sleep(600);
   // battle: commands, skill list, targets
   await page.evaluate(() => { window.__S.$.realm = 'far'; window.__bp = window.__game.scene.getScene('Map').startBattle('tr_dust_wisp_dust_wisp', { random: true, zone: 'z01' }); });
-  await waitScene(page, 'Battle', 15000); await sleep(1800); await shot('40-battle-partycmd');
-  await press(page, 'Enter'); await sleep(600); await shot('41-battle-actorcmd');
+  // wait for the actual command windows instead of fixed sleeps (the battle intro is slower on a loaded box / CI with software GL)
+  const waitCmd = (first) => page.waitForFunction((first) => { const b = window.__game.scene.getScene('Battle'); return !!b && b.cmdWin?.active && b.cmdWin.visible && b.cmdWin.items?.[0]?.label === first; }, first, { timeout: 30000, polling: 100 });
+  await waitScene(page, 'Battle', 15000); await waitCmd('Fight'); await sleep(300); await shot('40-battle-partycmd');
+  await press(page, 'Enter'); await waitCmd('Attack'); await sleep(300); await shot('41-battle-actorcmd');
   ok(await cursorOn('Battle', 'cmdWin'), 'battle command cursor drawn');
-  await press(page, 'Enter'); await sleep(500); await shot('42-battle-target-enemy');
+  await press(page, 'Enter'); await page.waitForFunction(() => window.__game.scene.getScene('Battle').cursorTxt.visible, null, { timeout: 5000, polling: 100 }).catch(() => {}); await sleep(200); await shot('42-battle-target-enemy');
   ok(await page.evaluate(() => window.__game.scene.getScene('Battle').cursorTxt.visible), 'enemy target cursor visible');
-  await back(); await press(page, 'ArrowDown'); await press(page, 'Enter'); await sleep(500); await shot('43-battle-skills');
-  await back(); await sleep(300);
+  await back(); await waitCmd('Attack'); await press(page, 'ArrowDown'); await press(page, 'Enter'); await sleep(500); await shot('43-battle-skills');
+  await back(); await waitCmd('Attack'); await sleep(200);
   // item -> ally target
   const labels = await page.evaluate(() => window.__game.scene.getScene('Battle').cmdWin.items.map((i) => i.label)); const ii = labels.indexOf('Item');
-  for (let k = 1; k < ii; k++) await press(page, 'ArrowDown', 40); await press(page, 'Enter'); await sleep(500); await shot('44-battle-items'); await press(page, 'Enter'); await sleep(500); await shot('45-battle-target-ally');
+  for (let k = 1; k < ii; k++) await press(page, 'ArrowDown', 40); await press(page, 'Enter'); await sleep(500); await shot('44-battle-items'); await press(page, 'Enter'); await page.waitForFunction(() => window.__game.scene.getScene('Battle').cursorTxt.visible, null, { timeout: 5000, polling: 100 }).catch(() => {}); await sleep(200); await shot('45-battle-target-ally');
   ok(await page.evaluate(() => window.__game.scene.getScene('Battle').cursorTxt.visible), 'ally target cursor visible');
   console.log('errors', errors.filter((e) => !/willReadFrequently|Canvas2D/.test(e)).slice(0, 5));
 } catch (e) { console.log('EXC', e.message); fails++; await shot('99-fail'); }

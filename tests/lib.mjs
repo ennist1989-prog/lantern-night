@@ -1,13 +1,20 @@
 import { chromium } from 'playwright-core';
+import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
+// Env knobs: BASE (game URL), CHROME_PATH (Chrome/Chromium binary), SS (screenshot dir),
+// E2E_DEFAULT_SPEED=1 (play at the shipped default walk/text speed instead of the brisk test pace).
+export const CHROME_PATH = process.env.CHROME_PATH || '/usr/bin/google-chrome';
+export const SSDIR = path.resolve(process.env.SS || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'screenshots'));
+fs.mkdirSync(SSDIR, { recursive: true });
 export async function launch(url = process.env.BASE || 'http://127.0.0.1:8099/', opts = {}) {
-  const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
-  const ctx = await browser.newContext({ viewport: { width: 816, height: 624 }, ...opts });
+  const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', '--host-resolver-rules=MAP *.sentry.io ~NOTFOUND, MAP sentry.io ~NOTFOUND'] });
+  const { defaultSpeed, ...ctxOpts } = opts;
+  const ctx = await browser.newContext({ viewport: { width: 816, height: 624 }, ...ctxOpts });
   const page = await ctx.newPage();
   await page.route(/sentry\.io/, (r) => r.abort());   // never report test sessions to Sentry
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.type() + ': ' + m.text()); });
   page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message + '\n' + (e.stack || '').split('\n').slice(0, 14).join('\n')));
-  await page.addInitScript(() => { try { if (!localStorage.getItem('lotfs.settings')) localStorage.setItem('lotfs.settings', JSON.stringify({ walkSpeed: 'brisk', textSpeed: 2 })); } catch (e) {} });   // tests were tuned for the brisk pace
+  if (!(opts.defaultSpeed ?? process.env.E2E_DEFAULT_SPEED === '1')) await page.addInitScript(() => { try { if (!localStorage.getItem('lotfs.settings')) localStorage.setItem('lotfs.settings', JSON.stringify({ walkSpeed: 'brisk', textSpeed: 2 })); } catch (e) {} });   // tests were tuned for the brisk pace
   await page.goto(url);
   return { browser, ctx, page, errors };
 }
@@ -24,18 +31,19 @@ export async function teleport(page, map, x, y, dir = 'down') { await page.evalu
 // Bell-Keeper aftermath tracker (A6 + Ch3 handoff): reward toasts -> summit epilogue -> fade to Sachi's house (map 2) -> Ch3 opener.
 // Call step() each poll; it records the order things were seen in and fails if the old Credits ending shows up.
 export function bkFlow(page) {
-  const seen = []; const mark = (k) => { if (!seen.includes(k)) seen.push(k); };
+  const seen = []; const mark = (k) => { if (!seen.includes(k)) seen.push(k); }; const st = {};
   return {
-    seen,
+    seen, st,
     async step() {
       const p = await page.evaluate(() => { const g = window.__game, $ = window.__S.$, m = g.scene.getScene('Map'); if (m?.msg && !m.msg.__bk) { const o = m.msg.show.bind(m.msg); m.msg.__bk = true; window.__shown = window.__shown || []; m.msg.show = (f, n, t, op) => { window.__shown.push(String(t)); return o(f, n, t, op); }; } const txt = (o) => (o?.list || o?.children?.list || []).flatMap((c) => c.text ? [c.text] : txt(c.content || c)); let t = ''; try { t = txt(m?.msg?.layer).join('|'); } catch (e) {}
-        return { credits: g.scene.isActive('Credits'), map: $.map?.id, boss: $.sw('boss_done'), ch3: $.sw('ch3_started'), t, shown: (window.__shown || []).join('|') }; });
+        return { credits: g.scene.isActive('Credits'), map: $.map?.id, realm: $.realm, boss: $.sw('boss_done'), ch3: $.sw('ch3_started'), t, shown: (window.__shown || []).join('|') }; });
       if (p.credits) mark('credits');
       if (p.boss) { if (/Key Item: Wellkeeper/.test(p.t)) mark('toast_pebble'); if (/Quest complete/.test(p.t)) mark('toast_quest'); if (/Thank you, Lantern-bearer/.test(p.shown) && /work out that knot/.test(p.shown) && p.map === 6) mark('epilogue'); }
-      if (p.boss && p.map === 2) mark('sachi'); if (p.ch3) mark('ch3_opener');
+      if (p.boss && st.winRealm === undefined) st.winRealm = p.realm;   // realm Mio was in when the Keeper fell (far after an in-battle Shift)
+      if (p.boss && p.map === 2) { mark('sachi'); if (st.sachiRealm === undefined) st.sachiRealm = p.realm; } if (p.ch3) mark('ch3_opener');
       return p;
     },
     done() { return seen.includes('ch3_opener') || seen.includes('credits'); },
-    verdict() { const want = ['epilogue', 'sachi', 'ch3_opener']; const idx = want.map((k) => seen.indexOf(k)); const ok = !seen.includes('credits') && idx.every((i) => i >= 0) && idx[0] < idx[1] && idx[1] <= idx[2]; return { ok, seen }; },
+    verdict() { const want = ['epilogue', 'sachi', 'ch3_opener']; const idx = want.map((k) => seen.indexOf(k)); const ok = !seen.includes('credits') && idx.every((i) => i >= 0) && idx[0] < idx[1] && idx[1] <= idx[2] && st.sachiRealm === 'near'; return { ok, seen: [...seen, 'won:' + st.winRealm, 'sachi:' + st.sachiRealm] }; },   // the handoff always lands on the Near Shore
   };
 }

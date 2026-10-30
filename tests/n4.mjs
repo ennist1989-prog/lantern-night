@@ -1,5 +1,5 @@
 // Side quests sq03 (Hollow Roll Call) and sq04 (The Wrong Note) + sidequest data loader
-import { launch, press, sleep, newGame, mashUntil, teleport } from './lib.mjs';
+import { launch, press, sleep, newGame, mashUntil, teleport, SSDIR } from './lib.mjs';
 const { browser, page, errors } = await launch();
 let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 async function mash(cond, n = 60) { for (let i = 0; i < n; i++) { if (await page.evaluate(cond)) return true; await press(page, 'Enter', 50); await sleep(120); } return false; }
@@ -35,7 +35,7 @@ try {
   await page.evaluate(() => { const { $ } = window.__S; for (let i = 0; i < 5; i++) { $.setSw('sq03_h' + i, true); $.setSw('sq03_m' + i, true); } });
   const f0 = await page.evaluate(() => window.__S.$.fragments); await run(13, 18, 'far');
   const f1 = await page.evaluate(() => ({ f: window.__S.$.fragments, d: window.__S.$.sw('sq03_done') })); ok(f1.d && f1.f === f0 + 2, 'sq03 complete: +2 Name Fragments');
-  await page.screenshot({ path: '/workspace/lantern-night/screenshots/n4-sq.png' });
+  await page.screenshot({ path: SSDIR + '/n4-sq.png' });
   const errs = errors.filter((e) => !/willReadFrequently|Canvas2D/.test(e)); console.log('errors', errs);
 } catch (e) { console.log('EXC', e.message); fails++; }
 await browser.close(); console.log(fails ? 'FAILS ' + fails : 'ALL OK'); process.exit(fails ? 1 : 0);

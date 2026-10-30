@@ -59,7 +59,11 @@ Rule of thumb: tune numbers in `tools/balance_patches.py`; change story and even
 - `npm run data` = `tools/gen_game.py`: gen_db → spec_import → items_import → sq_import → balance_patches → maps. Run after any generator edit and commit the regenerated JSON.
 - `npm run art` = `tools/art_custom.py`: copies `art/custom/**` over the built assets and refreshes `manifest.json`. `npm run data` also does this.
 - `npm run test:art` = `tests/test_frame_meta.py`: boss sprite-sheet frame layout regression test.
-- `node tests/sim.cjs`: headless battle balance sim (unseeded, small N, so it is noisy). For tuning, use the seeded/high-N scripts in `/workspace/ln-sim/` (`matrix.cjs`, `cliff.cjs`).
+- `npm test` = `tsc --noEmit` + `node tests/sim.cjs --assert` (about 5 s). The sim gates are seeded (`SEED`, default 20261024) and high-N (`SIM_N`, default 1000 per Bell-Keeper row, 2000 per normal row), and exit 1 on failure. Bell-Keeper with Mio+Kaze: L5 Shift ≥ 60%, L5 Auto ≥ 35%, L6 ≥ 90% (Shift and Auto), and Auto may not drop more than 5 pp from L6→L7→L8. Ch1/Ch2 normal encounters must stay at ~100%. The gate is ≥ 99%, because Mio solo at L3 vs one Straw Hound really wins only about 99.2–99.5%.
+- `npm run test:e2e` = `tests/e2e.mjs`. It builds `dist/` with the Sentry DSN blanked (and refuses to run if the bundle contains one), serves it with `vite preview` on 127.0.0.1:8099 (`PORT`), and runs the browser suite one test at a time. It prints a PASS/FAIL table and exits non-zero on any failure. `node tests/e2e.mjs t2 t3` runs only those tests, and `--no-build` reuses `dist/`. A test fails if it exits non-zero, times out (`E2E_TIMEOUT_MS`, default 10 min), or prints a line that starts with `FAIL` or `MATCH false`. Screenshots and per-test logs go to `test-results/` (ignored by git; `SS` overrides the screenshot dir).
+- Browser env knobs (`tests/lib.mjs`): `CHROME_PATH` (default `/usr/bin/google-chrome`) and `BASE`. `E2E_DEFAULT_SPEED=1` runs a test at the shipped defaults instead of the brisk walk / fast text that the other tests force. `tests/default_speed.mjs` always runs at the defaults. Every test aborts `*.sentry.io` requests.
+- CI: `.github/workflows/test.yml` runs `npm ci && npm test` and the e2e suite (Chrome from `browser-actions/setup-chrome`) on every PR and on pushes to `main`.
+- `node tests/sim.cjs`: the printed balance table (set `SEED=<n>` for reproducible output). For tuning, use the seeded/high-N scripts in `/workspace/ln-sim/` (`matrix.cjs`, `cliff.cjs`).
 - `npm run build` / `npx tsc --noEmit`: bundle / typecheck. `npm run deploy` publishes `dist/` to GitHub Pages (see above).
 
 **Legacy / unused files (kept for reference; nothing at runtime reads them)**
@@ -74,7 +78,7 @@ Rule of thumb: tune numbers in `tools/balance_patches.py`; change story and even
 * `keyitems.json` — key items (journal screen, stack counts) and `locks` (gate/puzzle/quest requirements; interpreter conditions `lock` / `nlock`).
 * `spec/skills.json` — 53 spells in 8 schools (learned by level, Bond-song lessons, or story flags; `spec/learn.json`), field spells (`field:{tile,realm,effect,range}`); `spec/summons.json` — 12 keepsake summons (once per battle, one per round, SP + Lumen + Echo). Map events opt into field spells with `ft:'<tile>'` + `fieldList`.
 * Saves carry a version (`SAVE_VERSION = 2`, `src/core/migrate.ts` upgrades older saves).
-* Tests: `tests/n1.mjs` (data/logic), `n2.mjs` (menu screens), `n3.mjs` (map locks + field spells), plus the earlier t/b suites (`node tests/<name>.mjs` against `npm run preview -- --port 8099`).
+* Tests: `tests/n1.mjs` (data/logic), `n2.mjs` (menu screens), `n3.mjs` (map locks + field spells), plus the earlier t/b/smoke/c suites. Run them all with `npm run test:e2e`, or one at a time with `node tests/<name>.mjs` against `npm run preview -- --port 8099`.
 
 ## Feel parameters (RPG Maker-like, re-implemented)
 Walk 267 ms/tile and dash 133 ms/tile (Options → Walk Speed: Brisk restores the old faster pace), key repeat 24/6 frames, latest-pressed-axis 4-way direction, window padding 12 / line height 36 / item height 44 (`WIN` in `src/ui/windows.ts`), message speed 60 chars/s (Options → Text Speed) with control codes `\C[n] \V[var] \N[actor] \I[item] \. \| \!`, encounter counter rand(n)+rand(n)+1 with our fairness floor/grace, integer variables.
