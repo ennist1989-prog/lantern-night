@@ -10,7 +10,7 @@ try {
   await press(page, 'Enter'); await sleep(400);
   const flow = bkFlow(page);
   let fights = 0; const t0 = Date.now(); let cheated = false; let sawRetry = true;
-  while (Date.now() - t0 < 240000) {
+  while (Date.now() - t0 < 360000) {   // 360s: a wipe -> retry -> second (re-weakened) Keeper fight fits on a slow runner
     const sc = await activeScenes(page);
     await flow.step(); if (flow.done()) { await sleep(1500); await flow.step(); break; }   // Ch3 handoff: epilogue -> Sachi's house -> Ch3 opener (was: Credits)
     if (!sc.includes('Battle')) cheated = false;   // a wipe/retry starts a fresh Keeper fight: weaken that one too

@@ -1,10 +1,11 @@
 // B2: chapter advances at story transitions, old saves infer it, save slots show it.
 import { launch, sleep, newGame, waitScene, SSDIR } from './lib.mjs';
-import fs from 'fs';
+import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url';
+const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'data');   // cwd-independent
 const { browser, page, errors } = await launch(process.argv[2]);
 let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 try {
-  const m4 = JSON.stringify(JSON.parse(fs.readFileSync('public/data/maps/map004.json', 'utf8'))); const m6 = JSON.stringify(JSON.parse(fs.readFileSync('public/data/maps/map006.json', 'utf8')));
+  const m4 = JSON.stringify(JSON.parse(fs.readFileSync(path.join(DATA, 'maps/map004.json'), 'utf8'))); const m6 = JSON.stringify(JSON.parse(fs.readFileSync(path.join(DATA, 'maps/map006.json'), 'utf8')));
   ok(/"key_got"[^\]]*?\{"c":"chapter","n":2\}/.test(m4), 'Well: Shrine Key win sets chapter 2');
   ok(/"boss_done"[^\]]*?\{"c":"chapter","n":3\}/.test(m6), 'Bell-Keeper win sets chapter 3');
   await newGame(page); await sleep(400);
