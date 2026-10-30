@@ -56,7 +56,20 @@ try {
   await teleport(page, 113, 6, 17, 'up'); await idle(); await run(6, 16, 'far');          // memory 2 (grove mist)
   await teleport(page, 111, 26, 13, 'right'); await idle(); await run(27, 14, 'far');     // Yoshi remembers -> toll token
   ok(await S('cord_tied') && await page.evaluate(() => window.__S.$.v('pil_mem')) >= 3 && await page.evaluate(() => window.__S.$.has('toll_token')), 'Yoshi remembers (cord tied, 3 memories, toll token)');
+  // Kappa's field sprite must not be drawn under the tree belt (v3 grading: only his dish showed): no visible non-flat object
+  // drawn in front of him (higher depth) may cover more than 15% of his sprite box, in Near or Far.
+  const kappaCover = () => page.evaluate(() => { const m = window.__game.scene.getScene('Map'); const out = [];
+    for (const e of m.evs) { const c = e.char; if (!c || !c.spr || !c.spr.visible || !(e.page && e.page.g && e.page.g.sheet === 'kappa')) continue;
+      const b = c.spr.getBounds(); let worst = 0, by = '';
+      for (const o of m.objs) { if (!o.visible || o.depth <= c.spr.depth) continue; const q = o.getBounds();
+        const w = Math.min(b.right, q.right) - Math.max(b.left, q.left), h = Math.min(b.bottom, q.bottom) - Math.max(b.top, q.top);
+        if (w > 0 && h > 0 && (w * h) / (b.width * b.height) > worst) { worst = (w * h) / (b.width * b.height); by = `${o.frame.name}@${o.x},${o.y}`; } }
+      out.push({ x: e.data.x, y: e.data.y, cover: +worst.toFixed(2), by }); }
+    return out; });
+  for (const r of ['near', 'far']) { await realm(r); await sleep(200); const k = await kappaCover(); ok(k.length > 0 && k.every((q) => q.cover <= 0.15), `Kappa (ford, ${r}) is not drawn under the tree belt ${JSON.stringify(k)}`); }
   await run(31, 12, 'far', ['Pay']); ok(await S('kappa_passed'), 'Kappa Toll-Keeper lets the party pass (toll paid)');
+  for (const r of ['near', 'far']) { await realm(r); await sleep(200); const k = await kappaCover(); ok(k.length > 0 && k.every((q) => q.cover <= 0.15), `Kappa (stepped aside, ${r}) is not drawn under the tree belt ${JSON.stringify(k)}`); }
+  await realm('far');
   await run(41, 19, 'far'); await fast(false); await realm('far'); await teleport(page, 111, 16, 12, 'right'); await sleep(900); await shot('05_crossing_far'); await realm('near'); await sleep(900); await shot('06_crossing_near'); await fast(true);
   // Willow Hollow
   await realm('near'); await teleport(page, 112, 2, 20, 'right'); await idle(); await log();
@@ -70,13 +83,20 @@ try {
   const auto0 = await page.evaluate(() => { const d = window.__S.SaveManager.read(0); return d && d.game && d.game.map && d.game.map.id; });
   ok(!wipe.done && wipe.map === 112 && wipe.realm === 'near' && wipe.full && !wipe.title && wipe.mapOn && wipe.cp && auto0 === 112, 'Willow wipe -> retry at the Near Shore, healed, no title/game over, autosaved (' + JSON.stringify(wipe) + ' auto0=' + auto0 + ')');
   ok(L.some((l) => l[1] === 'Whisper Wick' && /Parley/.test(l[2] || '')), 'after the wipe the Whisper Wick points at Parley');
+  { // the wipe-retry Wick line teaches the same route as the other hints, and fits one page of the message window (face + 4 lines)
+    const WICK = 'She does not need to be beaten, little lantern. She needs to be remembered. Parley: Remember her children three times until she is Calm, then Send her home.';
+    const wl = (L.find((l) => l[1] === 'Whisper Wick' && /Parley/.test(l[2] || '')) || [])[2] || '';
+    const fit = await page.evaluate((t) => { const m = window.__game.scene.getScene('Map').msg; const hasFace = window.__game.textures.exists('face_lantern'); const tx = hasFace ? 150 : 28 + 12; const W = window.__game.scale.width; const lines = m.wrapIdx(t, W - 16 - tx - 28); return { hasFace, lines: lines.length }; }, wl);
+    ok(wl === WICK && fit.lines >= 1 && fit.lines <= 4, 'wipe-retry Whisper Wick line matches the other hints and fits one message page ' + JSON.stringify({ wl, ...fit }));
+  }
   { // every Willow hint gives the real route (Remember x3 -> Calm -> Send) and never the Marigold Petal (she has no liked item; Offer only wastes Mio's turn)
     const tip = (L.find((l) => l[1] === 'Tip' && /Willow Mother/.test(l[2] || '')) || [])[2] || '';
     const H = await page.evaluate(() => { const { DB, SPEC } = window.__S; const w = SPEC.bosses.willow_mother; return { hint: w.parleyOnly.hintText, key: w.parley.key.note, note: DB.system.notes.find((n) => n.unlock === 'willow_tip').text, boss: window.__game.scene.getScene('Battle').bossHint({ id: 'willow_mother', name: 'Willow Mother' }) }; });
     const wl = L.filter((l) => (l[1] === 'Kaze' && /grieving/.test(l[2] || '')) || l[1] === 'Whisper Wick').map((l) => l[2]);
     const all = { tip, ...H, lines: wl.join(' / ') };
     ok(!/petal|offer/i.test(JSON.stringify(all)), 'no Willow hint mentions Offer / a Marigold Petal ' + (/petal|offer/i.test(JSON.stringify(all)) ? JSON.stringify(all) : ''));
-    ok([tip, H.hint, H.key, H.note, H.boss].every((t) => /Remember/.test(t) && /Calm/.test(t) && /Send/.test(t)) && [tip, H.hint, H.key, H.note, H.boss].every((t) => /three times/.test(t)), 'Tip, in-battle hint, boss hint, Notes and key note all teach Remember three times -> Calm -> Send');
+    const wick = (L.find((l) => l[1] === 'Whisper Wick' && /Parley/.test(l[2] || '')) || [])[2] || '';
+    ok([tip, H.hint, H.key, H.note, H.boss, wick].every((t) => /Remember/.test(t) && /Calm/.test(t) && /Send/.test(t)) && [tip, H.hint, H.key, H.note, H.boss, wick].every((t) => /three times/.test(t)), 'Tip, in-battle hint, boss hint, Notes, key note and wipe-retry Wick line all teach Remember three times -> Calm -> Send');
   }
   await run(28, 4, 'near'); ok(await S('willow_done') && await page.evaluate(() => window.__S.$.has('willow_sprig')), 'Willow Mother is laid to rest on the retry (sprig)');
   L = await log(); ok(L.some((l) => l[0] === 'battle' && l[1] === 'boss_willow_mother'), 'Willow Mother fight is boss_willow_mother');
@@ -98,6 +118,16 @@ try {
   for (const [t, n] of [['boss_kappa_toll', 'battle_kappa'], ['boss_willow_mother', 'battle_willow']]) {
     await page.evaluate((t) => { window.__game.scene.getScene('Map').startBattle(t, { boss: true, noEscape: true }); }, t); await waitScene(page, 'Battle', 15000); await waitInput(page, 40000); await sleep(700); await shot('08_' + n);
     const st = await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); return b.B.foes.map((f) => f.name); }); ok(st.length > 0, t + ' starts: ' + st.join(', '));
+    // ch3-redo-v2 engine hooks: no Far glow disc behind the boss; per-state strip swap with a fallback to the single strip
+    const eng = await page.evaluate(async () => { const b = window.__game.scene.getScene('Battle'); const B = b.B; const f = B.foes.find((x) => x.boss); const s = b.spr.get(f.uid); const fr = () => new Promise((r) => setTimeout(r, 120));
+      const discs = b.children.list.filter((o) => o.type === 'Ellipse' && o.fillColor === 0x9fdcff && Math.abs(o.x - s.x) < 4 && o.width >= s.displayWidth).length;
+      const ps = f.sprite.phaseStrips || {}; const [pname, alt] = Object.entries(ps)[0] || []; const ph = f.def.phases.find((p) => p.name === pname); const out = { boss: f.id, glow: !!s.glow, discs, fd: b.bossMeta[f.id].fd ?? 150, base: s.texture.key, alt };
+      if (!ph) return out; const st = ph.enter?.stateOn; const had = b.textures.exists('boss_' + alt) && !!b.bossMeta[alt];
+      f.phasesDone.add(ph.id); if (st) f.states[st] = { n: 1, turns: 9 }; await fr(); out.missing = had ? null : s.texture.key;   // strip not delivered -> stays on the base strip
+      let injected = false; if (!had) { const c = document.createElement('canvas'); const m = b.bossMeta[f.id]; c.width = m.fw * 2; c.height = m.fh; b.textures.addCanvas('boss_' + alt, c); b.bossMeta[alt] = { fw: m.fw, fh: m.fh, n: 2, sc: 1, sheet: alt }; injected = true; }
+      await fr(); out.swapped = s.texture.key; f.calm = true; await fr(); out.calm = s.texture.key; f.calm = false; if (st) delete f.states[st]; f.phasesDone.delete(ph.id); await fr(); out.back = s.texture.key;
+      if (injected) { b.textures.remove('boss_' + alt); delete b.bossMeta[alt]; } return out; });
+    ok(!eng.glow && eng.discs === 0 && (!eng.alt || ((eng.missing === null || eng.missing === eng.base) && eng.swapped === 'boss_' + eng.alt && eng.calm === eng.base && eng.back === eng.base)), t + ': no Far glow disc behind the boss; phase strip swaps in (and back on Calm / phase over), single strip when the second is missing ' + JSON.stringify(eng));
     if (t === 'boss_willow_mother') {   // Parley-only in the real engine: blades can't end her, the hint shows once, Remember x3 -> Calm -> Send wins
       const po = await page.evaluate(async () => { const b = window.__game.scene.getScene('Battle'); const B = b.B; const w = B.foes.find((f) => f.boss); const ev = [];
         B.hurt(B.party[B.party.length - 1], w, w.hp, ev, {}); const after = w.hp; const send1 = B.canSend(w); const hint = ev.some((e) => e.t === 'tutorial'); b.play(ev); return { after, mhp: w.mhp, send1, hint, alive: w.hp > 0 }; });
@@ -112,11 +142,13 @@ try {
       await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); b.log(window.__S.SPEC.bosses.willow_mother.parleyOnly.hintText, 0); }); await sleep(300); await shot('08_willow_hint_fit');
       // follow the advice with the real Parley skills: Mio uses Remember three times, then Send (Kaze only Guards)
       const pw = await page.evaluate(() => { const B = window.__game.scene.getScene('Battle').B; const w = B.foes.find((f) => f.boss); const mio = B.party.find((p) => p.actorId === 'mio') || B.party[0];
-        mio.sp = Math.max(mio.sp, 18); const mood = [];
+        mio.sp = Math.max(mio.sp, 18); const mood = []; if (!B.foes.some((f) => f.add && f.hp > 0 && !f.gone)) B.summon(w, 'willow_bud', 2, 3, [], true); const buds0 = B.foes.filter((f) => f.add && f.hp > 0 && !f.gone).length;
         for (let i = 0; i < 3; i++) { mio.action = { type: 'skill', skill: 'mio_remember', targets: [w.uid] }; B.act(mio); mood.push(w.calm ? 'calm' : w.mood); }
-        const calm = w.calm; const send = B.canSend(w); mio.action = { type: 'skill', skill: 'mio_send', targets: [w.uid] }; B.act(mio);
-        return { mood, calm, send, gone: w.gone, end: B.checkEnd(), budsCalm: B.foes.filter((f) => f.add && f.hp > 0 && !f.gone).every((f) => f.calm) }; });
+        const calm = w.calm; const send = B.canSend(w); const budsCalm = B.foes.filter((f) => f.add && f.hp > 0 && !f.gone).every((f) => f.calm); mio.action = { type: 'skill', skill: 'mio_send', targets: [w.uid] }; const res = B.act(mio);
+        const evs = JSON.stringify(res && res.ev ? res.ev.map((e) => e.t) : (res || []).map ? (res || []).map((e) => e.t) : []);
+        return { mood, calm, send, gone: w.gone, buds0, budsCalm, budsLeft: B.foes.filter((f) => f.add && f.hp > 0 && !f.gone).length, budsSent: B.foes.filter((f) => f.add && f.gone === 'sent').length, ended: B.ended, end: B.checkEnd(), evs }; });
       ok(pw.calm && pw.send && pw.gone === 'sent' && pw.end === 'win' && pw.budsCalm, 'Willow: following the hint (Remember x3 -> Calm -> Send) wins the battle ' + JSON.stringify(pw));
+      ok(pw.buds0 >= 1 && pw.budsLeft === 0 && pw.budsSent >= pw.buds0 && pw.ended === 'win', 'Willow: her calm buds leave with her on the Send and the battle ends right there (no extra turns) ' + JSON.stringify(pw));
     }
     await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); for (const f of b.B.foes) f.hp = 0; }); await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); b.endCheck(); });
     const t0 = Date.now(); while (Date.now() - t0 < 25000 && await page.evaluate(() => window.__game.scene.isActive('Battle'))) { await press(page, 'Enter', 50); await sleep(200); }
