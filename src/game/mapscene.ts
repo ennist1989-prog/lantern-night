@@ -112,7 +112,7 @@ export class MapScene extends Phaser.Scene {
     this.msg.setTone(far ? 'far' : 'near'); this.hud.setTone(far ? 'far' : 'near');
     // lantern glows
     this.glows.forEach((g) => g.destroy()); this.glows = [];
-    for (const l of this.mapData.lights || []) { if (l.realm && l.realm !== $.realm) continue; const g = this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setAlpha(far ? 0.75 : 0.28); (g as any).l = l; this.fxLayer.add(g); this.glows.push(g); }
+    for (const l of this.mapData.lights || []) { if (l.realm && l.realm !== $.realm) continue; const g = this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setAlpha(l.a ?? (far ? 0.75 : 0.28)); if (l.tint != null) g.setTint(l.tint); (g as any).l = l; this.fxLayer.add(g); this.glows.push(g); }
     this.evs.forEach((e) => this.applyPageGraphic(e));
   }
   // ------------------------------------------------------------ events
@@ -376,7 +376,7 @@ export class MapScene extends Phaser.Scene {
       this.vig.setPosition((P.px - this.scrollX) * 3, (P.py - 8 - this.scrollY) * 3);
       for (const m of this.motes) { m.s.x += m.vx * dt / 1000; m.s.y += m.vy * dt / 1000; if (m.s.y < -10) { m.s.y = H + 10; m.s.x = Math.random() * W; } m.s.setAlpha(0.35 + 0.25 * Math.sin(this.time.now / 300 + m.s.x)); }
     }
-    for (const g of this.glows) { const l = (g as any).l; g.setPosition((l.x * TS + 8 - this.scrollX) * 3, (l.y * TS + 8 - this.scrollY) * 3).setScale((l.r || 4) * 0.6 * (1 + 0.05 * Math.sin(this.time.now / 260 + l.x))); }
+    for (const g of this.glows) { const l = (g as any).l; g.setPosition((l.x * TS + 8 - this.scrollX) * 3, (l.y * TS + 8 - this.scrollY) * 3).setScale((l.r || 4) * 0.6 * (l.a != null ? 1 : 1 + 0.05 * Math.sin(this.time.now / 260 + l.x))); }
     if (this.shake_ > 0) this.shake_ = Math.max(0, this.shake_ - dt / 120);
   }
   updateHud() {

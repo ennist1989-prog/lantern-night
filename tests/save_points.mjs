@@ -36,5 +36,11 @@ const items = JSON.parse(fs.readFileSync('public/data/items.json', 'utf8')), ico
 ok(items.mochi && items.mochi.effect && items.mochi.effect.hp === 30 && items.mochi.usable, 'mochi heals +30 HP (effect matches its description)');
 ok(items.mochi && items.mochi.icon === 'mochi' && !items.mochi.iconV2 && icons.mochi === 74, 'mochi uses its own icon (icons.png slot 74), not the v2 pear');
 ok(box && box.pages[0].g.obj === 'supply_box' && box.pages[1].g.obj === 'supply_box_open' && box.x === 2 && box.y === 21, 'supply box obj at (2,21), open look after its flag');
+{ const m7 = JSON.parse(fs.readFileSync('public/data/maps/map007.json', 'utf8')); const sh = (n) => m7.events.find((e) => e.pages[0].g && e.pages[0].g.sheet === n);
+  const tk = sh('tokubei_far'), hr = sh('haru');
+  ok(tk && tk.x === 11 && tk.y === 3 && tk.realm === 'far' && tk.peek === false && !m7.col.far[3 * m7.w + 11], 'Old Tokubei: tokubei_far at (11,3), Far-only, peek:false, open cell');
+  ok(hr && hr.x === 30 && hr.y === 3 && hr.realm === 'both', 'Haru at (30,3), both realms');
+  ok(m7.lights.some((l) => l.x === 11 && l.y === 3 && l.realm === 'far' && l.a === 0.3 && l.tint === 0xb8dce5), 'Tokubei glow: per-light alpha 0.3 / tint #b8dce5, Far only');
+  ok(m7.lights.filter((l) => l.a == null).every((l) => l.tint == null), 'other lights keep the default glow'); }
 const objs = JSON.parse(fs.readFileSync('public/assets/objects.json', 'utf8')); ok(objs.supply_box && objs.supply_box_open, 'supply_box objects in the atlas');
 console.log(fails ? `FAIL ${fails}` : 'PASS save_points + maze'); process.exit(fails ? 1 : 0);

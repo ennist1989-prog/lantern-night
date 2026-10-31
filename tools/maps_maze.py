@@ -103,7 +103,12 @@ def build_maze():
         if gift: first.append(item(gift[0], gift[1]))
         first.append(sw(flag))
         after = [say(sheet, name, lines[-1] if not gift else 'Go on, Mio. The reeds remember you, even if they’ve grown taller.')]
-        m.event(x, y, [page(g=NPC(sheet, 'down', step=False), list=[IF({'nsw': flag}, first, after)])], 'far' if sheet == 'tokubei_far' else 'near')
+        if sheet == 'haru': x, y = 30, 3          # Pixel Sage regrade: Haru at (30,3), both realms
+        if sheet == 'tokubei_far': x, y = 11, 3   # Old Tokubei at (11,3), Far-only, never shown by peek
+        eid = m.event(x, y, [page(g=NPC(sheet, 'down', step=False), list=[IF({'nsw': flag}, first, after)])], 'far' if sheet == 'tokubei_far' else 'both' if sheet == 'haru' else 'near')
+        if sheet == 'tokubei_far':
+            m.events[-1]['peek'] = False
+            m.light(x, y, 1.1, 'far', a=0.3, tint=0xb8dce5)   # maze-v1 robe glow, static
     m.event(27, 2, [page(cond={'nsw': 'maze_intro'}, trigger='touch', through=True, list=[
         say('mio', 'Mio', 'The old reed field… it’s grown into a maze. Granny used to say a keeper learns the way by losing it first.'), sw('maze_intro')])])
     return m

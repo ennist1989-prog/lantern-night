@@ -15,9 +15,6 @@ export class Char {
   setSheet(name: string | null, far: boolean, dir: Dir = this.dir) {
     this.far = far; this.dir = dir; if (!name) { this.spr.setVisible(false); this.sheet = ''; this.visible = false; return; }
     this.visible = true; this.spr.setVisible(true); this.sheet = name;
-    // maze-v1 fx.json: Old Tokubei's static robe glow (#b8dce5, r 14, alpha 0.3, ADD, behind the sprite)
-    this.aura?.destroy(); this.aura = undefined;
-    if (name === 'tokubei_far' && this.scene.textures.exists('glow')) this.aura = this.scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xb8dce5).setAlpha(0.3).setScale(14 / 64);
     let key = 'char_' + name; if (!this.scene.textures.exists(key)) key = 'char_villager1';
     if (far && !NO_FAR.has(name)) key = farTexture(this.scene, key);
     this.isObj = false; if (this.spr instanceof Phaser.GameObjects.Image && !(this.spr instanceof Phaser.GameObjects.Sprite)) { const old = this.spr; this.spr = this.scene.add.sprite(this.px, this.py, key, 0).setOrigin(0.5, 1); old.destroy(); }
@@ -32,8 +29,7 @@ export class Char {
     let row = this.moving || this.stepAnim ? [0, 1, 2, 3][Math.floor(this.animT / 1) % 4] : 0; const rows = Math.max(1, Math.floor(((this.spr.texture as any).frameTotal - 1) / 4)); row = row % rows;
     (this.spr as Phaser.GameObjects.Sprite).setFrame(row * 4 + DIRCOL[this.dir]);
   }
-  aura?: Phaser.GameObjects.Image;
-  refreshPos() { if (this.aura) this.aura.setPosition(Math.round(this.px), Math.round(this.py - 1 + this.yOff - 7)).setDepth(this.py - 0.5).setVisible(this.spr.visible); this.spr.setPosition(Math.round(this.px), Math.round(this.py - 1 + this.yOff)); this.spr.setDepth(this.flat ? this.py - 5000 : this.py + 0.01 * this.tx); this.spr.setTint(this.tint); this.spr.setAlpha(this.opacity); }
+  refreshPos() { this.spr.setPosition(Math.round(this.px), Math.round(this.py - 1 + this.yOff)); this.spr.setDepth(this.flat ? this.py - 5000 : this.py + 0.01 * this.tx); this.spr.setTint(this.tint); this.spr.setAlpha(this.opacity); }
   place(tx: number, ty: number) { this.tx = tx; this.ty = ty; this.px = tx * TS + 8; this.py = ty * TS + TS; this.moving = false; this.t = 0; this.refreshPos(); }
   start(dir: Dir, dur: number) { this.dir = dir; this.fx = this.tx; this.fy = this.ty; this.tx += DV[dir][0]; this.ty += DV[dir][1]; this.moving = true; this.t = 0; this.dur = dur; }
   update(dt: number) {
@@ -47,5 +43,5 @@ export class Char {
     if (this.marker) { this.marker.setPosition(this.px, this.py - 24 + Math.sin(this.scene.time.now / 160) * 1.5); this.marker.setDepth(99999); }
   }
   face(d: Dir) { this.dir = d; this.updateFrame(); }
-  destroy() { this.aura?.destroy(); this.spr.destroy(); this.marker?.destroy(); }
+  destroy() { this.spr.destroy(); this.marker?.destroy(); }
 }
