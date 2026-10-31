@@ -3,10 +3,10 @@ export interface SettingsData { bgm: number; se: number; textSpeed: number; alwa
 const DEF: SettingsData = { bgm: 0.5, se: 0.7, textSpeed: 1, alwaysRun: false, walkSpeed: 'classic', battleSpeed: 1, autoBattle: false, autoV2: true, difficulty: 'standard', touch: true, msgAuto: false, juice: 'full', warmth: 0 };
 class SettingsClass {
   data: SettingsData = { ...DEF };
-  load() { try { const s = localStorage.getItem(KEY); if (s) this.data = { ...DEF, ...JSON.parse(s) };
+  load() { try { const s = localStorage.getItem(KEY); const st = s ? JSON.parse(s) : null; if (st) this.data = { ...DEF, ...st };
     // PF2 #3: picking Auto in battle used to save Auto Battle ON for good. It is now one turn only, so the always-on mode is an
-    // explicit Options choice; clear any ON that the old battle menu left behind (once).
-    if (!this.data.autoV2) { this.data.autoBattle = false; this.data.autoV2 = true; if (s) this.save(); } } catch (e) { /* ignore */ } }
+    // explicit Options choice; clear any ON that the old battle menu left behind (once). Check the STORED object: DEF has autoV2.
+    if (st && !st.autoV2) { this.data.autoBattle = false; this.data.autoV2 = true; this.save(); } } catch (e) { /* ignore */ } }
   save() { try { localStorage.setItem(KEY, JSON.stringify(this.data)); } catch (e) { /* ignore */ } }
 }
 export const Settings = new SettingsClass();
