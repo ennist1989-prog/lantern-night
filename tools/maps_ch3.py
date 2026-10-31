@@ -54,13 +54,14 @@ EDGE_OBJS = {10: [('flank_stump', 0, 16), ('flank_rock', 0, 20), ('flank_rock', 
              111: [('flank_stump', 0, 11), ('flank_rock', 0, 15), ('hollow_fronds_l', 45, 10), ('hollow_fronds_r', 45, 14)],
              112: [('hollow_fronds_l', 0, 18), ('hollow_fronds_r', 0, 22)],
              113: [('flank_stump', 13, 25), ('flank_rock', 17, 25)]}
+EXIT_CLEAR = {10: {(x, 20) for x in range(46, 50)}}   # #11: no pine half-hiding the player at the forest's east exit mouth (New Bot, PR #49)
 def edge_clear(m):
     """Cells woods() must leave clear for this map's EDGE_OBJS (call before woods())."""
     clear = set()
     for (n, x, y) in EDGE_OBJS.get(m.id, []):
         if n not in OBJ: continue
         clear.update((x, y + j) for j in ((-1, 0, 1) if n.startswith('hollow_fronds') else (0, 1)))
-    return clear
+    return clear | EXIT_CLEAR.get(m.id, set())
 def edge_objs(m):
     """Place EDGE_OBJS (after woods(), so they win depth ties), the trail-opening pieces and map 10's fog lip."""
     for (n, x, y) in EDGE_OBJS.get(m.id, []):
@@ -476,6 +477,8 @@ def build_hollow():
         page(cond={'sw': 'wick_got'}, list=[say(None, None, 'The grass where the wick floated is still warm.')])])
     # D6: post-quest root path back to the Crossing: walk onto it (was an action + choice). Ember's 48x32 root_bridge_end: cols 32-33, rows 20-21, flush with the edge.
     m.event(32, 21, [page(cond={'sw': 'wick_got'}, g=(dict(obj='root_bridge_end') if 'root_bridge_end' in OBJ else None), trigger='touch', through=True, list=[{'c': 'transfer', 'map': 111, 'x': 43, 'y': 12, 'dir': 'left', 'se': 'grass'}])])
+    for y in (20, 21, 22):   # before the wick: roots bar the open-looking edge (same barrier as the Forest's grove gap; New Bot, PR #49)
+        m.event(33, y, [page(cond={'nsw': 'wick_got'}, g=dict(obj='tree_trunk'), trigger='action', list=[say(None, None, 'Thick roots knot across the path back to the Crossing.')])])
     chest(m, 2, 4, [('lantern_oil', 2), ('marigold_petal', 2)]); chest(m, 31, 23, [('kuzu_tonic', 2)]); chest(m, 18, 24, [('ward_salt', 1)], realm='far')
     foe(m, 6, 5, 'tr_willow_sprout_willow_sprout', 'rustle', 'both', aggro=3, range=2)
     foe(m, 22, 5, 'tr_rusalka_reed_willow_sprout', 'ghostgirl', aggro=3, range=2)
