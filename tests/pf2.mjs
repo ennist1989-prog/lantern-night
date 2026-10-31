@@ -36,7 +36,7 @@ try {
   await page.evaluate(() => { window.__S.$.setSw('warden_done', true); }); await teleport(page, 1, 15, 22, 'left'); p = await step('ArrowLeft', 900);
   ok(p.x <= 13, 'old save already past the Warden (warden_done, no kaze_joined) is not blocked: ' + JSON.stringify(p));
   await page.evaluate(() => { window.__S.$.setSw('warden_done', false); window.__S.$.setSw('kaze_joined', true); });
-  for (const realm of ['near', 'far']) { await page.evaluate((r) => { window.__S.$.realm = r; window.__game.scene.getScene('Map').applyRealmVisuals?.(); }, realm); await teleport(page, 1, 15, 22, 'left'); p = await step('ArrowLeft', 700);
+  for (const realm of ['near', 'far']) { await page.evaluate((r) => { window.__S.$.realm = r; window.__game.scene.getScene('Map').applyRealmVisuals?.(); }, realm); await teleport(page, 1, 15, 22, 'left'); p = await step('ArrowLeft', 420);   // short: stop before the Warden at x=10
     ok(p.x <= 13, `${realm}: with Kaze Mio walks through the gate toward the ${realm === 'near' ? 'boulders' : 'Warden'}: ` + JSON.stringify(p)); }
   // ---- #4 Warden 'Not yet' (Far): turned around and walked back to the east side of the boulders
   for (const row of [22, 24]) {
