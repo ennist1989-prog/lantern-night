@@ -67,7 +67,7 @@ export class Interpreter {
         case 'se': Audio.se(c.name); break;
         case 'chestopen': { // #8: the lid opens on screen right away; the self-switch page (obj chest_open) keeps it open after
           const e = S.evs.find((v: any) => v.id === (c.ev ?? ctx.ev)); if (!e || !e.char) break; const far = $.realm === 'far';
-          e.char.setObject('chest_open', far, false); const sp = e.char.spr; const sy = sp.scaleY;
+          e.char.setObject(c.obj || 'chest_open', far, false); const sp = e.char.spr; const sy = sp.scaleY;
           S.tweens.add({ targets: sp, scaleY: { from: sy * 0.8, to: sy }, duration: 140, ease: 'Back.easeOut' }); break; }
         case 'me': Audio.me(c.name); break;
         case 'move': await S.moveRoute(c.target ?? 'player', c.route, c.wait !== false, ctx); break;

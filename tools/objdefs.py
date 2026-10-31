@@ -76,6 +76,8 @@ OBJS.update({
  "shelf_b":      cell("TilesetElement.png",4,7,1,2),
  "cupboard":     cell("TilesetElement.png",2,7,1,2),
  "chest":        cell("TilesetElement.png",3,1,1,1),
+ "supply_box":   cell("TilesetElement.png",3,1,1,1),   # training maze; art/custom/objects/supply_box.png (Ember maze-v1) overrides
+ "supply_box_open": cell("TilesetElement.png",3,1,1,1),
  "pot_big":      cell("TilesetElement.png",4,1,1,1),
  "jar":          cell("TilesetElement.png",2,1,1,1),
  "chair":        cell("TilesetElement.png",0,9,1,1),

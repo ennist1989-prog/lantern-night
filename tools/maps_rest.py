@@ -13,13 +13,13 @@ def fill_walls_wood(m, face_x=None):
     m.bg = '#3b3643'
 def foe(m, x, y, troop, sheet, realm='far', **kw):
     e = dict(troop=troop, aggro=kw.get('aggro', 4), chase=True, range=kw.get('range', 3), spd=kw.get('spd', 260)); m.event(x, y, [page(g=NPC(sheet), enemy=e)], realm)
-def chest(m, x, y, items, text=None, realm='both'):
+def chest(m, x, y, items, text=None, realm='both', obj='chest', empty='The chest is empty.'):
     got = []
     for it_, n in items: got.append(item(it_, n))
     # (no static chest object: the event draws the closed/open frame, so the open lid is never hidden under a closed copy)
     # #8: the lid opens on the spot (chest_open frame) and the opened page keeps that frame for good
-    m.event(x, y, [page(cond={'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}, {'c': 'chestopen'}] + got + [self_sw('A')]),
-                   page(cond={'self': 'A'}, g=dict(obj='chest_open'), list=[say(None, None, 'The chest is empty.')])], realm)
+    m.event(x, y, [page(cond={'nself': 'A'}, g=dict(obj=obj), list=[{'c': 'se', 'name': 'pickup'}, dict({'c': 'chestopen'}, **({} if obj == 'chest' else {'obj': obj + '_open'}))] + got + [self_sw('A')]),
+                   page(cond={'self': 'A'}, g=dict(obj=obj + '_open'), list=[say(None, None, empty)])], realm)
 def build_sachi():
     m = Map(2, 'Sachi’s House', 12, 10, 'home', 'home', seed=2); fill_walls_wood(m, (1, 10))
     m.fill('both', 1, 2, 10, 8, WOOD_FLOOR); m.fill('both', 6, 9, 6, 9, WOOD_FLOOR)
@@ -127,7 +127,7 @@ def build_well():
     for x in range(16, 25):
         m.tile('far', x, 7, G(2, 12, 3)); m.walk('far', x, 7, True)
     m.region(2, 3, 10, 9, 3); m.region(15, 3, 23, 11, 3); m.region(19, 15, 28, 23, 3)
-    m.post(5, 6, 3); m.post(25, 9, 3); m.post(22, 17, 3)
+    m.post(5, 6, 3, save=False); m.post(25, 9, 3); m.post(22, 17, 3, save=False)   # one save per map: keep the Post past the pit bridge, before the Well Spirit
     m.region(0, 0, 0, 0, 0)
     for (x, y) in [(3, 3), (9, 3), (6, 9), (16, 4), (16, 10), (27, 3), (27, 11), (20, 16), (28, 22), (19, 22)]: m.obj('both', 'boulder_brown', x, y, fw=2, block=True) if False else None
     for (x, y) in [(10, 4), (2, 9), (22, 10), (16, 11), (28, 17), (19, 20)]: m.obj('both', 'pot_big', x, y, fw=1)  # #9: jar was at (28,15), the only tile next to the (28,14) chest

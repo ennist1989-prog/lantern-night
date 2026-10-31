@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { farTexture } from './recolor';
 export const TS = 16;
 /** Sheets that keep their true colours on the Far Shore (beings of the Far; Tsubaki asset pack §1.5 / §4.2 #5). Per-event `nofar` still works too. */
-export const NO_FAR = new Set<string>(['tsubaki']);
+export const NO_FAR = new Set<string>(['tsubaki', 'tokubei_far']);
 export type Dir = 'down' | 'up' | 'left' | 'right';
 export const DIRCOL: Record<Dir, number> = { down: 0, up: 1, left: 2, right: 3 };
 export const DV: Record<Dir, [number, number]> = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] };

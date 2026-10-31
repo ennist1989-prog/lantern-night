@@ -57,12 +57,12 @@ for (const m of Object.values(maps)) for (const e of m.events) for (const p of e
   for (const { c } of transfers) { const t = maps[c.map]; if (!t) continue; for (const r of ['near', 'far']) if (walk(t, r, c.x, c.y)) ok(exitsFrom(t, r, c.x, c.y, -9, -9), `arrival ${c.map}:${c.x},${c.y} [${r}] has no open neighbour`); }
   console.log('push-back landings checked', n); }
 // edge exits: the trigger cells on the map border; their trail must stay walkable to the edge
-const EDGE = [[1, [[35, 16], [35, 17]]], [10, [[0, 17], [0, 18], [0, 19], [49, 18], [49, 19], [24, 0], [25, 0], [26, 0]]], [111, [[0, 12], [0, 13], [45, 11], [45, 12], [45, 13]]], [112, [[0, 19], [0, 20], [0, 21]]], [113, [[14, 25], [15, 25], [16, 25]]]];
+const EDGE = [[1, [[35, 16], [35, 17], [0, 16], [0, 17], [22, 29], [23, 29], [24, 29]]], [7, [[26, 0], [27, 0], [28, 0], [0, 21], [0, 22], [0, 23]]], [10, [[0, 17], [0, 18], [0, 19], [49, 18], [49, 19], [24, 0], [25, 0], [26, 0]]], [111, [[0, 12], [0, 13], [45, 11], [45, 12], [45, 13]]], [112, [[0, 19], [0, 20], [0, 21]]], [113, [[14, 25], [15, 25], [16, 25]]]];
 for (const [id, cells] of EDGE) for (const [x, y] of cells) { const m = maps[id]; const es = m.events.filter((e) => e.x === x && e.y === y && isTransferEv(e));
   ok(es.length && es.every((e) => e.pages.every((p) => p.trigger === 'touch')), `edge exit ${id}:${x},${y} is a walk-off touch transfer`);
   ok(x === 0 || y === 0 || x === m.w - 1 || y === m.h - 1, `edge exit ${id}:${x},${y} on the map border`); }
 // no black (gid 0) cells in the village or the small interiors; the well keeps only its pit
-for (const id of [1, 2, 3, 10, 111, 112, 113]) for (const r of ['near', 'far']) ok(!maps[id].layers[r].g.some((v) => !v), `map ${id} ${r}: gid-0 (black) ground cells`);
+for (const id of [1, 2, 3, 7, 10, 111, 112, 113]) for (const r of ['near', 'far']) ok(!maps[id].layers[r].g.some((v) => !v), `map ${id} ${r}: gid-0 (black) ground cells`);
 for (const id of [2, 3]) ok(maps[id].bg === '#3b3643', `map ${id}: letterbox tinted to the wall colour`);
 // chests: every chest event has a 4-neighbour reachable from the map's arrivals. BFS over (x, y, realm) with realm shifts
 // (unless noShift); story-gated blockers (events whose solid pages all have a cond, e.g. hay, sand drifts) and switch-built
