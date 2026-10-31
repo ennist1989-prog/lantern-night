@@ -113,7 +113,7 @@ print('spells', len(spells), 'summons', len(SM['summons']), 'keyitems', len(kis)
 
 # ---------------- system extras (dungeon exits for Paper Crane / Evac, no-warp rooms) + designer decision: peaceful routes also yield boss cores
 sysd = json.load(open(os.path.join(DATA, 'system.json')))
-sysd['dungeonExit'] = {'4': {'map': 1, 'x': 5, 'y': 24, 'dir': 'up'}, '5': {'map': 1, 'x': 18, 'y': 5, 'dir': 'down'}}
+sysd['dungeonExit'] = {'4': {'map': 1, 'x': 6, 'y': 24, 'dir': 'right'}, '5': {'map': 1, 'x': 18, 'y': 7, 'dir': 'down'}}
 sysd['noWarp'] = [6]
 dump(os.path.join(DATA, 'system.json'), sysd)
 bs = json.load(open(os.path.join(SPEC, 'bosses.json'))); fixed = []

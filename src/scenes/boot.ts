@@ -6,7 +6,7 @@ const FACES = CHARS.concat(['tengu', 'gspirit', 'tsubaki_grief', 'tsubaki_anger'
 /** Art/audio that may not be delivered yet (Tsubaki asset pack, final-boss BGM). These are only queued when
  *  assets/manifest.json (written by tools/art_custom.py) lists them, so a missing file never 404s; create() then
  *  aliases a missing char sheet to the current placeholder, and Audio falls back for a missing BGM. */
-const OPTIONAL: Record<'chars' | 'faces' | 'bgm' | 'tiles', string[]> = { chars: ['tsubaki'], faces: ['tsubaki', 'tsubaki_grief', 'tsubaki_anger', 'tsubaki_resolve', 'kappa_bowed', 'willow_final_calm', 'willow_final_strained'], bgm: ['final'], tiles: ['ch3fix'] };
+const OPTIONAL: Record<'chars' | 'faces' | 'bgm' | 'tiles', string[]> = { chars: ['tsubaki'], faces: ['tsubaki', 'tsubaki_grief', 'tsubaki_anger', 'tsubaki_resolve', 'kappa_bowed', 'willow_final_calm', 'willow_final_strained'], bgm: ['final'], tiles: ['ch3fix', 'border'] };
 const CHAR_PLACEHOLDER: Record<string, string> = { tsubaki: 'mio' };
 const isOpt = (k: keyof typeof OPTIONAL, n: string) => OPTIONAL[k].includes(n);
 const FX = 'circle claw cut cutx explosion flam ice plant shield slash spark spirit spiritb thunder water'.split(' ');

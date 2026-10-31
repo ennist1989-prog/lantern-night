@@ -121,7 +121,7 @@ def objects_overlay(log=True):
     for fn in sorted(os.listdir(d)):
         if not fn.endswith('.png'): continue
         n = fn[:-4]; im = Image.open(os.path.join(d, fn)).convert('RGBA')
-        if n not in frames: print('WARN objects overlay: no atlas cell named', n); continue
+        if n not in frames: frames[n] = [0, 0, 0, 0]; changed = True   # custom-only cell (e.g. chest_open): appended below the atlas
         x, y, w, h = frames[n]
         if (w, h) != im.size:
             y = atlas.height + 1; x = 0; grown = Image.new('RGBA', (max(atlas.width, im.width), y + im.height), (0, 0, 0, 0))

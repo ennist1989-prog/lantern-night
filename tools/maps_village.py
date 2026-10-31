@@ -1,6 +1,7 @@
 from mapkit import *
 def build_village():
     m = Map(1, 'Ashiro Village', 36, 30, 'village', 'village_far', seed=7)
+    m.fill('both', 0, 0, 35, 29, GRASS[0], walk=False)  # D5: no black border past the playable area (an int: no rng draws, rest of the map unchanged)
     m.fill('both', 2, 3, 33, 27, GRASS)
     # ---- paths
     cells = set()
@@ -9,8 +10,11 @@ def build_village():
             for x in range(x0, x1 + 1): cells.add((x, y))
     rect(15, 15, 20, 18); rect(17, 3, 18, 14); rect(5, 16, 14, 17); rect(21, 16, 35, 17); rect(17, 19, 18, 24); rect(5, 22, 16, 24)
     rect(7, 15, 7, 15); rect(25, 15, 25, 15); rect(12, 12, 12, 15); rect(24, 9, 24, 15); rect(3, 21, 9, 26)
+    STAIRS = {(x, y) for x in (17, 18) for y in (0, 1, 2)}   # D6 #1: the shrine path climbs on as stone stairs into the north gap
+    if has_border(): cells |= STAIRS
     m.fill('both', 34, 13, 35, 19, GRASS, walk=False)
-    m.blob('both', cells)
+    m.blob('both', cells, open_cells={(35, 16), (35, 17)} | STAIRS)  # D6: the east road runs off the edge (no rim)
+    for (x, y) in STAIRS: m.walk('both', x, y, False)   # the stairs are scenery: the transfer stays at the gate (18,4)
     # ---- border trees (blocking band is collision = default 1 outside walkable rect)
     for x in range(0, 36, 3):
         for y in (0, 3 if False else 1):
@@ -25,7 +29,7 @@ def build_village():
         m.obj('both', 'tree_pink' if (x // 3) % 3 == 0 else 'tree_big', x + 1, 29, fw=3, block=False)
     for y in range(3, 28, 3):
         for x in (-1, 33):
-            if x == 33 and y in (12, 15): continue          # east road gap (Ch3: the road to the Whispering Forest)
+            if x == 33 and y in (12, 15, 18): continue          # east road gap (Ch3: the road to the Whispering Forest)
             m.obj('both', 'tree_big', x, y + 1, fw=3, block=False); m.obj('both', 'tree_orange' if y % 2 else 'tree_big', x + (1 if x < 0 else 0), y + 3, fw=3, block=False)
     # keep trees out of the shrine gap: add pines flanking
     for x, y in [(15, 2), (21, 2), (15, 5), (21, 5)]:
@@ -75,12 +79,12 @@ def build_village():
         m.walk('both', x, 21, False); m.walk('both', x, 25, False)
     # ---- the Well
     m.obj('both', 'well_hole', 5, 23, fw=1)
-    m.event(5, 23, [page(g=dict(obj='well_hole'), trigger='action', marker=True, list=[
-        IF({'nsw': 'well_seen'}, [say('mio', 'Mio', 'Ashiro Well. Cold air breathes up from below, and a rope ladder trails into the dark.'), sw('well_seen')]),
+    # D6: walking into the well mouth climbs down (touch on bump; no button). Before the Warden falls it explains and steps back.
+    m.event(5, 23, [page(g=dict(obj='well_hole'), trigger='touch', marker=False, list=[
         IF({'nsw': 'warden_done'}, [
-            say('mio', 'Mio', 'The path past the boulder still feels watched. I should clear the Far Shore corridor first.'),
-            {'c': 'move', 'route': ['up']}],
-           [choice(['Climb down', 'Not yet'], [[{'c': 'transfer', 'map': 4, 'x': 3, 'y': 4, 'dir': 'down', 'se': 'grass'}], []])])])])
+            IF({'nsw': 'well_seen'}, [say('mio', 'Mio', 'Ashiro Well. Cold air breathes up from below, and a rope ladder trails into the dark.'), sw('well_seen')]),
+            say('mio', 'Mio', 'The path past the boulder still feels watched. I should clear the Far Shore corridor first.')],
+           [sw('well_seen'), {'c': 'transfer', 'map': 4, 'x': 3, 'y': 4, 'dir': 'down', 'se': 'grass'}])])])
     # ---- boulder wall (Near only) + paths clear in Far
     for y in (22, 23, 24):
         m.walk('near', 11, y, False)
@@ -103,16 +107,16 @@ def build_village():
         m.event(x, y, [page(trigger='touch', through=True, list=[say(None, None, t), {'c': 'move', 'route': ['down']}])])
     # ---- shrine gate
     m.event(18, 4, [page(trigger='touch', through=True, list=[
-        IF({'nlock': 'L02'}, [{'c': 'se', 'name': 'buzzer'}, say('villager3', 'Gate Guard', 'Halt. No one climbs to the Shrine after dusk without the Elder’s seal. Orders.'), say('mio', 'Mio', 'Elder Matsu has one for us, I think. Let’s ask him.'), {'c': 'move', 'route': ['down']}],
+        IF({'nlock': 'L02'}, [{'c': 'se', 'name': 'buzzer'}, say('villager3', 'Gate Guard', 'Halt. No one climbs to the Shrine after dusk without the Elder’s seal. Orders.'), say('mio', 'Mio', 'Elder Matsu has one for us, I think. Let’s ask him.'), {'c': 'move', 'route': ['back']}],
            [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [IF({'nlvl': 5}, [say('kaze', 'Kaze', 'Mio. The spirits up there bite harder than the ones down here. A few more fights on the Far Shore first wouldn’t hurt. (Recommended Lv 5)')]), {'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The Guard checks the Elder’s seal and waves you through. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
-              [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['down']}])])])])], realm='near')
+              [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['back']}])])])])], realm='near')
     # Far Shore: no guard stands here (lock L02 alternative route)
     m.event(18, 4, [page(trigger='touch', through=True, list=[
         IF({'nsw': 'kaze_joined'}, [
             say('mio', 'Mio', '(I shouldn’t climb alone. That fox on the Far Shore by the square post… I should find him first.)'),
-            {'c': 'move', 'route': ['down']}],
+            {'c': 'move', 'route': ['back']}],
            [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [IF({'nlvl': 5}, [say('kaze', 'Kaze', 'Mio. The spirits up there bite harder than the ones down here. A few more fights on the Far Shore first wouldn’t hurt. (Recommended Lv 5)')]), {'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
-              [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['down']}])])])])], realm='far')
+              [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['back']}])])])])], realm='far')
     # Gate Guard (Near only): his post by the gate
     m.event(19, 4, [page(g=NPC('villager3', 'left'), list=[say('villager3', 'Gate Guard', 'Up to the Shrine? Not without the Elder’s seal, miss. Not after dusk. Though the wind says the other shore has no guards…'), IF({'lock': 'L02'}, [say('villager3', 'Gate Guard', 'Ah, the seal. All in order. Go on.')])])], realm='near')
     m.event(17, 4, [page(trigger='touch', through=True, list=[{'c': 'balloon', 'icon': '…'}])]) if False else None
@@ -226,7 +230,23 @@ def build_village():
     for y in (16, 17):
         m.event(35, y, [page(trigger='touch', through=True, list=[IF({'sw': 'ch3_started'}, [{'c': 'transfer', 'map': 10, 'x': 1, 'y': 18, 'dir': 'right'}],
             [say('mio', 'Mio', '(The east road goes to the Forest and the Crossing. Not tonight. Not until the Bell rings.)'), {'c': 'move', 'route': ['left']}])])])
-    m.obj('both', 'pine_s', 34, 14, fw=2); m.obj('both', 'pine_s', 34, 20, fw=2)
+    # #9 village road gate (edge-exit art v1): two plain banner posts either side of the open road, and a freestanding sign
+    m.obj('both', 'post_banner', 34, 15, fw=1, fh=2); m.obj('both', 'post_banner', 34, 19, fw=1, fh=2)
+    if 'road_sign' in OBJ: m.obj('both', 'road_sign', 33, 15, fw=1)
+    if has_border(): canopy_border(m, STAIRS)
     for (x, y) in [(32, 15), (32, 18), (14, 15), (21, 15)]:
         m.event(x, y, [page(cond={'sw': 'boss_done'}, g=dict(obj='lantern_post'), list=[say(None, None, 'A festival lantern, relit when the Bell rang. Its flame leans east, toward the Forest road.')])])
     return m
+def canopy_border(m, stairs):
+    """D5/edge-exit art: lay the canopy (border.png) on the map-1 border band under the existing trees, and its ragged edge on the
+    first grass ring. Runs last, so the decor rng stream is unchanged; collision is unchanged (tiles only)."""
+    def band(x, y): return (y <= 2 or y >= 28 or x <= 1 or x >= 34) and not (16 <= x <= 20 and y <= 2) and not (x >= 34 and y in (16, 17))
+    for y in range(m.h):
+        for x in range(m.w):
+            if band(x, y): m.tile('both', x, y, CANOPY[y % 2][x % 2])
+    for y in range(m.h):
+        for x in range(m.w):
+            if band(x, y) or m.layers['near']['g'][m.i(x, y)] not in GRASS: continue
+            for side, (dx, dy) in (('n', (0, -1)), ('s', (0, 1)), ('e', (1, 0)), ('w', (-1, 0))):
+                if m.inb(x + dx, y + dy) and band(x + dx, y + dy): m.tile('both', x, y, CANOPY_EDGE[side]); break
+    for (x, y) in stairs: m.tile('both', x, y, STAIRS_L if x == 17 else STAIRS_R)

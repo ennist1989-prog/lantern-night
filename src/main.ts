@@ -25,12 +25,12 @@ async function start() {
   try { const f = new FontFace('Pixelify', 'url(assets/fonts/PixelifySans.ttf)', { weight: '400 700' }); await f.load(); document.fonts.add(f); await document.fonts.load('22px Pixelify'); } catch (e) { console.warn('font', e); }
   const game = new Phaser.Game({
     type: Phaser.AUTO, width: W, height: H, parent: 'game', backgroundColor: '#05070f', pixelArt: true, roundPixels: true, antialias: false,
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.NO_CENTER /* #game is a flex box that centres the canvas; CENTER_BOTH added margins on top of it (D1) */ },
     input: { keyboard: true, gamepad: false },
     audio: { disableWebAudio: false },
     scene: [BootScene, TitleScene, MapScene, BattleScene, MenuScene, ShopScene, SaveLoadScene, CreditsScene],
   });
-  (window as any).__game = game; (window as any).__S = { $, DB, Input, SaveManager, Settings, Field, Gear, Locks, migrateGame, SPEC };
+  (window as any).__game = game; (window as any).__S = { $, DB, Input, SaveManager, Settings, Field, Gear, Locks, migrateGame, SPEC, Audio };
   Audio.init(game); Input.init();
   game.events.on('prestep', () => Input.update());
   // resume audio on first gesture
