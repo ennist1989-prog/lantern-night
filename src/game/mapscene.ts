@@ -27,6 +27,8 @@ export class MapScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(0x000000);
     this.world = this.add.container(0, 0).setScale(3); this.fxLayer = this.add.container(0, 0).setDepth(50); this.ui = this.add.container(0, 0).setDepth(100);
+    // click/tap a tile next to Mio: face it and act on it (same as the action button; e.g. the hidden Spirit Elixirs)
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => { if (!this.isFree() || !this.player || this.player.moving) return; this.clickTile(Math.floor((p.x / 3 + this.scrollX) / TS), Math.floor((p.y / 3 + this.scrollY) / TS)); });
     this.msg = new MessageSystem(this, this.ui); this.fader = new Fader(this, 99999); this.fader.rect.fillAlpha = 1; /* black from the first frame; start() reveals */ this.interp = new Interpreter(this);
     // darkness vignette (Far Shore): clear centre, dark edges
     const vw = 1632, vh = 1248; if (!this.textures.exists('vig')) { const vc = this.textures.createCanvas('vig', vw, vh)!; const vx = vc.getContext(); const g = vx.createRadialGradient(vw / 2, vh / 2, 250, vw / 2, vh / 2, 640);
@@ -242,9 +244,13 @@ export class MapScene extends Phaser.Scene {
     const pool: any[] = zone.tables[$.realm] || []; if (!pool.length) return; let tot = 0; pool.forEach((p) => (tot += p.weight)); let r = Math.random() * tot; let pick = pool[0]; for (const p of pool) { r -= p.weight; if (r <= 0) { pick = p; break; } }
     this.interp.running++; try { await this.startBattle(pick.troop, { random: true, zone: zone.id }); } finally { this.interp.running--; }
   }
+  clickTile(tx: number, ty: number) {
+    const P = this.player; const d = (Object.keys(DV) as Dir[]).find((k) => P.tx + DV[k][0] === tx && P.ty + DV[k][1] === ty); if (!d) return;
+    if (P.dir !== d) P.face(d); this.action();
+  }
   action() {
     const P = this.player; const fx = P.tx + DV[P.dir][0], fy = P.ty + DV[P.dir][1];
-    let cands = this.eventsAt(fx, fy).filter((e) => e.page.trigger === 'action' || e.page.enemy);
+    let cands = this.eventsAt(fx, fy).filter((e) => (e.page.trigger === 'action' && (!e.page.faceDir || e.page.faceDir === P.dir)) || e.page.enemy);
     // counter-style: talk across a counter tile
     if (!cands.length && this.mapData.counters?.some((c: number[]) => c[0] === fx && c[1] === fy)) { const gx = fx + DV[P.dir][0], gy = fy + DV[P.dir][1]; cands = this.eventsAt(gx, gy).filter((e) => e.page.trigger === 'action'); }
     if (!cands.length) cands = this.eventsAt(P.tx, P.ty).filter((e) => e.page.trigger === 'action');
