@@ -72,8 +72,8 @@ def build_village():
     m.post(17, 16 - 0 if False else 16, 3) if False else None
     m.walk('both', 17, 16, True)
     m.post(16, 16, 3)
-    m.post(18, 6, 2)
-    m.post(8, 23, 3)
+    m.post(18, 6, 2, save=False)   # one save per map: the village keeps only the square's Post (lit in the Ch1 tutorial)
+    m.post(8, 23, 3, save=False)
     m.light(25, 16, 3); m.light(7, 16, 3); m.light(12, 12, 3); m.light(28, 17, 3)
     for x in range(10, 17):
         m.walk('both', x, 21, False); m.walk('both', x, 25, False)
@@ -198,8 +198,8 @@ def build_village():
         m.event(10, wy, [page(cond=wd_cond, trigger='touch', through=True, list=[
             IF({'sw': 'warden_seen'}, [], [say(None, None, 'A scarecrow stands in the corridor — but on the Far Shore its straw shivers, and two hollow eyes open.'), sw('warden_seen')]),
             IF({'nsw': 'flame_seen'}, [say(None, None, 'In its chest, one small flame burns perfectly still. No flicker, no wind. It is the only steady fire in Ashiro tonight.'), sw('flame_seen')]),
-            IF({'nlvl': 3}, [IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Hm. That’s a Warden. I’d feel better if we were Level 3 first. Those wisps in the fields would make good practice — and the Post by the Well road is a safe place to rest.')],
-                [say('mio', 'Mio', 'That scarecrow feels wrong. I should be stronger before I face it — Level 3, maybe. The wisps in the fields… and a Post nearby to rest.')])]),
+            IF({'nlvl': 3}, [IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Hm. That’s a Warden. I’d feel better if we were Level 3 first. Those wisps in the fields would make good practice — and the Post in the square is a safe place to rest.')],
+                [say('mio', 'Mio', 'That scarecrow feels wrong. I should be stronger before I face it — Level 3, maybe. The wisps in the fields… and the Post in the square to rest.')])]),
             choice(['Face the Warden', 'Not yet'], [[
                 {'c': 'checkpoint', 'boss': True},
                 IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'It’s guarding something it has forgotten. Hit it where its straw is weak. When the Veil slips it will be open to a Send.')],
@@ -236,11 +236,12 @@ def build_village():
     if has_border(): canopy_border(m, STAIRS)
     for (x, y) in [(32, 15), (32, 18), (14, 15), (21, 15)]:
         m.event(x, y, [page(cond={'sw': 'boss_done'}, g=dict(obj='lantern_post'), list=[say(None, None, 'A festival lantern, relit when the Bell rang. Its flame leans east, toward the Forest road.')])])
+    west_road(m, cells, STAIRS)   # training maze: appended after existing events so main event IDs stay put
     return m
 def canopy_border(m, stairs):
     """D5/edge-exit art: lay the canopy (border.png) on the map-1 border band under the existing trees, and its ragged edge on the
     first grass ring. Runs last, so the decor rng stream is unchanged; collision is unchanged (tiles only)."""
-    def band(x, y): return (y <= 2 or y >= 28 or x <= 1 or x >= 34) and not (16 <= x <= 20 and y <= 2) and not (x >= 34 and y in (16, 17))
+    def band(x, y): return (y <= 2 or y >= 28 or x <= 1 or x >= 34) and not (16 <= x <= 20 and y <= 2) and not ((x >= 34 or x <= 1) and y in (16, 17)) and not (22 <= x <= 24 and y >= 28)
     for y in range(m.h):
         for x in range(m.w):
             if band(x, y): m.tile('both', x, y, CANOPY[y % 2][x % 2])
@@ -250,3 +251,24 @@ def canopy_border(m, stairs):
             for side, (dx, dy) in (('n', (0, -1)), ('s', (0, 1)), ('e', (1, 0)), ('w', (-1, 0))):
                 if m.inb(x + dx, y + dy) and band(x + dx, y + dy): m.tile('both', x, y, CANOPY_EDGE[side]); break
     for (x, y) in stairs: m.tile('both', x, y, STAIRS_L if x == 17 else STAIRS_R)
+    c0, r0, w, h = TRAIL_PIECES['s_cap']   # training-maze entrance trail (22..24, 28..29)
+    for dy in range(h):
+        for dx in range(w): m.tile('both', 22 + dx, 28 + dy, G(BORDER, c0 + dx, r0 + dy))
+WEST = {(x, y) for x in range(0, 5) for y in (16, 17)}
+def west_road(m, cells, stairs):
+    """Training maze (map 7): the Sachi road runs on west off the map edge into the Reedwind Maze. Runs after the decor pass, so
+    the rng stream and every older event ID are unchanged; the new events are appended after them."""
+    m.blob('both', cells | WEST, open_cells={(35, 16), (35, 17), (0, 16), (0, 17)} | stairs)
+    for (x, y) in stairs: m.walk('both', x, y, False)
+    for r in ('near', 'far'):   # drop the decor flowers on the new road and the two border trees standing in it
+        m.objs[r] = [o for o in m.objs[r] if not ((o.get('flat') and (o['x'] // 16, o['y'] // 16 - 1) in WEST) or (o['n'] in ('tree_big', 'tree_orange') and (o['x'], o['y']) in ((8, 272), (24, 304))))]
+    m.obj('both', 'post_banner', 1, 15, fw=1, fh=2); m.obj('both', 'post_banner', 1, 19, fw=1, fh=2)
+    for y in (16, 17):   # loop-back: the maze exit arrives here; walking west re-enters the maze at its exit clearing
+        m.event(0, y, [page(trigger='touch', through=True, list=[{'c': 'transfer', 'map': 7, 'x': 1, 'y': 22, 'dir': 'right'}])])
+    # entrance (art spec 2): a trail south off the plaza (22..24, 28..29) through the canopy, v2.1 s_cap piece, like map 113 south
+    m.walkrect('both', 22, 28, 24, 29)
+    for r in ('near', 'far'):
+        m.objs[r] = [o for o in m.objs[r] if not (o['n'] in ('tree_big', 'tree_l2', 'tree_pink') and o['y'] in (464, 480) and 20 * 16 <= o['x'] <= 26 * 16)]
+    for x in (22, 23, 24):
+        m.event(x, 29, [page(trigger='touch', through=True, list=[IF({'sw': 'post_lit'}, [{'c': 'transfer', 'map': 7, 'x': 27, 'y': 1, 'dir': 'down'}],
+            [say('mio', 'Mio', '(The old reed field trail. Granny is waiting for me. I should see her first.)'), {'c': 'move', 'route': ['up']}])])])

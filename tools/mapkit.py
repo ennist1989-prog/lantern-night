@@ -105,10 +105,13 @@ class Map:
         d = {'x': x, 'y': y, 'r': r}
         if realm: d['realm'] = realm
         self.lights.append(d)
-    def post(self, tx, ty, rad=3, light=6):
+    def post(self, tx, ty, rad=3, light=6, save=True):
+        """save=False (one-save-per-map rule): the post stands as scenery with the same event ID and tile, but its wick is
+        spent, so it neither rests nor saves. Each map keeps at most one working Lantern Post (tests/save_points.mjs)."""
         self.obj('both', 'lantern_post', tx, ty)
         self.region_circle(tx, ty, rad, 6); self.light(tx, ty, light)
-        self.event(tx, ty, [page(g=dict(obj='lantern_post'), trigger='action', list=[{'c': 'post'}], marker=True)])
+        if save: self.event(tx, ty, [page(g=dict(obj='lantern_post'), trigger='action', list=[{'c': 'post'}], marker=True)])
+        else: self.event(tx, ty, [page(g=dict(obj='lantern_post'), trigger='action', list=[say(None, None, 'An old Lantern Post. Its wick burned down to ash long ago. There is a working Post elsewhere on this road.')])])
     def event(self, x, y, pages, realm='both'):
         self._eid += 1
         self.events.append({'id': self._eid, 'x': x, 'y': y, 'realm': realm, 'pages': pages}); return self._eid

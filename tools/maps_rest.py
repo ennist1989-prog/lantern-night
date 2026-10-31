@@ -127,7 +127,7 @@ def build_well():
     for x in range(16, 25):
         m.tile('far', x, 7, G(2, 12, 3)); m.walk('far', x, 7, True)
     m.region(2, 3, 10, 9, 3); m.region(15, 3, 23, 11, 3); m.region(19, 15, 28, 23, 3)
-    m.post(5, 6, 3); m.post(25, 9, 3); m.post(22, 17, 3)
+    m.post(5, 6, 3, save=False); m.post(25, 9, 3); m.post(22, 17, 3, save=False)   # one save per map: keep the Post past the pit bridge, before the Well Spirit
     m.region(0, 0, 0, 0, 0)
     for (x, y) in [(3, 3), (9, 3), (6, 9), (16, 4), (16, 10), (27, 3), (27, 11), (20, 16), (28, 22), (19, 22)]: m.obj('both', 'boulder_brown', x, y, fw=2, block=True) if False else None
     for (x, y) in [(10, 4), (2, 9), (22, 10), (16, 11), (28, 17), (19, 20)]: m.obj('both', 'pot_big', x, y, fw=1)  # #9: jar was at (28,15), the only tile next to the (28,14) chest

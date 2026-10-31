@@ -479,7 +479,7 @@ export class MapScene extends Phaser.Scene {
     const i = await this.msg.choice([`Rest (${price} G)`, 'Never mind'], 1);
     if (i === 1) { await this.msg.show(c.face ?? null, who, c.no ?? 'Come back anytime.'); return; }
     if ($.gold < price) { Audio.se('buzzer'); await this.msg.show(c.face ?? null, who, c.poor ?? "Oh… you're a bit short. Next time, dear."); return; }
-    $.gold -= price; await this.fader.out(this, 500); $.healAll(); $.lumen = $.lumenMax; Audio.me('secret'); await sleep(this, 1200); this.autosave('inn'); await this.fader.in(this, 500);
+    $.gold -= price; await this.fader.out(this, 500); $.healAll(); $.lumen = $.lumenMax; Audio.me('secret'); await sleep(this, 1200); if (!c.noSave) this.autosave('inn');   // one-save-per-map: an inn on a map that has a Lantern Post rests only await this.fader.in(this, 500);
     await this.msg.show(c.face ?? null, who, c.yes ?? 'Sleep well? HP, SP and Lumen restored!');
   }
   async usePost(ctx: any) {
