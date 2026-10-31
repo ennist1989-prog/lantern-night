@@ -92,7 +92,7 @@ def build_maze():
     for dy in range(3):
         for dx in range(2): m.tile('both', dx, 21 + dy, G(BORDER, dx, 8 + dy))
     m.tile('both', 0, 20, G(BORDER, 4, 0)); m.tile('both', 0, 24, G(BORDER, 5, 0))
-    m.light(27, 2, 4); m.light(3, 22, 4)
+    m.light(27, 2, 4, fa=0.45); m.light(3, 22, 4, fa=0.45)   # dimmer in Far so Mio/ground stay under L* 90
     for (x, y) in ENTRY: m.door_touch(x, y, 1, x - 4, 26, 'up', se=None)
     for (x, y) in EXIT: m.door_touch(x, y, 1, 1, 16 if y < 23 else 17, 'right', se=None, extra=[IF({'nsw': 'maze_cleared'}, [sw('maze_cleared')])])
     chest(m, CHEST[0], CHEST[1], [('rice_ball', 2), ('herbal_tea', 1), ('lantern_oil', 1), ('mochi', 1)], obj='supply_box', empty='The supply box is empty. Its cloth lies untied.')
@@ -108,7 +108,7 @@ def build_maze():
         eid = m.event(x, y, [page(g=NPC(sheet, 'down', step=False), list=[IF({'nsw': flag}, first, after)])], 'far' if sheet == 'tokubei_far' else 'both' if sheet == 'haru' else 'near')
         if sheet == 'tokubei_far':
             m.events[-1]['peek'] = False
-            m.light(x, y, 1.1, 'far', a=0.3, tint=0xb8dce5)   # maze-v1 robe glow, static
+            m.light(x, y, 1.1, 'far', a=0.1, tint=0x548789)   # robe glow, static; Pixel Sage L* cap 90
     m.event(27, 2, [page(cond={'nsw': 'maze_intro'}, trigger='touch', through=True, list=[
         say('mio', 'Mio', 'The old reed field… it’s grown into a maze. Granny used to say a keeper learns the way by losing it first.'), sw('maze_intro')])])
     return m

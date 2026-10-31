@@ -29,6 +29,7 @@ for (const r of ['near', 'far']) {
 }
 const tk = npcs.find((e) => e.pages[0].g.sheet === 'tokubei_far');
 for (const r of ['near', 'far']) { await realm(r, tk.x, tk.y + 1, 'up'); const v = await page.evaluate(([x, y]) => window.__game.scene.getScene('Map').evs.some((v) => v.data.x === x && v.data.y === y && v.char && v.char.visible), [tk.x, tk.y]);
+  if (r === 'near') await shot('near_no_tokubei');
   ok(r === 'far' ? v : !v, `Old Tokubei ${r === 'far' ? 'shown in Far' : 'hidden in Near'}`); }
 // supply box: opens once, stays open
 await realm('near', 2, 22, 'up'); const before = (await st()).items.mochi || 0;
@@ -49,5 +50,11 @@ ok(await page.evaluate(() => window.__S.$.sw('maze_cleared')), 'maze_cleared set
 await shot('near_loopback_arrival');
 await page.evaluate(() => { window.__S.$.realm = 'far'; }); await teleport(page, 1, 3, 16, 'right'); await sleep(500); await shot('far_loopback_arrival');
 await teleport(page, 1, 23, 26, 'down'); await sleep(400); await shot('far_village_south_entrance');
+await page.evaluate(() => { window.__S.$.realm = 'near'; }); await teleport(page, 1, 23, 26, 'down'); await sleep(400); await shot('near_village_south_entrance');
+await teleport(page, 1, 3, 16, 'left'); await sleep(400); await shot('near_west_join');
+// mochi icon in the Item menu
+await press(page, 'Escape'); await sleep(600); await press(page, 'Enter'); await sleep(700); await shot('near_menu_item_mochi');
+ok(await page.evaluate(() => JSON.stringify(window.__game.scene.getScenes(true).map((s) => s.sys.settings.key)).includes('Menu')), 'menu opened for the mochi icon shot');
+await press(page, 'Escape'); await sleep(300); await press(page, 'Escape'); await sleep(300);
 ok(!errors.filter((e) => /error/i.test(e)).length, 'no console errors ' + errors.slice(0, 3).join(' | '));
 await browser.close(); console.log(fails ? `FAIL ${fails}` : 'PASS maze_e2e'); process.exit(fails ? 1 : 0);

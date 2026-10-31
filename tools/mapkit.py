@@ -103,11 +103,12 @@ class Map:
                 for yy in range(y0, y1 + 1):
                     for xx in range(x0, x1 + 1):
                         if self.inb(xx, yy): self.col[r][self.i(xx, yy)] = 1
-    def light(self, x, y, r=4, realm=None, a=None, tint=None):
+    def light(self, x, y, r=4, realm=None, a=None, tint=None, fa=None):
         d = {'x': x, 'y': y, 'r': r}
         if realm: d['realm'] = realm
         if a is not None: d['a'] = a        # optional per-light alpha (default: realm lantern alpha)
-        if tint is not None: d['tint'] = tint  # optional per-light tint (default: fixed cyan glow)
+        if tint is not None: d['tint'] = tint
+        if fa is not None: d['fa'] = fa      # optional Far-only brightness (default 0.75); keeps the flicker  # optional per-light tint (default: fixed cyan glow)
         self.lights.append(d)
     def post(self, tx, ty, rad=3, light=6, save=True):
         """save=False (one-save-per-map rule): the post stands as scenery with the same event ID and tile, but its wick is

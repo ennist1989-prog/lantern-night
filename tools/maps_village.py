@@ -276,7 +276,7 @@ def west_road(m, cells, stairs):
         m.tile('both', 25, 28, G(BORDER, 6, 0)); m.tile('both', 25, 29, G(BORDER, 6, 0))
         for dx in range(3):
             m.tile('both', 22 + dx, 27, G(5, dx, 1))
-            for dy in range(2): m.tile('both', 22 + dx, 28 + dy, G(BORDER, 4 + dx, 4 + dy))   # trail_open_s (replaces the s_cap)   # ch3fix rounded blob top where the plaza meets the trail
+            for dy in range(2): m.tile('both', 22 + dx, 28 + dy, G(BORDER, 4 + dx, 4 + dy))   # trail_open_s (replaces the s_cap)
         m.tile('both', 21, 27, G(MAZE, 2, 4)); m.tile('both', 25, 27, G(MAZE, 3, 4))
     for r in ('near', 'far'):   # drop the decor flowers on the new road and the two border trees standing in it
         m.objs[r] = [o for o in m.objs[r] if not ((o.get('flat') and (o['x'] // 16, o['y'] // 16 - 1) in WEST) or (o['n'] in ('tree_big', 'tree_orange') and (o['x'], o['y']) in ((8, 272), (24, 304))))]
