@@ -128,7 +128,6 @@ export class MapScene extends Phaser.Scene {
     const p = e.page, c = e.char; const far = $.realm === 'far' || (e.data.realm === 'far' && $.buffs.peek > 0);
     if (!p || !p.g) { c.spr.setVisible(false); c.visible = false; return; }
     c.tint = p.g.tint ?? 0xffffff; c.opacity = p.g.alpha ?? 1; c.walkAnim = p.g.anim !== false; c.stepAnim = !!p.g.step; c.through = !!p.through;
-    c.gdx = p.g?.dx || 0; c.gdy = p.g?.dy || 0;
     if (p.g.obj) c.setObject(p.g.obj, far && !p.g.nofar, !!p.g.flat); else c.setSheet(p.g.sheet, far && !p.g.nofar, p.g.dir || c.dir);
     c.spr.setVisible(true); c.visible = true; c.refreshPos();
   }

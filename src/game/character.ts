@@ -10,7 +10,7 @@ export const OPP: Record<Dir, Dir> = { down: 'up', up: 'down', left: 'right', ri
 export class Char {
   scene: Phaser.Scene; spr: Phaser.GameObjects.Sprite | Phaser.GameObjects.Image; tx: number; ty: number; fx = 0; fy = 0; px: number; py: number;
   dir: Dir = 'down'; moving = false; t = 0; dur = 150; animT = 0; frame = 0; sheet = ''; far = false; isObj = false; through = false; opacity = 1;
-  walkAnim = true; stepAnim = false; tint = 0xffffff; marker: Phaser.GameObjects.Text | null = null; flat = false; visible = true; stun = 0; yOff = 0; gdx = 0; gdy = 0;   // gdx/gdy: pixel offset of an event's object graphic (e.g. a 2x2 object anchored on a tile corner)
+  walkAnim = true; stepAnim = false; tint = 0xffffff; marker: Phaser.GameObjects.Text | null = null; flat = false; visible = true; stun = 0; yOff = 0;
   constructor(scene: Phaser.Scene, tx: number, ty: number) { this.scene = scene; this.tx = tx; this.ty = ty; this.px = tx * TS + 8; this.py = ty * TS + TS; this.spr = scene.add.sprite(this.px, this.py, '__DEFAULT'); this.spr.setOrigin(0.5, 1); }
   setSheet(name: string | null, far: boolean, dir: Dir = this.dir) {
     this.far = far; this.dir = dir; if (!name) { this.spr.setVisible(false); this.sheet = ''; this.visible = false; return; }
@@ -29,7 +29,7 @@ export class Char {
     let row = this.moving || this.stepAnim ? [0, 1, 2, 3][Math.floor(this.animT / 1) % 4] : 0; const rows = Math.max(1, Math.floor(((this.spr.texture as any).frameTotal - 1) / 4)); row = row % rows;
     (this.spr as Phaser.GameObjects.Sprite).setFrame(row * 4 + DIRCOL[this.dir]);
   }
-  refreshPos() { this.spr.setPosition(Math.round(this.px + this.gdx), Math.round(this.py - 1 + this.yOff + this.gdy)); this.spr.setDepth(this.flat ? this.py - 5000 : this.py + 0.01 * this.tx); this.spr.setTint(this.tint); this.spr.setAlpha(this.opacity); }
+  refreshPos() { this.spr.setPosition(Math.round(this.px), Math.round(this.py - 1 + this.yOff)); this.spr.setDepth(this.flat ? this.py - 5000 : this.py + 0.01 * this.tx); this.spr.setTint(this.tint); this.spr.setAlpha(this.opacity); }
   place(tx: number, ty: number) { this.tx = tx; this.ty = ty; this.px = tx * TS + 8; this.py = ty * TS + TS; this.moving = false; this.t = 0; this.refreshPos(); }
   start(dir: Dir, dur: number) { this.dir = dir; this.fx = this.tx; this.fy = this.ty; this.tx += DV[dir][0]; this.ty += DV[dir][1]; this.moving = true; this.t = 0; this.dur = dur; }
   update(dt: number) {

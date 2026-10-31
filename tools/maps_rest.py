@@ -203,7 +203,7 @@ def build_well():
         for realm in ('near', 'far'):
             for y in range(m.h):
                 for x in range(m.w):
-                    if (x, y) not in PIT and m.layers[realm]['g'][m.i(x, y)] == 0: m.tile(realm, x, y, CAVE_ROCK)
+                    if (x, y) not in PIT and m.layers[realm]['g'][m.i(x, y)] == 0: m.tile(realm, x, y, cave_pick(x, y))
     return m
 def build_shrine1():
     m = Map(5, 'Bell Shrine — Lower Hall', 24, 24, 'shrine', 'shrine_far', seed=5); fill_walls(m)
@@ -248,6 +248,7 @@ def build_shrine1():
                     page(cond={'sw': 'ped_solved'}, trigger='touch', through=True, list=[{'c': 'transfer', 'map': 6, 'x': 8, 'y': 11, 'dir': 'up', 'se': 'door'}])])
     m.obj('both', 'stairs_up', 12, 6, fw=1, block=False)
     m.event(12, 6, [page(cond={'sw': 'ped_solved'}, trigger='touch', through=True, list=[{'c': 'transfer', 'map': 6, 'x': 8, 'y': 11, 'dir': 'up', 'se': 'door'}])])
+    if has_border(): m.fill('both', 11, 23, 12, 23, G(1, 12, 15))   # edge-exit spec I: wood threshold at the shrine's south door
     m.door_touch(11, 23, 1, 18, 7, 'down', se='door'); m.door_touch(12, 23, 1, 18, 7, 'down', se='door')  # D7: was (18,6), the solid post tile one step from the gate
     foe(m, 9, 9, 'tr_hollow_villager_candle_spirit', 'skeleton'); foe(m, 14, 14, 'tr_candle_spirit_bell_mouse', 'lantern2'); foe(m, 8, 14, 'tr_ofuda_moth', 'kettle'); foe(m, 16, 9, 'tr_gloam_bat_gloam_bat', 'mouse2'); foe(m, 12, 13, 'tr_bell_mouse_ofuda_moth', 'mouse')
     sq03_shrine(m); sq04_shrine(m)
@@ -261,6 +262,8 @@ def build_summit():
     for x, y in [(4, 11), (13, 11)]: m.obj('both', 'pot_big', x, y, fw=1)
     for x, y in [(5, 4), (12, 4), (8, 7), (4, 8), (13, 8)]: m.light(x, y, 5)
     m.door_touch(8, 13, 5, 11, 7, 'down', se='door'); m.door_touch(9, 13, 5, 12, 7, 'down', se='door')
+    if has_border():
+        for x in (8, 9): m.obj('both', 'stairs_down', x, 13, fw=1, block=False)   # edge-exit spec I: the summit exit reads as stairs
     # ---- ma (quiet scene, optional): Mio and Kaze rest under the silent bell
     m.event(8, 9, [page(cond={'nself': 'A'}, g=dict(obj='lantern_post', nofar=True) if False else None, trigger='action', marker=True, list=[
         narr('Under the great silent bell, Mio sits down. Kaze sits near, not close, the way he does.'),

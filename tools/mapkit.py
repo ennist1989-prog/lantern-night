@@ -25,7 +25,10 @@ WOOD_FLOOR = [G(1,12,15)]*3 + [G(1,14,18)]
 PT_WALL = G(BORDER, 0, 0); PT_FACE = G(BORDER, 1, 0)   # dark vertical-board wall body / face row (border.png)
 CANOPY = [[G(BORDER, 2, 0), G(BORDER, 3, 0)], [G(BORDER, 2, 1), G(BORDER, 3, 1)]]   # 2x2 seamless fill: CANOPY[y%2][x%2]
 CANOPY_EDGE = dict(n=G(BORDER, 4, 0), s=G(BORDER, 5, 0), e=G(BORDER, 6, 0), w=G(BORDER, 7, 0))   # letter = side the canopy is on
-STAIRS_L = G(BORDER, 0, 1); STAIRS_R = G(BORDER, 1, 1); FOG_LIP = G(BORDER, 4, 1); CAVE_ROCK = G(BORDER, 5, 1)
+STAIRS_L = G(BORDER, 0, 1); STAIRS_R = G(BORDER, 1, 1); FOG_LIP = G(BORDER, 4, 1); FOG_LIP_L = G(BORDER, 6, 1); FOG_LIP_R = G(BORDER, 7, 1)
+CAVE_ROCK = [G(BORDER, 5, 1), G(BORDER, 7, 2), G(BORDER, 7, 3)]   # cave_rock, _b, _c: pick per cell with cave_pick(x, y)
+def cave_pick(x, y): return CAVE_ROCK[((x * 73856093) ^ (y * 19349663)) % 3]   # Ember v2.1 hash pick (Python ints; no rng)
+TRAIL_PIECES = dict(w=(0, 2, 2, 3), e=(2, 2, 2, 3), w2=(0, 5, 2, 3), e2=(2, 5, 2, 3), s_cap=(4, 6, 3, 2), w_cap=(0, 8, 2, 3))   # sheet (col,row,w,h)
 SHRINE_F = [G(2,1,1), G(2,2,1), G(2,1,2), G(2,2,2)]
 BRIDGE = [G(2,12,3)]
 class Map:

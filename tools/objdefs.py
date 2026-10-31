@@ -47,6 +47,15 @@ OBJS.update({
  "crate_veg":    cell("TilesetHouse.png",17,14,1,1),
  "fence_h":      cell("TilesetHouse.png",11,5,1,1),
  "post_banner":  cell("TilesetHouse.png",22,20,1,2),
+ # Ember edge-exit v2.1 objects: art/custom/objects/<name>.png replaces the clip and sets the frame size (root_bridge_end 48x32)
+ "root_bridge_end": cell("TilesetNature.png",0,0,1,1),
+ "flank_stump": cell("TilesetNature.png",0,0,1,1),
+ "flank_rock": cell("TilesetNature.png",0,0,1,1),
+ "grove_stone_a": cell("TilesetNature.png",0,0,1,1),
+ "grove_stone_b": cell("TilesetNature.png",0,0,1,1),
+ "hollow_fronds_l": cell("TilesetNature.png",0,0,1,1),
+ "hollow_fronds_r": cell("TilesetNature.png",0,0,1,1),
+ "road_sign": cell("TilesetNature.png",0,0,1,1),
  # dungeon tileset bits
  "lantern_post": cell("TilesetDungeon.png",2,2,1,1),
  "well_hole":    cell("TilesetDungeon.png",2,3,1,1),
