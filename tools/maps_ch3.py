@@ -129,6 +129,7 @@ def build_forest():
     A.rect(21, 23, 22, 29, trail=True); A.rect(12, 30, 38, 33); A.rect(37, 20, 38, 29, trail=True)   # south loop
     A.rect(3, 28, 10, 34); A.rect(10, 31, 12, 32, trail=True)         # SW pocket
     A.carve(m); woods(m, A, 3, clear=edge_clear(m)); edge_objs(m)
+    for x in (46, 47, 48): m.walk('both', x, 20, True)   # #11: the cleared pocket under the exit mouth is walkable (enclosed: (45,20), (49,20) and row 21 stay blocked)
     deco(m, A, 'near', ['flower_y', 'flower_w', 'fern', 'tuft1', 'clover'], 40, 1)
     deco(m, A, 'far', ['fern', 'tuft2', 'tuft3', 'clover'], 30, 2)
     m.region(0, 0, 49, 39, 3); m.encounter = dict(region=3, zone='z06')
@@ -477,9 +478,9 @@ def build_hollow():
         page(cond={'sw': 'wick_got'}, list=[say(None, None, 'The grass where the wick floated is still warm.')])])
     # D6: post-quest root path back to the Crossing: walk onto it (was an action + choice). Ember's 48x32 root_bridge_end: cols 32-33, rows 20-21, flush with the edge.
     m.event(32, 21, [page(cond={'sw': 'wick_got'}, g=(dict(obj='root_bridge_end') if 'root_bridge_end' in OBJ else None), trigger='touch', through=True, list=[{'c': 'transfer', 'map': 111, 'x': 43, 'y': 12, 'dir': 'left', 'se': 'grass'}])])
-    for y in (20, 21, 22):   # before the wick: roots bar the open-looking edge (same barrier as the Forest's grove gap; New Bot, PR #49)
-        m.event(33, y, [page(cond={'nsw': 'wick_got'}, g=dict(obj='tree_trunk'), trigger='action', list=[say(None, None, 'Thick roots knot across the path back to the Crossing.')])])
     chest(m, 2, 4, [('lantern_oil', 2), ('marigold_petal', 2)]); chest(m, 31, 23, [('kuzu_tonic', 2)]); chest(m, 18, 24, [('ward_salt', 1)], realm='far')
     foe(m, 6, 5, 'tr_willow_sprout_willow_sprout', 'rustle', 'both', aggro=3, range=2)
     foe(m, 22, 5, 'tr_rusalka_reed_willow_sprout', 'ghostgirl', aggro=3, range=2)
+    for y in (20, 21, 22):   # before the wick (appended after every pre-existing event so saved event IDs keep their meaning): roots bar the open-looking edge (same barrier as the Forest's grove gap; New Bot, PR #49)
+        m.event(33, y, [page(cond={'nsw': 'wick_got'}, g=dict(obj='tree_trunk'), trigger='action', list=[say(None, None, 'Thick roots knot across the path back to the Crossing.')])])
     return m

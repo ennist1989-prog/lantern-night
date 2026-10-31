@@ -59,5 +59,15 @@ for (const m of Object.values(maps)) { const starts = arrivals[m.id] || []; if (
   for (const e of m.events) if (isChest(e)) ok(realms(e.realm).some((r) => Object.values(DV).some(([dx, dy]) => seen.has(`${r}:${e.x + dx},${e.y + dy}`))), `chest ${m.id}:${e.x},${e.y} has no reachable neighbour tile`); }
 // BGM: every map has a near and far track that exists
 for (const m of Object.values(maps)) for (const r of ['near', 'far']) ok(m.bgm?.[r] && bgmFiles.has(m.bgm[r]), `map ${m.id} bgm.${r} = ${m.bgm?.[r]} exists`);
+// save compat: opened chests, beaten foes and self-switches are saved by event ID, so every event that exists on main (71f9cc6,
+// snapshot in tests/fixtures/main_event_ids.json: map -> id -> [x, y, realm]) must keep its ID, tile and realm. New events go last.
+const MAIN_IDS = JSON.parse(fs.readFileSync('tests/fixtures/main_event_ids.json', 'utf8')); let idsChecked = 0;
+for (const [mid, evs] of Object.entries(MAIN_IDS)) { const m = maps[mid]; if (!ok(m, `map ${mid} from main is missing`)) continue;
+  const byId = new Map(m.events.map((e) => [String(e.id), e]));
+  for (const [id, [x, y, r]] of Object.entries(evs)) { const e = byId.get(id); idsChecked++;
+    ok(e && e.x === x && e.y === y && (e.realm || 'both') === r, `map ${mid} event ${id} moved or renumbered vs main (was ${x},${y} ${r}; now ${e ? `${e.x},${e.y} ${e.realm || 'both'}` : 'missing'}) - append new events after the existing ones`); }
+  const maxMain = Math.max(0, ...Object.keys(evs).map(Number));
+  for (const e of m.events) if (!(String(e.id) in evs)) ok(e.id > maxMain, `map ${mid} new event ${e.id} (${e.x},${e.y}) reuses an ID below main's last (${maxMain})`); }
+console.log('main event IDs unchanged:', idsChecked);
 console.log(fails ? `FAIL ${fails}` : `PASS edge_exits (${Object.keys(maps).length} maps, ${transfers.length} transfers)`);
 process.exit(fails ? 1 : 0);
