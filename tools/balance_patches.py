@@ -58,5 +58,19 @@ troops['tr_well_spirit'] = {'id': 'tr_well_spirit', 'name': 'Ido-no-Kami', 'enem
 # Battle art: reuse the Dust Wisp crop (tinted water-blue and drawn larger at runtime); boot loads mon/<id>.png.
 MON = os.path.join(ROOT, 'public', 'assets', 'mon'); shutil.copyfile(os.path.join(MON, 'dust_wisp.png'), os.path.join(MON, 'well_spirit.png'))
 bud = enemies['willow_bud']; bud['forms']['far']['outputMult'] = 0.8; bud['forms']['far']['rates']['phys'] = 0.75   # Willow Parley-only retune (above)
+# Playtest fixes 2 (#5): the first spirit past the Warden's boulder (Far, map 1 (8,22)) was a 1-2 hit Dust Wisp. It is now its
+# own slice-only enemy, the Hearth-Lost Wisp: 3.5x+ the wisp's HP and harder hits, so an L1 party loses, L2 rarely wins, L3 is a
+# real fight (5+ rounds) and L4 is comfortable. The common Dust Wisp (and every other troop) is unchanged. Sim: tests/first_spirit_sim.cjs.
+hw = json.loads(json.dumps(enemies['dust_wisp']))
+hw.update({'id': 'hearth_wisp', 'name': 'Hearth-Lost Wisp', 'role': 'First spirit past the Warden boulder: a grind check (L3+).', 'level': 3,
+           'rarity': 'uncommon', 'level_range': [3, 3], 'zones': [], 'exp': 30, 'gold': 20, 'tint': '#ffb070', 'scale': 6})
+HW_STATS = {'mhp': 820, 'msp': 0, 'atk': 14, 'def': 6, 'mat': 12, 'mdf': 14, 'agi': 11}
+hw['stats'] = dict(HW_STATS); hw['statsByLevel'] = {'3': dict(HW_STATS)}
+for f in hw['forms'].values(): f['outputMult'] = 1.0
+hw.pop('bond', None); hw['bond'] = None
+if isinstance(hw.get('parley'), dict): hw['parley']['recruit'] = False; hw['parley']['fragment'] = False
+enemies['hearth_wisp'] = hw
+troops['tr_hearth_wisp'] = {'id': 'tr_hearth_wisp', 'name': 'Hearth-Lost Wisp', 'enemies': ['hearth_wisp'], 'kind': 'normal', 'level': 3, 'exp': 30, 'gold': 20, 'events': []}
+shutil.copyfile(os.path.join(MON, 'dust_wisp.png'), os.path.join(MON, 'hearth_wisp.png'))
 dump(ep, enemies); dump(tp, troops)
 print('balance patches ok: warden mhp', w['stats']['mhp'], 'exp', w['exp'], '| bell_keeper atk', bk['stats']['atk'], '| bell_keeper rewards', r['items'], r['unlock'], '| kappa_toll', kt['stats'])

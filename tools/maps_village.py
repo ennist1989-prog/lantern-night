@@ -35,7 +35,7 @@ def build_village():
     for x, y in [(15, 2), (21, 2), (15, 5), (21, 5)]:
         m.obj('both', 'pine_s', x, y, fw=2)
     # ---- shrine torii and gate
-    m.obj('both', 'torii', 17, 5, fw=3, block=False); m.walk('both', 17, 5, False); m.walk('both', 19, 5, False)
+    m.obj('both', 'torii', 17, 5, fw=3, block=False, above=True, sy=2)   # PF2 #2: the shrine torii towers over the stair foot (2x tall, above-player priority); the stairs run on behind it; m.walk('both', 17, 5, False); m.walk('both', 19, 5, False)
     m.light(16, 5, 3); m.light(20, 5, 3)
     m.obj('both', 'statue_fox', 15, 6, fw=1); m.obj('both', 'statue_fox', 21, 6, fw=1)
     # ---- buildings
@@ -117,8 +117,8 @@ def build_village():
             {'c': 'move', 'route': ['back']}],
            [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [IF({'nlvl': 5}, [say('kaze', 'Kaze', 'Mio. The spirits up there bite harder than the ones down here. A few more fights on the Far Shore first wouldn’t hurt. (Recommended Lv 5)')]), {'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
               [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['back']}])])])])], realm='far')
-    # Gate Guard (Near only): his post by the gate
-    m.event(19, 4, [page(g=NPC('villager3', 'left'), list=[say('villager3', 'Gate Guard', 'Up to the Shrine? Not without the Elder’s seal, miss. Not after dusk. Though the wind says the other shore has no guards…'), IF({'lock': 'L02'}, [say('villager3', 'Gate Guard', 'Ah, the seal. All in order. Go on.')])])], realm='near')
+    # Gate Guard (Near only): PF2 #1 he stands at the foot of the shrine stairs, right side (20,3); stepping toward the first stair calls out (see the stair-foot triggers at the end)
+    m.event(20, 3, [page(g=NPC('villager3', 'left'), list=[say('villager3', 'Gate Guard', 'Up to the Shrine? Not without the Elder’s seal, miss. Not after dusk. Though the wind says the other shore has no guards…'), IF({'lock': 'L02'}, [say('villager3', 'Gate Guard', 'Ah, the seal. All in order. Go on.')])])], realm='near')
     m.event(17, 4, [page(trigger='touch', through=True, list=[{'c': 'balloon', 'icon': '…'}])]) if False else None
     # ---- Lantern Post tutorial (square): first interaction lights it (event on top of generic post event)
     m.events[[e['x'] for e in m.events].index(16)]['pages'] = [  # post at (16,16)
@@ -212,7 +212,7 @@ def build_village():
                          {'c': 'wait', 'ms': 600}, narr('Dusk. Mio sits on the rim of the Old Well, the Lantern in her lap.', 'Far Ashiro glows below, ghost-lit and gentle. No one speaks.'),
                          say(None, 'Sachi (a voice)', 'You are holding the lantern like a rope.'), {'c': 'wait', 'ms': 500},
                          sw('warden_done'), quest('main', 3, quiet=True), {'c': 'toast', 'text': 'Night 2: six nights to Lantern Night.'}], 'lose': [{'c': 'abort'}]}],
-                [{'c': 'move', 'route': ['left']}]])])], realm='far')
+                [{'c': 'move', 'route': ['face:right', 'right', 'right', 'face:right']}]])])], realm='far')   # PF2 #4: 'Not yet' turns Mio around and walks her back to the east side (x=12), never past the Warden
     m.event(10, 23, [page(cond=wd_cond, g=NPC('statue', 'down', step=False), trigger='action', list=[say(None, None, 'The straw figure watches you. It seems to be waiting.')])], realm='far')
     # Granny Sachi's Far-side friend: Zashiki Child (special spawn, parley only)
     m.event(9, 16, [page(cond={'nself': 'A'}, g=NPC('child', 'down', step=False), trigger='action', list=[
@@ -225,7 +225,7 @@ def build_village():
     # ---- Far enemies (visible, avoidable)
     def foe(x, y, troop, sheet, **kw):
         e = dict(troop=troop, aggro=kw.get('aggro', 4), chase=True, range=kw.get('range', 3), spd=kw.get('spd', 260)); m.event(x, y, [page(g=NPC(sheet), enemy=e)], realm='far')
-    foe(8, 22, 'tr_dust_wisp', 'wisp'); foe(14, 7, 'tr_straw_hound', 'mouse2'); foe(27, 12, 'tr_dust_wisp_dust_wisp', 'wisp'); foe(26, 23, 'tr_dust_wisp_moss_slimeling', 'wisp2'); foe(10, 12, 'tr_dust_wisp', 'wisp'); foe(22, 5, 'tr_straw_hound', 'mouse2')
+    foe(8, 22, 'tr_hearth_wisp', 'wisp'); foe(14, 7, 'tr_straw_hound', 'mouse2'); foe(27, 12, 'tr_dust_wisp_dust_wisp', 'wisp'); foe(26, 23, 'tr_dust_wisp_moss_slimeling', 'wisp2'); foe(10, 12, 'tr_dust_wisp', 'wisp'); foe(22, 5, 'tr_straw_hound', 'mouse2')
     # ---- Ch3: the east road to the Whispering Forest, and the lanterns the Bell relit
     for y in (16, 17):
         m.event(35, y, [page(trigger='touch', through=True, list=[IF({'sw': 'ch3_started'}, [{'c': 'transfer', 'map': 10, 'x': 1, 'y': 18, 'dir': 'right'}],
@@ -236,6 +236,14 @@ def build_village():
     if has_border(): canopy_border(m, STAIRS)
     for (x, y) in [(32, 15), (32, 18), (14, 15), (21, 15)]:
         m.event(x, y, [page(cond={'sw': 'boss_done'}, g=dict(obj='lantern_post'), list=[say(None, None, 'A festival lantern, relit when the Bell rang. Its flame leans east, toward the Forest road.')])])
+    # PF2 #1: stair-foot triggers (Near; new events, appended so existing IDs keep their numbers). Walking toward the first
+    # stair from the row-3/4 side paths puts you in the Gate Guard's way: locked -> he calls out and pushes you back; with the seal
+    # and the key it behaves exactly like the gate (18,4).
+    for (x, y) in [(17, 3), (18, 3), (19, 3), (17, 4), (19, 4)]:
+        m.event(x, y, [page(trigger='touch', through=True, list=[
+            IF({'nlock': 'L02'}, [{'c': 'se', 'name': 'buzzer'}, say('villager3', 'Gate Guard', 'Halt. No one climbs to the Shrine after dusk without the Elder’s seal. Orders.'), {'c': 'move', 'route': ['back']}],
+               [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [say('villager3', 'Gate Guard', 'Ah, the seal. All in order. The gate is just below the stairs. Go on.'), {'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
+                  [say('villager3', 'Gate Guard', 'Seal’s fine, miss, but the gate itself is locked. You’ll need the Shrine Key.'), {'c': 'move', 'route': ['back']}])])])], realm='near')
     return m
 def canopy_border(m, stairs):
     """D5/edge-exit art: lay the canopy (border.png) on the map-1 border band under the existing trees, and its ragged edge on the
