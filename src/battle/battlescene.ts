@@ -26,10 +26,13 @@ export class BattleScene extends Phaser.Scene {
   t(ms: number) { return sleep(this, ms / this.speed()); }
   /** Auto for this battle: null follows Settings; in boss fights toggles stay local (temporary) so the player's saved setting survives. */
   autoLocal: boolean | null = null;
-  get autoOn(): boolean { return this.autoLocal ?? Settings.data.autoBattle; }
+  /** PF2 #3: Auto picked from the battle menu covers this round only (its Echoes included); next round the menu returns. */
+  autoRound = false;
+  get autoAlways(): boolean { return this.autoLocal ?? Settings.data.autoBattle; }
+  get autoOn(): boolean { return this.autoRound || this.autoAlways; }
   setAuto(v: boolean) { if (this.B.bossDef) this.autoLocal = v; else { this.autoLocal = null; Settings.data.autoBattle = v; Settings.save(); } }
   create() {
-    this.autoLocal = null;
+    this.autoLocal = null; this.autoRound = false;
     this.fxMeta = this.cache.json.get('fxmeta'); this.bossMeta = this.cache.json.get('bossmeta');
     const zone = this.d.zone ? SPEC.zones[this.d.zone] : null;
     const items = $.items; const ctx: any = { realm: this.d.realm, lumen: $.lumen, lumenMax: $.lumenMax, difficulty: Settings.data.difficulty, warmth: Settings.data.warmth, items, itemDB: DB.items, pity: $.pity, flags: { fragments: $.fragments }, recLevel: this.d.recLevel ?? zone?.recLevel, ward: $.party.some((id) => hasWard($.actors[id])) };
@@ -255,17 +258,17 @@ export class BattleScene extends Phaser.Scene {
   // ---------------------------------------------------------------- command phase
   setCmd(items: any[], onOk: (it: any) => void, onCancel: (() => void) | null) { const c = this.cmdWin; c.rowH = 27; c.pad = 10; c.fontSize = 20; c.setItems(items); c.onOk = onOk; c.onCancel = onCancel; c.active = true; c.setVisible(true); }
   commandPhase(): Promise<'ok' | 'escape'> {
-    const B = this.B;
+    const B = this.B; this.autoRound = false;
     return new Promise((resolve) => {
       const party = () => {
         this.statusWin.setVisible(true); this.subWin.setVisible(false); this.descWin.setVisible(false); this.cmdWin.keepIndexOnSet = true; this.hideTarget(); this.refreshStatus(); this.drawOrder();
         // B3: bosses suspend Auto for this fight only; the saved Auto Battle setting is left alone
         if (this.B.bossDef && this.autoLocal === null && Settings.data.autoBattle) this.autoLocal = false;
-        if (this.autoOn) { if (Input.isTriggered('cancel')) { this.setAuto(false); } else { this.autoPlan(); resolve('ok'); return; } }
-        this.setCmd([{ label: 'Fight', data: 'fight' }, { label: 'Flee', data: 'escape', enabled: !B.noEscape || $.items.smoke_ball > 0 }, { label: 'Auto: ' + (this.autoOn ? 'ON' : 'OFF'), data: 'auto' }, { label: 'Speed: ×' + this.speed(), data: 'speed' }], (it) => {
+        if (this.autoAlways) { if (Input.isTriggered('cancel')) { this.setAuto(false); } else { this.autoPlan(); resolve('ok'); return; } }
+        this.setCmd([{ label: 'Fight', data: 'fight' }, { label: 'Flee', data: 'escape', enabled: !B.noEscape || $.items.smoke_ball > 0 }, { label: this.autoAlways ? 'Auto: ON' : 'Auto (1 turn)', data: 'auto' }, { label: 'Speed: ×' + this.speed(), data: 'speed' }], (it) => {
           if (it.data === 'fight') { this.cmdWin.active = false; actorCmd(0); }
           else if (it.data === 'escape') { this.cmdWin.active = false; this.doFlee().then((ok) => { if (ok) resolve('escape'); else { B.party.forEach((p) => { if (p.hp > 0) p.action = { type: 'wait' }; }); resolve('ok'); } }); }
-          else if (it.data === 'auto') { this.setAuto(!this.autoOn); if (this.autoOn) { this.cmdWin.active = false; this.autoPlan(); resolve('ok'); } else party(); }
+          else if (it.data === 'auto') { if (this.autoAlways) { this.setAuto(false); party(); } else { this.autoRound = true; this.cmdWin.active = false; this.autoPlan(); resolve('ok'); } }   // PF2 #3: one round of Auto; never saved
           else if (it.data === 'speed') { Settings.data.battleSpeed = this.speed() === 1 ? 2 : 1; Settings.save(); party(); }
         }, null);
       };
