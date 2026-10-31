@@ -143,7 +143,16 @@ export class MenuScene extends Phaser.Scene {
     list.onSelect = (it) => { det.clear(); if (it) { det.txt(it.data.title, 16, 10, { size: 24, color: COL.gold }); det.txt(it.data.text, 16, 52, { size: 19, wrap: 520 }); } };
     list.setItems(notes.map((n: any) => ({ label: n.title, data: n }))); list.active = true; await new Promise<void>((res) => (list.onCancel = () => res())); [list, det, panel].forEach((x) => this.rm(x));
   }
-  async save() { this.cmd.active = false; await new Promise<void>((res) => { this.scene.launch('SaveLoad', { mode: 'save', onClose: () => { this.scene.stop('SaveLoad'); Input.clear(); res(); } }); this.scene.bringToTop('SaveLoad'); }); }
+  async save() {
+    const ms: any = this.scene.get('Map');
+    if (ms && typeof ms.canSaveHere === 'function' && !ms.canSaveHere()) {   // saves are a reward: only at a lit Lantern Post (or a saving inn)
+      (this as any).lastSaveRefused = true; this.cmd.active = false; Audio.se('buzzer');
+      const w = this.mk(new Selectable(this, 250, 230, 400, 150, this.tone)); w.setDepth(400); w.rowH = 38; w.pad = 150; w.setItems([{ label: 'OK' }]);
+      const t = this.add.text(450, 244, "The lantern isn't lit here.\nSave at a Lantern Post.", { fontFamily: FONT, fontSize: '18px', color: '#fff', align: 'center' }).setOrigin(0.5, 0).setDepth(401); w.active = true;
+      await new Promise<void>((res) => { w.onOk = () => res(); w.onCancel = () => res(); }); this.rm(w); t.destroy(); this.cmd.active = true; return;
+    }
+    (this as any).lastSaveRefused = false;
+    this.cmd.active = false; await new Promise<void>((res) => { this.scene.launch('SaveLoad', { mode: 'save', onClose: () => { this.scene.stop('SaveLoad'); Input.clear(); res(); } }); this.scene.bringToTop('SaveLoad'); }); }
   async gameEnd() {
     const w = this.mk(new Selectable(this, 300, 220, 300, 190, this.tone)); w.setDepth(400); w.rowH = 38; w.pad = 44; w.setItems([{ label: 'Return to Title' }, { label: 'Cancel' }]); const t = this.add.text(450, 232, 'Return to the title screen?\n(Unsaved progress is lost.)', { fontFamily: FONT, fontSize: '17px', color: '#fff', align: 'center' }).setOrigin(0.5, 0).setDepth(401); w.active = true;
     const r = await new Promise<number>((res) => { w.onOk = (_i, i) => res(i); w.onCancel = () => res(1); }); this.rm(w); t.destroy();

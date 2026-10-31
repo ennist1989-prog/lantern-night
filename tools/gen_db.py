@@ -164,7 +164,7 @@ SYS = dict(
    dict(unlock='shiftfar',title='The Far Shore',text='Walls, rocks and doors differ between realms. If something blocks you, try the other shore.'),
    dict(unlock='send',title='Send & Invite',text='At full Mood a spirit is Calm. Send (Lv 3) guides it onward for full EXP and a Wish Scrap or Name Fragment. Invite (Lv 4) asks a calm spirit to walk with you as a Bond.'),
    dict(unlock='boss_tip_seen',title='Bosses',text='Hit a boss’s weakness to break its Veil, then Parley or Send. A ⚠ telegraph lands next round: Guard, or break it with a Stun/Unveil. Weaknesses can differ between shores, so Shift in battle.'),
-   dict(title='Saving',text='Save anywhere: Menu → Save (10 slots). The game also autosaves on every map change, after battles, and before bosses.')],
+   dict(title='Saving',text='Save at a lit Lantern Post (or an inn that offers it): Menu → Save works only there (10 slots). Saves are a reward: the game autosaves only at milestones: a new chapter, story checkpoints and before bosses, a boss win, and clearing an area like the Reedwind Maze.')],
 )
 
 def dump(name, data):

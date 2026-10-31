@@ -94,7 +94,7 @@ def build_maze():
     m.tile('both', 0, 20, G(BORDER, 4, 0)); m.tile('both', 0, 24, G(BORDER, 5, 0))
     m.light(27, 2, 4, fa=0.3); m.light(3, 22, 4, fa=0.3)   # dimmer in Far so Mio/ground stay under L* 90
     for (x, y) in ENTRY: m.door_touch(x, y, 1, x - 4, 26, 'up', se=None)
-    for (x, y) in EXIT: m.door_touch(x, y, 1, 1, 16 if y < 23 else 17, 'right', se=None, extra=[IF({'nsw': 'maze_cleared'}, [sw('maze_cleared')])])
+    for (x, y) in EXIT: m.door_touch(x, y, 1, 1, 16 if y < 23 else 17, 'right', se=None, extra=[IF({'nsw': 'maze_cleared'}, [sw('maze_cleared')]), {'c': 'autosave'}])   # clearing the maze is a milestone autosave (lands after the transfer)
     chest(m, CHEST[0], CHEST[1], [('rice_ball', 2), ('herbal_tea', 1), ('lantern_oil', 1), ('mochi', 1)], obj='supply_box', empty='The supply box is empty. Its cloth lies untied.')
     spots = npc_spots(cells)
     for i, (x, y, sheet, name, flag, gift, lines) in enumerate(NPCS):

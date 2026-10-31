@@ -319,7 +319,7 @@ export class MapScene extends Phaser.Scene {
     await this.fader.in(this, 700);
     const lines = DB.system.fadingLines; const ln = lines[$.fades % lines.length];
     await this.msg.show(ln.face, ln.name, ln.text);
-    this.fadingNow = false; this.interp.running--; this.autosave('fade');
+    this.fadingNow = false; this.interp.running--;   // no autosave on a fade: the player respawns at the last lit Post; saving stays a reward
   }
   findShiftTarget(tx: number, ty: number, target: 'near' | 'far') {
     const ok = (x: number, y: number) => this.tileFree(x, y, target) && this.region(x, y) !== 2 && !this.eventsBlock(x, y, target);
@@ -433,9 +433,17 @@ export class MapScene extends Phaser.Scene {
     Input.latchDirs(dir);   // D7: only the arrival (inward) direction keeps walking; others need a fresh press
     if (o.setRespawn) $.respawn = { map: mapId, x, y, dir };
     await this.fader.in(this, o.fast ? 150 : 320); this.transitioning = false;
-    if (!sameMap) { this.showBanner(mapName(mapId)); if (!o.noAuto) this.autosave('transfer'); }
+    if (!sameMap) { this.showBanner(mapName(mapId)); if (!o.noAuto && o.milestone) this.queueMilestone(); }   // saves are a reward: no autosave on a plain map change, only on milestone transfers
   }
   // ------------------------------------------------------------ saving
+  /** Menu > Save works only at a save point: next to (or on) this map's working Lantern Post, or its inn keeper when that inn saves. */
+  canSaveHere(): boolean {
+    const p = this.player; if (!p) return false;
+    const isSave = (l: any[]): boolean => (l || []).some((c: any) => c && (c.c === 'post' || (c.c === 'inn' && !c.noSave) || isSave(c.then) || isSave(c.else) || (Array.isArray(c.br) && c.br.some((b: any) => isSave(b)))));
+    return this.evs.some((e) => !e.erased && this.eventRealmOK(e) && Math.abs(e.data.x - p.tx) <= 1 && Math.abs(e.data.y - p.ty) <= 1 && !!e.page && isSave(e.page.list));
+  }
+  /** Milestone autosave, written once the running event has finished so the save never lands mid-cutscene. */
+  queueMilestone() { const tick = () => { if (!this.scene.isActive() && !this.scene.isPaused()) return; if (!this.ready || this.interp.busy || this.msg.busy || this.overlay) { this.time.delayedCall(200, tick); return; } this.autosave('milestone'); }; this.time.delayedCall(50, tick); }
   autosave(kind = 'auto') {
     if (kind === 'boss' || kind === 'cp') { $.checkpoint = null; const snap = SaveManager.snapshotString(); $.checkpoint = snap; }
     const r = SaveManager.auto(); if (r.ok) { this.saveIcon.setAlpha(1); this.tweens.add({ targets: this.saveIcon, alpha: 0, duration: 1600, delay: 600 }); }
@@ -514,7 +522,7 @@ export class MapScene extends Phaser.Scene {
     this.overlay = false; Input.clear(); this.applyRealmVisuals(); this.refreshEvents(); $.setV('battle_peaceful', peaceful ? 1 : 0);
     Audio.bgm(this.mapBgm()); const zz = SPEC.zones[zid]; $.grace = zz?.graceSteps ?? 8; this.stepsLeft = Math.max(this.stepsLeft, this.rollSteps(false, zz?.encounterSteps?.[$.realm] || 26)); await this.fader.in(this, 300);
     if (res === 'lose') { await this.handleDefeat(boss, o); return 'lose'; }
-    this.autosave('battle');
+    if (boss) this.autosave('battle');   // milestone: a boss win (ordinary fights no longer autosave)
     return res as any;
   }
   async handleDefeat(boss: boolean, o: any) {
