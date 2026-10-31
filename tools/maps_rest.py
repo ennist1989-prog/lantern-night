@@ -13,13 +13,13 @@ def fill_walls_wood(m, face_x=None):
     m.bg = '#3b3643'
 def foe(m, x, y, troop, sheet, realm='far', **kw):
     e = dict(troop=troop, aggro=kw.get('aggro', 4), chase=True, range=kw.get('range', 3), spd=kw.get('spd', 260)); m.event(x, y, [page(g=NPC(sheet), enemy=e)], realm)
-def chest(m, x, y, items, text=None, realm='both'):
+def chest(m, x, y, items, text=None, realm='both', obj='chest', empty='The chest is empty.'):
     got = []
     for it_, n in items: got.append(item(it_, n))
     # (no static chest object: the event draws the closed/open frame, so the open lid is never hidden under a closed copy)
     # #8: the lid opens on the spot (chest_open frame) and the opened page keeps that frame for good
-    m.event(x, y, [page(cond={'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}, {'c': 'chestopen'}] + got + [self_sw('A')]),
-                   page(cond={'self': 'A'}, g=dict(obj='chest_open'), list=[say(None, None, 'The chest is empty.')])], realm)
+    m.event(x, y, [page(cond={'nself': 'A'}, g=dict(obj=obj), list=[{'c': 'se', 'name': 'pickup'}, dict({'c': 'chestopen'}, **({} if obj == 'chest' else {'obj': obj + '_open'}))] + got + [self_sw('A')]),
+                   page(cond={'self': 'A'}, g=dict(obj=obj + '_open'), list=[say(None, None, empty)])], realm)
 def build_sachi():
     m = Map(2, 'Sachi’s House', 12, 10, 'home', 'home', seed=2); fill_walls_wood(m, (1, 10))
     m.fill('both', 1, 2, 10, 8, WOOD_FLOOR); m.fill('both', 6, 9, 6, 9, WOOD_FLOOR)

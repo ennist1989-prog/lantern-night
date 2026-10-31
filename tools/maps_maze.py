@@ -1,5 +1,5 @@
 """Map 7: Reedwind Maze, the early training field west of Ashiro (Thomas: leveling field + maze, loops back to the village).
-Walls are the border.png canopy (hedge band) with its ragged edge on the first grass ring; no new art. No Lantern Post here:
+Walls are the maze-v1 hedge autotile (sheet 7, maze.png) on a grass floor; mouths use the v2.1 trail pieces. No Lantern Post here:
 saves are a reward for progress (one-save-per-map rule)."""
 import random
 from mapkit import *
@@ -24,14 +24,14 @@ def maze_cells():
         for y in range(20, 25): open_.add((x, y))
     return open_
 NPCS = [  # (x, y, sheet, name, flag, gift, lines)
-    (30, 3, 'villager3', 'Haru', 'maze_haru', ('rice_ball', 2), [
+    (30, 3, 'haru', 'Haru', 'maze_haru', ('rice_ball', 2), [
         'Mio? Mio Ashiro! It’s me, Haru. We shared a desk at the temple school, remember? You always drew lanterns in the margins.',
         'Granny Sachi used to send us out here to cut reeds for the festival. Now the reed field’s grown into a hedge maze. Spirits wander it at night.',
         'If you’re going in, take these. You used to trade me your rice balls for my ink. Call it even.']),
     (17, 13, 'woman', 'Teacher Nao', 'maze_nao', None, [
         'Well, if it isn’t my most daydreaming pupil. You still stand like you’re listening for something only you can hear.',
         'Sachi told me once that keepers are taught twice: once by people, once by the road. This maze is the road’s lesson. Patience. Every dead end teaches the turn you missed.']),
-    (9, 21, 'ghostman', 'Old Tokubei', 'maze_tokubei', ('lantern_oil', 2), [
+    (9, 21, 'tokubei', 'Old Tokubei', 'maze_tokubei', ('lantern_oil', 2), [
         'Ah… the little one who waited by my cart every day after lessons. You and Haru, sticky fingers, one mochi between you.',
         'I sold sweets on the reed road for forty years. I don’t remember when I stopped. But I remember you.',
         'Lamp oil, from the bottom of my cart. A keeper should never walk with a hungry flame.']),
@@ -69,31 +69,33 @@ def build_maze():
     m.fill('both', 0, 0, W - 1, H - 1, GRASS[0], walk=False)
     for (x, y) in cells: m.fill('both', x, y, x, y, GRASS)
     trail = set(ENTRY) | set(EXIT) | {(1, y) for y in (21, 22, 23)}
-    m.blob('both', set(ENTRY), open_cells=set(ENTRY))   # short dirt stub at the top; the floor is grass everywhere else (art spec 1a)
     allopen = cells | trail
-    # hedge walls: canopy fill, ragged canopy edge on grass cells next to a wall
+    # hedge walls: maze-v1 autotile (sheet 7). Mask bit set when that neighbour is hedge (or off-map); floor everywhere else is grass.
+    hedge = lambda x, y: not m.inb(x, y) or (x, y) not in allopen
     for y in range(H):
         for x in range(W):
-            if (x, y) not in allopen: m.tile('both', x, y, CANOPY[y % 2][x % 2] if has_border() else G(1, 0, 0))
-    if has_border():
-        for (x, y) in cells - trail:
-            for side, (dx, dy) in (('n', (0, -1)), ('s', (0, 1)), ('e', (1, 0)), ('w', (-1, 0))):
-                if m.inb(x + dx, y + dy) and (x + dx, y + dy) not in allopen: m.tile('both', x, y, CANOPY_EDGE[side]); break
+            if hedge(x, y):
+                k = (1 if hedge(x, y - 1) else 0) | (2 if hedge(x + 1, y) else 0) | (4 if hedge(x, y + 1) else 0) | (8 if hedge(x - 1, y) else 0)
+                m.tile('both', x, y, G(MAZE, k % 4, k // 4))
+    # top mouth (maze-v1 README "Maze mouths"): trail_open_n (26..28, 0..1), ch3fix rounded end at row 2, canopy edges either side
+    for dx in range(3):
+        for dy in range(2): m.tile('both', 26 + dx, dy, G(BORDER, 4 + dx, 2 + dy))
+        m.tile('both', 26 + dx, 2, G(5, dx, 3))
+    m.tile('both', 25, 0, G(BORDER, 7, 0)); m.tile('both', 29, 0, G(BORDER, 6, 0))
     # gate art: the same banner posts and sign as the village's east road (existing objects)
-    m.obj('both', 'post_banner', 25, 0, fw=1, fh=1); m.obj('both', 'post_banner', 29, 0, fw=1, fh=1)
     m.region(0, 0, W - 1, H - 1, 3); m.region(23, 0, 31, 4, 0); m.region(0, 20, 7, 24, 0)   # clearings are calm
     m.encounter = dict(region=3, zone='z01m')
     deg = lambda c: sum((c[0] + dx, c[1] + dy) in cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
     for c in cells:
         if deg(c) == 1: m.region(c[0], c[1], c[0], c[1], 0)   # no encounters on dead-end tips (art spec 5.3)
-    if has_border():   # v2.1 west trail piece on the exit, as map 10's west exit
-        c0, r0, w, h = TRAIL_PIECES['w']
-        for dy in range(h):
-            for dx in range(w): m.tile('both', dx, 21 + dy, G(BORDER, c0 + dx, r0 + dy))
+    # west exit: capped west piece G(6,0..1,8..10) (no raw dirt against grass at x=2), canopy edge caps above/below
+    for dy in range(3):
+        for dx in range(2): m.tile('both', dx, 21 + dy, G(BORDER, dx, 8 + dy))
+    m.tile('both', 0, 20, G(BORDER, 4, 0)); m.tile('both', 0, 24, G(BORDER, 5, 0))
     m.light(27, 2, 4); m.light(3, 22, 4)
     for (x, y) in ENTRY: m.door_touch(x, y, 1, x - 4, 26, 'up', se=None)
     for (x, y) in EXIT: m.door_touch(x, y, 1, 1, 16 if y < 23 else 17, 'right', se=None, extra=[IF({'nsw': 'maze_cleared'}, [sw('maze_cleared')])])
-    chest(m, CHEST[0], CHEST[1], [('rice_ball', 2), ('herbal_tea', 1), ('lantern_oil', 1), ('mochi', 1)])
+    chest(m, CHEST[0], CHEST[1], [('rice_ball', 2), ('herbal_tea', 1), ('lantern_oil', 1), ('mochi', 1)], obj='supply_box', empty='The supply box is empty. Its cloth lies untied.')
     spots = npc_spots(cells)
     for i, (x, y, sheet, name, flag, gift, lines) in enumerate(NPCS):
         if i in spots: x, y = spots[i]
@@ -101,7 +103,7 @@ def build_maze():
         if gift: first.append(item(gift[0], gift[1]))
         first.append(sw(flag))
         after = [say(sheet, name, lines[-1] if not gift else 'Go on, Mio. The reeds remember you, even if they’ve grown taller.')]
-        m.event(x, y, [page(g=NPC(sheet, 'down', step=False), list=[IF({'nsw': flag}, first, after)])], 'far' if sheet == 'ghostman' else 'near')
+        m.event(x, y, [page(g=NPC(sheet, 'down', step=False), list=[IF({'nsw': flag}, first, after)])], 'far' if sheet == 'tokubei' else 'near')
     m.event(27, 2, [page(cond={'nsw': 'maze_intro'}, trigger='touch', through=True, list=[
         say('mio', 'Mio', 'The old reed field… it’s grown into a maze. Granny used to say a keeper learns the way by losing it first.'), sw('maze_intro')])])
     return m

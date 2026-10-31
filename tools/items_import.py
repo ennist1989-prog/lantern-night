@@ -40,6 +40,8 @@ for k, v in v2.items():
     if k in items:
         items[k].setdefault('iconV2', v.get('icon')); items[k].setdefault('rarity', v.get('rarity', 'common'))
 # collisions / decisions
+if 'mochi' in items:   # training maze: own 24px icon (icons.png slot 74, maze-v1), not the v2 pear; real +30 HP
+    items['mochi'].pop('iconV2', None); items['mochi'].update(icon='mochi', effect={'hp': 30})
 items['chime_offering'] = {'name': 'Wind Chime', 'type': 'offering', 'icon': 'flute', 'iconV2': 'I_Clock', 'desc': 'Offering: spirits that like sound.', 'price': 40, 'usable': False, 'offer': True, 'cats': ['sound'], 'shop': ['ch2'], 'rarity': 'common'}
 items['honey'] = {'name': 'Honey', 'type': 'item', 'icon': 'honey', 'iconV2': 'I_C_Honey' if 'I_C_Honey' in ic2 else 'I_C_Pie', 'desc': 'Restores 70 HP. Also a lovely offering: spirits with a sweet tooth adore it.', 'price': 14, 'usable': True, 'scope': 'ally', 'effect': {'hp': 70}, 'offer': True, 'cats': ['food'], 'rarity': 'common'}
 for k in ('anvil_core', 'garden_core'):   # heirloom catalysts: peaceful routes also yield them (designer decision)

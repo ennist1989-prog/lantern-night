@@ -12,7 +12,7 @@ import { MessageSystem } from '../ui/message';
 import { Char, TS, Dir, DV, OPP } from './character';
 import { Interpreter } from './interpreter';
 import { recolorCanvas, farTexture, farColor } from './recolor';
-const SHEETS = ['floor', 'ifloor', 'wallsimple', 'water', 'ch3fix', 'border'];   // gid sheet 5 = ch3fix (optional; maps only use it when art/custom/tiles/ch3fix.png exists)
+const SHEETS = ['floor', 'ifloor', 'wallsimple', 'water', 'ch3fix', 'border', 'maze'];   // sheet 7 = maze (training maze hedge, maze-v1)   // gid sheet 5 = ch3fix (optional; maps only use it when art/custom/tiles/ch3fix.png exists)
 export interface GEvent { id: number; data: any; char: Char; page: any | null; pageIdx: number; wander: number; erased: boolean; aggro: boolean; stun: number; marker: Phaser.GameObjects.Text | null; home: { x: number; y: number }; running: boolean; }
 export class MapScene extends Phaser.Scene {
   world!: Phaser.GameObjects.Container; ui!: Phaser.GameObjects.Container; fxLayer!: Phaser.GameObjects.Container; msg!: MessageSystem; fader!: Fader; interp!: Interpreter;

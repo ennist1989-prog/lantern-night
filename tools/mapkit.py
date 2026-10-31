@@ -13,6 +13,8 @@ CH3FIX_PNG = os.path.join(ROOT, 'art/custom/tiles/ch3fix.png')
 def has_ch3fix(): return os.path.exists(CH3FIX_PNG)
 BORDER = 6   # art/custom/tiles/border.png (Ember edge-exit art, sheet 6): interior boards, canopy, stairs, cave rock; optional
 BORDER_PNG = os.path.join(ROOT, 'art/custom/tiles/border.png')
+MAZE = 7   # art/custom/tiles/maze.png (Ember maze-v1, 64x112): hedge autotile rows 0-3 (mask N1 E2 S4 W8 -> cell mask%4, mask//4), canopy corners row 4
+MAZE_PNG = os.path.join(ROOT, 'art/custom/tiles/maze.png')
 def has_border(): return os.path.exists(BORDER_PNG)
 GRASS = [G(1,11,12)]*6 + [G(1,12,12), G(1,13,12), G(1,14,12)]
 PATH_O = (11, 7)
@@ -131,6 +133,7 @@ class Map:
         sheets = {1: Image.open(os.path.join(ROOT, 'public/assets/tiles/floor.png')).convert('RGBA'), 2: Image.open(os.path.join(ROOT, 'public/assets/tiles/ifloor.png')).convert('RGBA'), 3: Image.open(os.path.join(ROOT, 'public/assets/tiles/wallsimple.png')).convert('RGBA'), 4: Image.open(os.path.join(ROOT, 'public/assets/tiles/water.png')).convert('RGBA')}
         if os.path.exists(CH3FIX_PNG): sheets[CH3FIX] = Image.open(CH3FIX_PNG).convert('RGBA')
         if os.path.exists(BORDER_PNG): sheets[BORDER] = Image.open(BORDER_PNG).convert('RGBA')
+        if os.path.exists(MAZE_PNG): sheets[MAZE] = Image.open(MAZE_PNG).convert('RGBA')
         objs = Image.open(os.path.join(ROOT, 'public/assets/objects.png')).convert('RGBA')
         im = Image.new('RGBA', (self.w * TS, self.h * TS), (0, 0, 0, 255))
         for lname in ('g', 'o'):

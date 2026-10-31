@@ -1,3 +1,4 @@
+import os
 from mapkit import *
 def build_village():
     m = Map(1, 'Ashiro Village', 36, 30, 'village', 'village_far', seed=7)
@@ -258,8 +259,25 @@ WEST = {(x, y) for x in range(0, 5) for y in (16, 17)}
 def west_road(m, cells, stairs):
     """Training maze (map 7): the Sachi road runs on west off the map edge into the Reedwind Maze. Runs after the decor pass, so
     the rng stream and every older event ID are unchanged; the new events are appended after them."""
+    import copy
+    keep = (copy.deepcopy(m.layers), copy.deepcopy(m.col))
     m.blob('both', cells | WEST, open_cells={(35, 16), (35, 17), (0, 16), (0, 17)} | stairs)
-    for (x, y) in stairs: m.walk('both', x, y, False)
+    # only the west road cells take the re-blobbed tiles/collision; everything else (stairs, rest of the road) stays as on main
+    for r in ('near', 'far'):
+        for i in range(m.w * m.h):
+            x, y = i % m.w, i // m.w
+            if not (x <= 5 and 16 <= y <= 17):
+                m.layers[r]['g'][i] = keep[0][r]['g'][i]; m.layers[r]['o'][i] = keep[0][r]['o'][i]; m.col[r][i] = keep[1][r][i]
+    # maze-v1 joins (Ember, loopback_qa): canopy edge caps above/below the road, convex canopy corners at x=2
+    if os.path.exists(MAZE_PNG):
+        for x in (0, 1): m.tile('both', x, 15, G(BORDER, 4, 0)); m.tile('both', x, 18, G(BORDER, 5, 0))
+        m.tile('both', 2, 15, G(MAZE, 0, 4)); m.tile('both', 2, 18, G(MAZE, 2, 4))
+        for x in (21,): m.tile('both', x, 28, G(BORDER, 7, 0)); m.tile('both', x, 29, G(BORDER, 7, 0))
+        m.tile('both', 25, 28, G(BORDER, 6, 0)); m.tile('both', 25, 29, G(BORDER, 6, 0))
+        for dx in range(3):
+            m.tile('both', 22 + dx, 27, G(5, dx, 1))
+            for dy in range(2): m.tile('both', 22 + dx, 28 + dy, G(BORDER, 4 + dx, 4 + dy))   # trail_open_s (replaces the s_cap)   # ch3fix rounded blob top where the plaza meets the trail
+        m.tile('both', 21, 27, G(MAZE, 2, 4)); m.tile('both', 25, 27, G(MAZE, 3, 4))
     for r in ('near', 'far'):   # drop the decor flowers on the new road and the two border trees standing in it
         m.objs[r] = [o for o in m.objs[r] if not ((o.get('flat') and (o['x'] // 16, o['y'] // 16 - 1) in WEST) or (o['n'] in ('tree_big', 'tree_orange') and (o['x'], o['y']) in ((8, 272), (24, 304))))]
     m.obj('both', 'post_banner', 1, 15, fw=1, fh=2); m.obj('both', 'post_banner', 1, 19, fw=1, fh=2)

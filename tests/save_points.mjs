@@ -32,4 +32,9 @@ const npcs = z.events.filter((e) => e.pages.some((p) => p.g && p.trigger === 'ac
 const loop = [...cmds(z.events.flatMap((e) => e.pages.flatMap((p) => p.list)))].filter((c) => c.c === 'transfer' && c.map === 1);
 ok(loop.some((c) => c.x === 1 && c.y === 16 && c.dir === 'right'), 'maze exit loops back to village west road (1,16) facing right');
 ok(z.bgm && z.bgm.near && z.bgm.far, 'maze has BGM');
+const items = JSON.parse(fs.readFileSync('public/data/items.json', 'utf8')), icons = JSON.parse(fs.readFileSync('public/assets/icons.json', 'utf8'));
+ok(items.mochi && items.mochi.effect && items.mochi.effect.hp === 30 && items.mochi.usable, 'mochi heals +30 HP (effect matches its description)');
+ok(items.mochi && items.mochi.icon === 'mochi' && !items.mochi.iconV2 && icons.mochi === 74, 'mochi uses its own icon (icons.png slot 74), not the v2 pear');
+ok(box && box.pages[0].g.obj === 'supply_box' && box.pages[1].g.obj === 'supply_box_open' && box.x === 2 && box.y === 21, 'supply box obj at (2,21), open look after its flag');
+const objs = JSON.parse(fs.readFileSync('public/assets/objects.json', 'utf8')); ok(objs.supply_box && objs.supply_box_open, 'supply_box objects in the atlas');
 console.log(fails ? `FAIL ${fails}` : 'PASS save_points + maze'); process.exit(fails ? 1 : 0);
