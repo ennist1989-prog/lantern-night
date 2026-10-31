@@ -15,7 +15,7 @@ export class MessageSystem {
   measure: Phaser.GameObjects.Text;
   constructor(scene: Phaser.Scene, layer: Phaser.GameObjects.Container) {
     this.scene = scene; this.layer = layer;
-    this.win = new Win(scene, 8, H - 8 - (WIN.fittingHeight(WIN.msgLines, WIN.lineH) + 8), W - 16, WIN.fittingHeight(WIN.msgLines, WIN.lineH) + 8);   // 4 lines × 36 + 2×12 padding + 8 = 176 this.win.setVisible(false); layer.add(this.win);
+    this.win = new Win(scene, 8, H - 8 - (WIN.fittingHeight(WIN.msgLines, WIN.lineH) + 8), W - 16, WIN.fittingHeight(WIN.msgLines, WIN.lineH) + 8); this.win.setVisible(false); layer.add(this.win);   // 4 lines × 36 + 2×12 padding + 8 = 176. PF2 #6: these two calls had slipped into the comment, so the empty message box showed after a load
     this.arrow = scene.add.text(W / 2 - 10, H - 34, '▼', { fontFamily: FONT, fontSize: '20px', color: COL.gold }).setVisible(false); layer.add(this.arrow);
     this.autoTxt = scene.add.text(W - 70, H - 218, 'AUTO', { fontFamily: FONT, fontSize: '18px', color: COL.gold, stroke: '#000', strokeThickness: 3 }).setVisible(false); layer.add(this.autoTxt);
     this.measure = scene.add.text(-999, -999, '', { fontFamily: FONT, fontSize: WIN.font + 'px' }).setVisible(false); layer.add(this.measure);

@@ -87,7 +87,8 @@ export class MapScene extends Phaser.Scene {
     const md = this.mapData;
     for (const realm of ['near', 'far'] as const) for (const o of md.objs[realm] || []) {
       const key = realm === 'far' ? farTexture(this, 'objects') : 'objects';
-      const im = this.add.image(o.x, o.y, key, o.n).setOrigin(0.5, 1); im.setDepth(o.flat ? o.y - 5000 : o.above ? 90000 + o.y : o.y + (o.dy || 0)); if (o.sx || o.sy) im.setScale(o.sx || 1, o.sy || 1);   // PF2: 'above' objs draw over characters (below markers/balloons at 99999) (im as any).realm = realm; this.world.add(im); this.objs.push(im);
+      const im = this.add.image(o.x, o.y, key, o.n).setOrigin(0.5, 1); im.setDepth(o.flat ? o.y - 5000 : o.above ? 90000 + o.y : o.y + (o.dy || 0)); if (o.sx || o.sy) im.setScale(o.sx || 1, o.sy || 1);
+      (im as any).realm = realm; this.world.add(im); this.objs.push(im);   // PF2: 'above' objs draw over characters (below markers/balloons at 99999)
     }
   }
   buildEvents() {
