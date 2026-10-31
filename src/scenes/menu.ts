@@ -33,7 +33,7 @@ export class MenuScene extends Phaser.Scene {
   close(r?: any) { this.d.onClose?.(r); }
   refresh() {
     const p = this.party; p.clear(); $.party.forEach((id, i) => this.drawActor(p, id, 14, 12 + i * 148, 530));
-    const f = this.info; f.clear(); f.txt('Gold', 14, 8, { size: 18, color: COL.sys }); f.txt(String($.gold), 216, 6, { size: 21, color: COL.gold, align: 'right' });
+    const f = this.info; f.clear(); f.txt('Gold', 14, 8, { size: 18, color: COL.sys }); f.txt($.gold.toLocaleString("en-US"), 216, 6, { size: 21, color: COL.gold, align: 'right' });
     f.txt('Lumen', 14, 34, { size: 18, color: COL.sys }); f.gauge(88, 44, 96, $.lumen / $.lumenMax, 0x7fe9ff, 0xe8ffff, 9); f.txt(String(Math.ceil($.lumen)), 216, 34, { size: 19, color: COL.lumen, align: 'right' });
     f.txt('Time', 14, 60, { size: 18, color: COL.sys }); f.txt(fmtTime($.playtime), 216, 60, { size: 19, align: 'right' });
     f.txt(mapName($.map.id), 14, 88, { size: 19, color: COL.gold, wrap: 205 }); f.txt($.realm === 'far' ? 'Far Shore' : 'Near Shore', 14, 116, { size: 16, color: $.realm === 'far' ? COL.teal : COL.warn });
