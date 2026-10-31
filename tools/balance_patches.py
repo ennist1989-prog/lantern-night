@@ -9,6 +9,10 @@ def dump(p, o): json.dump(o, open(p, 'w'), separators=(',', ':'), ensure_ascii=F
 bp = os.path.join(SPEC, 'bosses.json'); bosses = load(bp)
 # A2: Straw Warden was a speed bump (Mio L1 solo 100%, ends ~36/90 HP). +30% HP, EXP 40 (a level at the story beat).
 w = bosses['straw_warden']; w['stats']['mhp'] = 624; w['exp'] = max(w.get('exp', 0), 40)
+# PF2 #5 (playtest): the Warden (first spirit at the boulders) must not fall at L1 and should be a 5+ round fight at L3.
+# 3x HP (624 -> 1872) with softer hits and a sharper Lumen weakness on the Far form so the fight is long, not lethal.
+# Mio solo, Far, seeded sim: L1 0% | L2 ~1% | L3 ~85% in ~8 rounds | L4 100% in ~4 (tests/first_spirit_sim.cjs).
+w['stats'].update({'mhp': 1872, 'atk': 9, 'mat': 9, 'def': 2, 'mdf': 1}); w['forms']['far']['rates']['lumen'] = 2.0
 # A6: the Bell-Keeper reward re-granted the clapper the player already used, and claimed "Kaze joins permanently"
 # (Kaze joined in Chapter 1). Keep the tea; drop the duplicate key item and the stale unlock text.
 bk = bosses['bell_keeper']; r = bk.setdefault('rewards', {})

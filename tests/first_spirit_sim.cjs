@@ -13,4 +13,9 @@ for (const solo of [1, 2, 3, 4]) console.log(JSON.stringify(sim.run('tr_hearth_w
 const w = (r) => parseInt(r.win); for (const r of rows) {
   if (r.lv === 1 && w(r) > 2) ok = false; if (r.lv === 2 && w(r) > 35) ok = false;
   if (r.lv === 3 && (w(r) < 70 || +r.rounds < 5)) ok = false; if (r.lv >= 4 && w(r) < 95) ok = false; }
+// The Straw Warden at the boulders (boss, first spirit fight): >= 3x the old 624 HP; Mio solo + Mio/Kaze, auto and shift bots
+const W = sim.SPEC.bosses.straw_warden; if (W.stats.mhp < 3 * 624) ok = false; console.log('straw_warden mhp', W.stats.mhp);
+for (const party of [['mio'], ['mio', 'kaze']]) for (const style of ['auto', 'shift']) for (const lv of [1, 2, 3, 4]) {
+  const r = sim.run('boss_straw_warden', party, lv, { realm: 'far', n: 400, style }); console.log('warden', party.join('+'), JSON.stringify(r));
+  if (party.length === 1) { if (lv === 1 && w(r) > 2) ok = false; if (lv === 2 && w(r) > 35) ok = false; if (lv === 3 && (w(r) < 60 || +r.rounds < 5)) ok = false; if (lv === 4 && w(r) < 95) ok = false; } }
 console.log(ok ? 'PASS first spirit: L1 loses, L2 low, L3 >=5-round fight, L4+ comfortable' : 'FAIL first spirit balance'); if (!ok) process.exitCode = 1;

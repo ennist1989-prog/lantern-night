@@ -35,7 +35,7 @@ def build_village():
     for x, y in [(15, 2), (21, 2), (15, 5), (21, 5)]:
         m.obj('both', 'pine_s', x, y, fw=2)
     # ---- shrine torii and gate
-    m.obj('both', 'torii', 17, 5, fw=3, block=False, above=True, sy=2)   # PF2 #2: the shrine torii towers over the stair foot (2x tall, above-player priority); the stairs run on behind it; m.walk('both', 17, 5, False); m.walk('both', 19, 5, False)
+    m.obj('both', 'torii', 17, 5, fw=3, block=False, above=True, sy=2); m.walk('both', 17, 5, False); m.walk('both', 19, 5, False)   # PF2 #2: the torii towers over the stair foot (2x tall, above-player priority), stairs run on behind it; pillar collision unchanged
     m.light(16, 5, 3); m.light(20, 5, 3)
     m.obj('both', 'statue_fox', 15, 6, fw=1); m.obj('both', 'statue_fox', 21, 6, fw=1)
     # ---- buildings
@@ -236,14 +236,15 @@ def build_village():
     if has_border(): canopy_border(m, STAIRS)
     for (x, y) in [(32, 15), (32, 18), (14, 15), (21, 15)]:
         m.event(x, y, [page(cond={'sw': 'boss_done'}, g=dict(obj='lantern_post'), list=[say(None, None, 'A festival lantern, relit when the Bell rang. Its flame leans east, toward the Forest road.')])])
-    # PF2 #1: stair-foot triggers (Near; new events, appended so existing IDs keep their numbers). Walking toward the first
-    # stair from the row-3/4 side paths puts you in the Gate Guard's way: locked -> he calls out and pushes you back; with the seal
-    # and the key it behaves exactly like the gate (18,4).
-    for (x, y) in [(17, 3), (18, 3), (19, 3), (17, 4), (19, 4)]:
-        m.event(x, y, [page(trigger='touch', through=True, list=[
-            IF({'nlock': 'L02'}, [{'c': 'se', 'name': 'buzzer'}, say('villager3', 'Gate Guard', 'Halt. No one climbs to the Shrine after dusk without the Elder’s seal. Orders.'), {'c': 'move', 'route': ['back']}],
-               [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [say('villager3', 'Gate Guard', 'Ah, the seal. All in order. The gate is just below the stairs. Go on.'), {'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
-                  [say('villager3', 'Gate Guard', 'Seal’s fine, miss, but the gate itself is locked. You’ll need the Shrine Key.'), {'c': 'move', 'route': ['back']}])])])], realm='near')
+    # PF2 #1: first-stair triggers (Near; new events, appended so existing IDs keep their numbers). The stairs (17-18, 0-2) are
+    # scenery, so stepping toward the first stair from the stair foot (row 3) bumps these touch events: locked -> the Gate Guard
+    # (standing right of the stairs) calls out and Mio stays where she is (no push needed, the stair tile blocks); with the seal
+    # and the key it behaves exactly like the gate (18,4). The PR #49 gate and its push-back are unchanged.
+    for (x, y) in [(17, 2), (18, 2)]:
+        m.event(x, y, [page(trigger='touch', list=[
+            IF({'nlock': 'L02'}, [{'c': 'se', 'name': 'buzzer'}, say('villager3', 'Gate Guard', 'Halt. No one climbs to the Shrine after dusk without the Elder’s seal. Orders.')],
+               [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [say('villager3', 'Gate Guard', 'Ah, the seal. All in order. Go on up.'), {'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
+                  [say('villager3', 'Gate Guard', 'Seal’s fine, miss, but the shrine gate is locked. You’ll need the Shrine Key.')])])])], realm='near')
     return m
 def canopy_border(m, stairs):
     """D5/edge-exit art: lay the canopy (border.png) on the map-1 border band under the existing trees, and its ragged edge on the

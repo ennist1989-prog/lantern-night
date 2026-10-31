@@ -12,14 +12,14 @@ try {
   await newGame(page); await mashUntil(page, () => window.__S.$.sw('intro_done') && window.__game.scene.getScene('Map').isFree());
   await page.evaluate(() => { const $ = window.__S.$; $.tutorialsShown.ctl_done = true; const m = window.__game.scene.getScene('Map'); const o = m.msg.show.bind(m.msg); m.msg.show = (f, n, t, op) => { window.__shown = window.__shown || []; window.__shown.push(String(n) + ':' + String(t)); return o(f, n, t, op); }; });
   // ---- #1 Gate Guard: right of the stairs, and stepping toward the first stair (from the side path) calls him out + pushes back
-  await page.evaluate(() => { window.__S.$.realm = 'near'; }); await teleport(page, 1, 16, 3, 'right');
+  await page.evaluate(() => { window.__S.$.realm = 'near'; }); await teleport(page, 1, 17, 3, 'up');
   const g = await page.evaluate(() => window.__game.scene.getScene('Map').evs.find((e) => e.id === 16));
   ok(g && g.char.tx === 20 && g.char.ty === 3, 'Gate Guard (event 16) stands right of the stairs at (20,3)');
 
-  await page.evaluate(() => { window.__shown = []; }); await page.keyboard.down('ArrowRight'); await sleep(260); await page.keyboard.up('ArrowRight');
+  await page.evaluate(() => { window.__shown = []; }); await page.keyboard.down('ArrowUp'); await sleep(260); await page.keyboard.up('ArrowUp');
   await mashUntil(page, () => window.__game.scene.getScene('Map').isFree() && !window.__game.scene.getScene('Map').player.moving, null, 40); let p = await pos();
-  ok(/Gate Guard/.test(await shown()), 'stair approach (17,3) triggers the Gate Guard message: ' + (await shown()).slice(0, 80));
-  ok(p.x === 16 && p.y === 3, 'locked: pushed back off the stair foot to (16,3), got ' + JSON.stringify(p));
+  ok(/Gate Guard/.test(await shown()), 'stepping toward the first stair (17,2) from (17,3) triggers the Gate Guard message: ' + (await shown()).slice(0, 80));
+  ok(p.x === 17 && p.y === 3, 'locked: stays at the stair foot (17,3), got ' + JSON.stringify(p));
   ok(await free(), 'map is free afterwards (no soft-lock)');
   // ---- #4 Warden 'Not yet' (Far): turned around and walked back to the east side of the boulders
   for (const row of [22, 24]) {
