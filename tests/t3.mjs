@@ -1,5 +1,5 @@
 import { launch, press, hold, sleep, waitScene, newGame, mashUntil, teleport, activeScenes, bkFlow } from './lib.mjs';
-const SS = process.env.SS || '/workspace/lantern-night/screenshots';
+const SS = (process.env.SHOTS || process.env.SS || '/workspace/lantern-night/screenshots');
 const { browser, page, errors } = await launch();
 const shot = (n) => page.screenshot({ path: `${SS}/${n}.png` });
 try {

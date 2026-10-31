@@ -146,9 +146,9 @@ export class MenuScene extends Phaser.Scene {
   async save() {
     const ms: any = this.scene.get('Map');
     if (ms && typeof ms.canSaveHere === 'function' && !ms.canSaveHere()) {   // saves are a reward: only at a lit Lantern Post (or a saving inn)
-      (this as any).lastSaveRefused = true; this.cmd.active = false; Audio.se('buzzer');
+      (this as any).lastSaveRefused = ms.nearUnlitPost?.() ? 'unlit' : 'away'; this.cmd.active = false; Audio.se('buzzer');
       const w = this.mk(new Selectable(this, 250, 230, 400, 150, this.tone)); w.setDepth(400); w.rowH = 38; w.pad = 150; w.setItems([{ label: 'OK' }]);
-      const t = this.add.text(450, 244, "The lantern isn't lit here.\nSave at a Lantern Post.", { fontFamily: FONT, fontSize: '18px', color: '#fff', align: 'center' }).setOrigin(0.5, 0).setDepth(401); w.active = true;
+      const t = this.add.text(450, 244, ms.nearUnlitPost?.() ? "This Lantern Post is dark.\nLight the lantern first." : "The lantern isn't lit here.\nSave at a Lantern Post.", { fontFamily: FONT, fontSize: '18px', color: '#fff', align: 'center' }).setOrigin(0.5, 0).setDepth(401); w.active = true;
       await new Promise<void>((res) => { w.onOk = () => res(); w.onCancel = () => res(); }); this.rm(w); t.destroy(); this.cmd.active = true; return;
     }
     (this as any).lastSaveRefused = false;

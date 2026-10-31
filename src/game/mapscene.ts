@@ -437,6 +437,12 @@ export class MapScene extends Phaser.Scene {
   }
   // ------------------------------------------------------------ saving
   /** Menu > Save works only at a save point: next to (or on) this map's working Lantern Post, or its inn keeper when that inn saves. */
+  /** True beside a Lantern Post that has a save page but is not lit yet (its active page is the lighting scene). */
+  nearUnlitPost(): boolean {
+    const p = this.player; if (!p) return false;
+    const has = (l: any[]): boolean => (l || []).some((c: any) => c && (c.c === 'post' || has(c.then) || has(c.else)));
+    return this.evs.some((e) => !e.erased && this.eventRealmOK(e) && Math.abs(e.data.x - p.tx) <= 1 && Math.abs(e.data.y - p.ty) <= 1 && (e.data.pages || []).some((pg: any) => has(pg.list)) && !(e.page && has(e.page.list)));
+  }
   canSaveHere(): boolean {
     const p = this.player; if (!p) return false;
     const isSave = (l: any[]): boolean => (l || []).some((c: any) => c && (c.c === 'post' || (c.c === 'inn' && !c.noSave) || isSave(c.then) || isSave(c.else) || (Array.isArray(c.br) && c.br.some((b: any) => isSave(b)))));
@@ -542,6 +548,6 @@ export class MapScene extends Phaser.Scene {
     }
     await this.fadeOutOfFar2();
   }
-  async fadeOutOfFar2() { await this.fader.out(this, 600, 0xffffff); $.fades++; $.realm = 'near'; $.lumen = Math.max(20, $.lumen); $.healAll(); const r = $.respawn; await this.loadMap(r.map, r.x, r.y, r.dir as Dir); await this.fader.in(this, 600); const ln = DB.system.fadingLines[$.fades % DB.system.fadingLines.length]; await this.msg.show(ln.face, ln.name, 'You blacked out… ' + ln.text); this.autosave('fade'); }
+  async fadeOutOfFar2() { await this.fader.out(this, 600, 0xffffff); $.fades++; $.realm = 'near'; $.lumen = Math.max(20, $.lumen); $.healAll(); const r = $.respawn; await this.loadMap(r.map, r.x, r.y, r.dir as Dir); await this.fader.in(this, 600); const ln = DB.system.fadingLines[$.fades % DB.system.fadingLines.length]; await this.msg.show(ln.face, ln.name, 'You blacked out… ' + ln.text); }   // no autosave on a blackout: the player wakes at the last rest point; saving stays a reward
 }
 export { Win, COL };

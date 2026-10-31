@@ -1,7 +1,7 @@
 // Cursor sweep: screenshot every selectable screen; verifies shared heartbeat cursor is drawn (pixel check on title at first load)
 import { launch, press, sleep, newGame, mashUntil, waitScene, teleport } from './lib.mjs';
 import { execSync } from 'child_process';
-const SS = '/workspace/lantern-night/screenshots/cursor'; execSync('mkdir -p ' + SS);
+const SS = (process.env.SHOTS || process.env.SS || '/workspace/lantern-night/screenshots') + '/cursor'; execSync('mkdir -p ' + SS);
 const { browser, page, errors } = await launch();
 let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 const shot = (n) => page.screenshot({ path: `${SS}/${n}.png` });
