@@ -46,17 +46,42 @@ try {
   ok(JSON.stringify(snap).includes('ctl_move'), 'tutorial progress is in the save snapshot (save version unchanged)');
   await press(page, 'z'); await sleep(400); ok(!(await panel()) && await page.evaluate(() => window.__S.$.tutorialsShown.ctl_done), 'press dismisses it for good');
   await bgmCheck(page, 'map 2');
-  // 3. D7: hold Up into the locked shrine gate: one trigger, no loop
-  await tp(page, 1, 18, 5, 'up'); await sleep(400);
-  await page.evaluate(() => { const m = window.__game.scene.getScene('Map'); m.__trig = 0; const o = m.triggerEvent.bind(m); m.triggerEvent = (e, b) => { if ((e.data?.x ?? e.x) === 18 && (e.data?.y ?? e.y) === 4) m.__trig++; return o(e, b); }; });
-  await page.keyboard.down('ArrowUp'); const t0 = Date.now();
+  // 3. D7: the locked shrine gate (1:18,4) pushes the player back the way they came, never into the (18,5) dead-end pocket
+  const idle = () => !window.__game.scene.getScene('Map').msg.busy && !window.__game.scene.getScene('Map').interp.busy;
+  const hookGate = () => page.evaluate(() => { const m = window.__game.scene.getScene('Map'); m.__trig = 0; if (m.__hooked) return; m.__hooked = 1; const o = m.triggerEvent.bind(m); m.triggerEvent = (e, b) => { if ((e.data?.x ?? e.x) === 18 && (e.data?.y ?? e.y) === 4) m.__trig++; return o(e, b); }; });
+  const trig = () => page.evaluate(() => window.__game.scene.getScene('Map').__trig);
+  const freeNb = () => page.evaluate(() => { const m = window.__game.scene.getScene('Map'), P = m.player; return [[0, -1], [0, 1], [-1, 0], [1, 0]].filter(([dx, dy]) => !(P.tx + dx === 18 && P.ty + dy === 4) && m.cellOpen(P.tx + dx, P.ty + dy, P)).length; });
+  const tpRealm = async (realm, x, y, dir) => { await tp(page, 1, x, y, dir); await page.evaluate(async ([r, x, y, dir]) => { const m = window.__game.scene.getScene('Map'); window.__S.$.realm = r; m.ready = false; await m.loadMap(1, x, y, dir); m.ready = true; }, [realm, x, y, dir]); await sleep(400); await mashUntil(page, idle, null, 30); await hookGate(); };
+  const intoGate = async (key) => { await walkUntil(page, key, (q) => q.busy, 2500); await mashUntil(page, idle, null, 30); await sleep(300); return st(page); };
+  // (a) walk in from behind (row 3) and from the side (row 4), Near and Far: pushed back to that side, free to walk on
+  for (const realm of ['near', 'far']) {
+    await tpRealm(realm, 18, 3, 'down'); let s = await intoGate('ArrowDown');
+    ok(await trig() === 1 && s.x === 18 && s.y === 3 && s.realm === realm, `D7 ${realm}: in from behind (18,3) -> gate fires once, pushed back to (18,3) (at ${s.x},${s.y})`);
+    ok(await freeNb() >= 2, `D7 ${realm}: (18,3) has free neighbours (${await freeNb()})`);
+    s = await walkUntil(page, 'ArrowLeft', (q) => q.x <= 15, 2500); ok(s.x <= 15 && s.y === 3 && !s.busy, `D7 ${realm}: walks away left along row 3 (at ${s.x},${s.y})`);
+    await tpRealm(realm, 16, 4, 'right'); s = await intoGate('ArrowRight');
+    ok(await trig() === 1 && s.x === 17 && s.y === 4 && await freeNb() >= 2, `D7 ${realm}: in from the side (17,4) -> pushed back to (17,4), not (18,5) (at ${s.x},${s.y})`);
+    s = await walkUntil(page, 'ArrowUp', (q) => q.y <= 3, 2000); ok(s.y === 3 && s.x === 17, `D7 ${realm}: walks away up from (17,4) (at ${s.x},${s.y})`);
+  }
+  // holding a key into the gate is one trigger, no loop
+  await tpRealm('near', 18, 3, 'down'); await page.keyboard.down('ArrowDown'); const t0 = Date.now();
   while (Date.now() - t0 < 5000) { if (await page.evaluate(() => window.__game.scene.getScene('Map').msg.busy)) await page.keyboard.press('Enter'); await sleep(250); }
-  await page.keyboard.up('ArrowUp'); await sleep(300); await mashUntil(page, () => !window.__game.scene.getScene('Map').msg.busy, null, 10);
-  let n = await page.evaluate(() => window.__game.scene.getScene('Map').__trig); let s = await st(page);
-  ok(n === 1 && s.map === 1 && s.y === 5, `D7: 5 s holding Up at the locked gate fires it once (fired ${n}, at ${s.x},${s.y})`);
+  await page.keyboard.up('ArrowDown'); await sleep(300); await mashUntil(page, idle, null, 10);
+  let n = await trig(); let s = await st(page);
+  ok(n === 1 && s.map === 1 && s.y === 3, `D7: 5 s holding Down into the locked gate fires it once (fired ${n}, at ${s.x},${s.y})`);
   await page.screenshot({ path: `${SS}/04-shrine-gate-held.png` });
-  s = await walkUntil(page, 'ArrowUp', (q) => q.busy, 1500); ok(s.busy, 'a fresh Up press still talks to the gate');
-  await mashUntil(page, () => !window.__game.scene.getScene('Map').msg.busy && !window.__game.scene.getScene('Map').interp.busy, null, 20);
+  // (b) an old save made standing in the (18,5) pocket loads, and the player gets out (Near and Far)
+  for (const realm of ['near', 'far']) {
+    await tpRealm(realm, 14, 4, 'down');
+    await page.evaluate(async (r) => { const S = window.__S, m = window.__game.scene.getScene('Map'); const d = JSON.parse(S.SaveManager.snapshotString()); Object.assign(d.game.map, { id: 1, x: 18, y: 5, dir: 'up' }); d.game.realm = r;
+      S.SaveManager.write(9, d); S.SaveManager.load(9); m.ready = false; await m.loadMap(S.$.map.id, S.$.map.x, S.$.map.y, S.$.map.dir || 'up'); m.ready = true; }, realm);
+    await sleep(500); await mashUntil(page, idle, null, 30); await hookGate(); s = await st(page);
+    ok(s.x === 18 && s.y === 5 && s.realm === realm, `D7 ${realm}: save at (18,5) loads there (at ${s.x},${s.y})`);
+    s = await intoGate('ArrowUp');
+    ok(await trig() === 1 && !(s.x === 18 && s.y === 5) && await freeNb() >= 2, `D7 ${realm}: Up from the (18,5) pocket -> out to (${s.x},${s.y})`);
+    const s2 = await walkUntil(page, 'ArrowLeft', (q) => q.x <= s.x - 2, 2000); ok(s2.x <= s.x - 2 && !s2.busy, `D7 ${realm}: then walks away freely (at ${s2.x},${s2.y})`);
+  }
+  await page.evaluate(() => { localStorage.removeItem('lotfs.save.9'); window.__S.$.realm = 'near'; });
   await bgmCheck(page, 'map 1');
   // shrine return lands below the post, facing away; holding Down keeps walking (no bounce)
   await tp(page, 5, 11, 22, 'down'); await sleep(400);

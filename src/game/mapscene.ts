@@ -394,12 +394,28 @@ export class MapScene extends Phaser.Scene {
   // ------------------------------------------------------------ event helpers for interpreter
   findChar(target: any, ctx: any): Char | null { if (target === 'player') return this.player; if (typeof target === 'string' && target.startsWith('f')) return this.followers[parseInt(target.slice(1)) - 1] || null; const id = target === 'self' ? ctx.ev : target; const e = this.evs.find((x) => x.id === id); return e ? e.char : null; }
   turnChar(target: any, dir: Dir | 'player' | 'away', ctx: any) { const ch = this.findChar(target, ctx); if (!ch) return; if (dir === 'player') { const dx = this.player.tx - ch.tx, dy = this.player.ty - ch.ty; ch.face(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up')); } else ch.face(dir as Dir); }
+  /** Can a char stand on (x,y)? Tile walkable and no blocking event char there. */
+  cellOpen(x: number, y: number, self?: Char) {
+    if (!this.tileFree(x, y)) return false;
+    for (const e of this.evs) { if (e.char === self || !e.page || !e.char.visible || e.page.through || e.char.through) continue; if (e.char.tx === x && e.char.ty === y) return false; }
+    return true;
+  }
+  /** 'back' route step (locked doors/gates): opposite of facing (= where the char came from) if that cell is open and not a dead end;
+   *  else any open neighbour with a further exit; else any open neighbour; else stay. Recovers saves standing in a dead-end pocket. */
+  backDir(ch: Char): Dir | null {
+    const order: Dir[] = [OPP[ch.dir as Dir], 'down', 'left', 'right', 'up'];
+    const open = (d: Dir) => this.cellOpen(ch.tx + DV[d][0], ch.ty + DV[d][1], ch);
+    const exits = (d: Dir) => { const x = ch.tx + DV[d][0], y = ch.ty + DV[d][1]; return (['down', 'left', 'right', 'up'] as Dir[]).some((e) => { const ex = x + DV[e][0], ey = y + DV[e][1]; return !(ex === ch.tx && ey === ch.ty) && this.cellOpen(ex, ey, ch); }); };
+    return order.find((d) => open(d) && exits(d)) ?? order.find(open) ?? null;
+  }
   async moveRoute(target: any, route: string[], wait: boolean, ctx: any) {
     const ch = this.findChar(target, ctx); if (!ch) return;
     for (const step of route) {
       if (step.startsWith('wait')) { await sleep(this, parseInt(step.split(':')[1] || '300')); continue; }
       if (step.startsWith('face:')) { ch.face(step.slice(5) as Dir); continue; }
-      const d = step as Dir; ch.face(d); const nx = ch.tx + DV[d][0], ny = ch.ty + DV[d][1];
+      let d = step as Dir;
+      if (step === 'back') { const b = this.backDir(ch); if (!b) continue; d = b; }   // D7: push back the way the char came, never into a dead end
+      ch.face(d); const nx = ch.tx + DV[d][0], ny = ch.ty + DV[d][1];
       if (!(ch.through || this.tileFree(nx, ny)) && target !== 'player') continue;
       ch.start(d, 190); if (target === 'player') { this.trail.push({ x: ch.tx, y: ch.ty }); this.moveFollowers(190); }
       await new Promise<void>((res) => { const t = this.time.addEvent({ delay: 16, loop: true, callback: () => { if (!ch.moving) { t.remove(); res(); } } }); });

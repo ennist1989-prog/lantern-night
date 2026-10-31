@@ -107,16 +107,16 @@ def build_village():
         m.event(x, y, [page(trigger='touch', through=True, list=[say(None, None, t), {'c': 'move', 'route': ['down']}])])
     # ---- shrine gate
     m.event(18, 4, [page(trigger='touch', through=True, list=[
-        IF({'nlock': 'L02'}, [{'c': 'se', 'name': 'buzzer'}, say('villager3', 'Gate Guard', 'Halt. No one climbs to the Shrine after dusk without the Elder’s seal. Orders.'), say('mio', 'Mio', 'Elder Matsu has one for us, I think. Let’s ask him.'), {'c': 'move', 'route': ['down']}],
+        IF({'nlock': 'L02'}, [{'c': 'se', 'name': 'buzzer'}, say('villager3', 'Gate Guard', 'Halt. No one climbs to the Shrine after dusk without the Elder’s seal. Orders.'), say('mio', 'Mio', 'Elder Matsu has one for us, I think. Let’s ask him.'), {'c': 'move', 'route': ['back']}],
            [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [IF({'nlvl': 5}, [say('kaze', 'Kaze', 'Mio. The spirits up there bite harder than the ones down here. A few more fights on the Far Shore first wouldn’t hurt. (Recommended Lv 5)')]), {'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The Guard checks the Elder’s seal and waves you through. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
-              [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['down']}])])])])], realm='near')
+              [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['back']}])])])])], realm='near')
     # Far Shore: no guard stands here (lock L02 alternative route)
     m.event(18, 4, [page(trigger='touch', through=True, list=[
         IF({'nsw': 'kaze_joined'}, [
             say('mio', 'Mio', '(I shouldn’t climb alone. That fox on the Far Shore by the square post… I should find him first.)'),
-            {'c': 'move', 'route': ['down']}],
+            {'c': 'move', 'route': ['back']}],
            [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [IF({'nlvl': 5}, [say('kaze', 'Kaze', 'Mio. The spirits up there bite harder than the ones down here. A few more fights on the Far Shore first wouldn’t hurt. (Recommended Lv 5)')]), {'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
-              [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['down']}])])])])], realm='far')
+              [IF({'sw': 'gate_open'}, [{'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up'}], [say(None, None, 'The Shrine gate is locked tight. Its keyhole is shaped like a bell.'), {'c': 'move', 'route': ['back']}])])])])], realm='far')
     # Gate Guard (Near only): his post by the gate
     m.event(19, 4, [page(g=NPC('villager3', 'left'), list=[say('villager3', 'Gate Guard', 'Up to the Shrine? Not without the Elder’s seal, miss. Not after dusk. Though the wind says the other shore has no guards…'), IF({'lock': 'L02'}, [say('villager3', 'Gate Guard', 'Ah, the seal. All in order. Go on.')])])], realm='near')
     m.event(17, 4, [page(trigger='touch', through=True, list=[{'c': 'balloon', 'icon': '…'}])]) if False else None

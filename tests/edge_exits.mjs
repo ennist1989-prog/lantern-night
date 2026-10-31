@@ -34,6 +34,28 @@ for (const { m, e, p, c } of transfers) {
 for (const m of Object.values(maps)) for (const e of m.events) for (const p of e.pages) if (p.trigger === 'touch') for (const c of cmds(p.list)) if (c.c === 'move' && !c.ev && c.route?.length === 1 && DV[c.route[0]]) {
   const [dx, dy] = DV[c.route[0]]; for (const r of realms(e.realm)) ok(walk(m, r, e.x + dx, e.y + dy), `${m.id}:${e.x},${e.y} push-back ${c.route[0]} lands on a blocked tile [${r}]`);
 }
+// D7 dead-end scan (all maps): wherever a touch event (locked door/gate) pushes the player, from every side they can walk in
+// from, the landing tile must be walkable and keep a free neighbour other than the event tile itself (else: stuck / push loop).
+// 'back' mirrors MapScene.backDir: opposite of facing if open and not a dead end, else the first such neighbour, else any open one.
+{ const OPPD = { up: 'down', down: 'up', left: 'right', right: 'left' };
+  const solidAt = (m, r, x, y) => m.events.some((e) => e.x === x && e.y === y && realms(e.realm).includes(r) && e.pages.some((p) => solidPage0(p) && !p.cond) && !e.pages.some((p) => p.through));
+  const solidPage0 = (p) => p.g && !p.through && !p.g.flat && (p.g.obj || p.g.sheet);
+  const open = (m, r, x, y) => walk(m, r, x, y) && !solidAt(m, r, x, y);
+  const exitsFrom = (m, r, x, y, fx, fy) => Object.values(DV).some(([dx, dy]) => !(x + dx === fx && y + dy === fy) && open(m, r, x + dx, y + dy));
+  let n = 0;
+  for (const m of Object.values(maps)) for (const e of m.events) for (const p of e.pages) if (p.trigger === 'touch') for (const c of cmds(p.list)) if (c.c === 'move' && !c.ev && (!c.target || c.target === 'player') && c.route?.length === 1 && (DV[c.route[0]] || c.route[0] === 'back')) {
+    for (const r of realms(e.realm)) for (const a of Object.keys(DV)) { const fx = e.x - DV[a][0], fy = e.y - DV[a][1]; if (!open(m, r, fx, fy)) continue;   // approached moving `a`
+      let d = c.route[0];
+      if (d === 'back') { const order = [OPPD[a], 'down', 'left', 'right', 'up']; const L = (k) => [e.x + DV[k][0], e.y + DV[k][1]];
+        d = order.find((k) => open(m, r, ...L(k)) && exitsFrom(m, r, ...L(k), e.x, e.y)) ?? order.find((k) => open(m, r, ...L(k))); }
+      n++; const tag = `${m.id}:${e.x},${e.y} [${r}] entered moving ${a}: push ${c.route[0]}`;
+      if (!ok(d, `${tag} has nowhere to go`)) continue;
+      const lx = e.x + DV[d][0], ly = e.y + DV[d][1];
+      ok(open(m, r, lx, ly) && exitsFrom(m, r, lx, ly, e.x, e.y), `${tag} -> (${lx},${ly}) is a dead end (D7: the shrine gate pushed the player into (18,5))`);
+    } }
+  // arrivals: every transfer destination keeps at least one open neighbour
+  for (const { c } of transfers) { const t = maps[c.map]; if (!t) continue; for (const r of ['near', 'far']) if (walk(t, r, c.x, c.y)) ok(exitsFrom(t, r, c.x, c.y, -9, -9), `arrival ${c.map}:${c.x},${c.y} [${r}] has no open neighbour`); }
+  console.log('push-back landings checked', n); }
 // edge exits: the trigger cells on the map border; their trail must stay walkable to the edge
 const EDGE = [[1, [[35, 16], [35, 17]]], [10, [[0, 17], [0, 18], [0, 19], [49, 18], [49, 19], [24, 0], [25, 0], [26, 0]]], [111, [[0, 12], [0, 13], [45, 11], [45, 12], [45, 13]]], [112, [[0, 19], [0, 20], [0, 21]]], [113, [[14, 25], [15, 25], [16, 25]]]];
 for (const [id, cells] of EDGE) for (const [x, y] of cells) { const m = maps[id]; const es = m.events.filter((e) => e.x === x && e.y === y && isTransferEv(e));
