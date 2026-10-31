@@ -200,8 +200,8 @@ def build_village():
             {'c': 'move', 'route': ['face:right', 'right', 'right', 'face:right']}], [
             IF({'sw': 'warden_seen'}, [], [say(None, None, 'A scarecrow stands in the corridor — but on the Far Shore its straw shivers, and two hollow eyes open.'), sw('warden_seen')]),
             IF({'nsw': 'flame_seen'}, [say(None, None, 'In its chest, one small flame burns perfectly still. No flicker, no wind. It is the only steady fire in Ashiro tonight.'), sw('flame_seen')]),
-            IF({'nlvl': 3}, [IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Hm. That’s a Warden. I’d feel better if we were Level 3 first. Those wisps in the fields would make good practice — and the Post by the Well road is a safe place to rest.')],
-                [say('mio', 'Mio', 'That scarecrow feels wrong. I should be stronger before I face it — Level 3, maybe. The wisps in the fields… and a Post nearby to rest.')])]),
+            IF({'nlvl': 3}, [IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Hm. That’s a Warden. At Level 3 it’s a real fight — Level 4 to be safe. Those wisps in the fields would make good practice — and the Post by the Well road is a safe place to rest.')],
+                [say('mio', 'Mio', 'That scarecrow feels wrong. I can’t face it alone — Kaze is needed. That fox on the Far Shore by the square post… I should find him first.')])]),
             choice(['Face the Warden', 'Not yet'], [[
                 {'c': 'checkpoint', 'boss': True},
                 IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'It’s guarding something it has forgotten. Hit it where its straw is weak. When the Veil slips it will be open to a Send.')],
