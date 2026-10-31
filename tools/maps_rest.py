@@ -4,17 +4,25 @@ def fill_walls(m, g=None):
     for y in range(m.h):
         for x in range(m.w):
             m.tile('both', x, y, DARKBRICK if y % 2 == 0 else DARKBRICK2); 
+def fill_walls_wood(m, face_x=None):
+    """Maps 2/3 (playtest D2): dark vertical-board walls instead of DARKBRICK (a recolour of the floor cobble). The row-1 wall
+    face behind the furniture gets PT_FACE. The letterbox around these small rooms is tinted to the wall colour (bg)."""
+    if not has_border(): fill_walls(m); m.bg = '#3b3643'; return
+    m.fill('both', 0, 0, m.w - 1, m.h - 1, PT_WALL, walk=False)
+    if face_x: m.fill('both', face_x[0], 1, face_x[1], 1, PT_FACE, walk=False)
+    m.bg = '#3b3643'
 def foe(m, x, y, troop, sheet, realm='far', **kw):
     e = dict(troop=troop, aggro=kw.get('aggro', 4), chase=True, range=kw.get('range', 3), spd=kw.get('spd', 260)); m.event(x, y, [page(g=NPC(sheet), enemy=e)], realm)
 def chest(m, x, y, items, text=None, realm='both'):
     got = []
     for it_, n in items: got.append(item(it_, n))
-    m.obj(realm, 'chest', x, y, fw=1, block=False)
-    m.event(x, y, [page(cond={'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}] + got + [self_sw('A')]),
-                   page(cond={'self': 'A'}, g=dict(obj='chest'), list=[say(None, None, 'The chest is empty.')])], realm)
+    # (no static chest object: the event draws the closed/open frame, so the open lid is never hidden under a closed copy)
+    # #8: the lid opens on the spot (chest_open frame) and the opened page keeps that frame for good
+    m.event(x, y, [page(cond={'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}, {'c': 'chestopen'}] + got + [self_sw('A')]),
+                   page(cond={'self': 'A'}, g=dict(obj='chest_open'), list=[say(None, None, 'The chest is empty.')])], realm)
 def build_sachi():
-    m = Map(2, 'Sachi’s House', 12, 10, 'home', 'home', seed=2); fill_walls(m)
-    m.fill('both', 1, 2, 10, 8, INT_FLOOR); m.fill('both', 6, 9, 6, 9, INT_FLOOR)
+    m = Map(2, 'Sachi’s House', 12, 10, 'home', 'home', seed=2); fill_walls_wood(m, (1, 10))
+    m.fill('both', 1, 2, 10, 8, WOOD_FLOOR); m.fill('both', 6, 9, 6, 9, WOOD_FLOOR)
     m.region(1, 2, 10, 9, 6)
     m.obj('both', 'bookshelf_w', 1, 1, fw=4, block=False); m.obj('both', 'dresser', 6, 1, fw=3, block=False); m.obj('both', 'cupboard', 9, 1, fw=1, block=False)
     m.obj('both', 'table3', 3, 3, fw=3); m.obj('both', 'stool', 2, 3, fw=1, block=False); m.obj('near', 'stool', 6, 3, fw=1, block=False)
@@ -35,7 +43,7 @@ def build_sachi():
         say('sachi', 'Granny Sachi', 'Light the Lantern Post in the village square. Then go see Elder Matsu. Take care of your light, child. It’s the only thing that follows you across.'),
         say('mio', 'Mio', '…I’ll try, Granny.'),
         {'c': 'item', 'id': 'lantern'}, sw('intro_done'), quest('main', 0),
-        tut('controls', 'Move: Arrows/WASD · Talk/OK: Z/Enter · Menu: X/Esc · Dash: hold Shift · Realm Shift: Q/Tab · Skip text: hold F/Ctrl', 9000)]
+        {'c': 'ctltut'}]  # D3: was a 9 s toast; now a checklist that stays until each control is used and a button is pressed
     m.event(6, 7, [page(cond={'nsw': 'intro_done'}, trigger='auto', list=intro)])
     sachi_talk = [choice(['Talk', 'Rest (free)', 'Save', 'Never mind'], [[
             IF({'anysw': ['first_send', 'warden_done'], 'noitem': 'collectors_book'}, [say('sachi', 'Granny Sachi', 'Ah, you have begun to meet them properly. Here, child: my old ledger. Spirits you meet write themselves in it, and the bonds you keep.'), item('collectors_book'), tut('ledger', 'Keeper’s Ledger: Menu now shows Bonds (equip, give Offerings) and the Bestiary. Check Key Items for everything else you carry.', 8000)]),
@@ -82,8 +90,8 @@ def build_sachi():
     m.event(9, 1, [page(g=dict(obj='cupboard'), trigger='action', list=[say(None, None, 'Granny’s cupboard.'), IF({'nself': 'A'}, [{'c': 'item', 'id': 'rice_ball', 'n': 2}, self_sw('A')], [say(None, None, 'Empty now, but it smells of rice.')])])], realm='near')
     return m
 def build_tea():
-    m = Map(3, 'Tama’s Teahouse & Store', 14, 10, 'home', 'home', seed=3); fill_walls(m)
-    m.fill('both', 1, 2, 12, 8, INT_FLOOR); m.fill('both', 7, 9, 7, 9, INT_FLOOR); m.region(1, 2, 12, 9, 6)
+    m = Map(3, 'Tama’s Teahouse & Store', 14, 10, 'calm', 'calm', seed=3); fill_walls_wood(m, (1, 12))
+    m.fill('both', 1, 2, 12, 8, WOOD_FLOOR); m.fill('both', 7, 9, 7, 9, WOOD_FLOOR); m.region(1, 2, 12, 9, 6)
     m.obj('both', 'shelf_a', 2, 1, fw=1, block=False); m.obj('both', 'shelf_b', 3, 1, fw=1, block=False); m.obj('both', 'cupboard', 4, 1, fw=1, block=False); m.obj('both', 'dresser', 8, 1, fw=3, block=False); m.obj('both', 'shelf_a', 11, 1, fw=1, block=False)
     m.obj('both', 'counter', 3, 4, fw=3); m.counters = [[3, 4], [4, 4], [5, 4]]
     m.obj('both', 'table3', 8, 6, fw=3); m.obj('both', 'stool', 7, 6, fw=1, block=False); m.obj('both', 'stool', 11, 6, fw=1, block=False)
@@ -122,20 +130,19 @@ def build_well():
     m.post(5, 6, 3); m.post(25, 9, 3); m.post(22, 17, 3)
     m.region(0, 0, 0, 0, 0)
     for (x, y) in [(3, 3), (9, 3), (6, 9), (16, 4), (16, 10), (27, 3), (27, 11), (20, 16), (28, 22), (19, 22)]: m.obj('both', 'boulder_brown', x, y, fw=2, block=True) if False else None
-    for (x, y) in [(10, 4), (2, 9), (22, 10), (16, 11), (28, 15), (19, 20)]: m.obj('both', 'pot_big', x, y, fw=1)
+    for (x, y) in [(10, 4), (2, 9), (22, 10), (16, 11), (28, 17), (19, 20)]: m.obj('both', 'pot_big', x, y, fw=1)  # #9: jar was at (28,15), the only tile next to the (28,14) chest
     for (x, y) in [(8, 4), (14, 11), (26, 22)]: m.obj('both', 'barrel', x, y, fw=1)
     for x, y in [(3, 4), (9, 8), (17, 10), (27, 4), (21, 19)]: m.light(x, y, 4)
     m.encounter = dict(region=3, zones={'near': 'z02', 'far': 'z03'})
     # exit up to village
     m.obj('both', 'stairs_up', 3, 3, fw=1, block=False)
-    m.event(3, 3, [page(trigger='touch', through=True, list=[{'c': 'transfer', 'map': 1, 'x': 5, 'y': 24, 'dir': 'up', 'se': 'grass'}])])
+    m.event(3, 3, [page(trigger='touch', through=True, list=[{'c': 'transfer', 'map': 1, 'x': 6, 'y': 24, 'dir': 'right', 'se': 'grass'}])])
     # chests
     chest(m, 3, 8, [('sweet_tea', 1), ('kuzu_tonic', 1)])  # E6: was charm3 (also sq04 reward + shop); now modest consumables
     chest(m, 28, 14, [('honey', 2)]); chest(m, 8, 7, [('rice_ball', 2), ('herbal_tea', 1)])
     m.walk('both', 8, 7, True)
     # field-spell nook (Fox-fire Torch, Kaze Lv4): a hay bale blocks a cache in the NE room
-    m.obj('both', 'chest', 27, 3, fw=1, block=False)
-    m.event(27, 3, [page(cond={'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}, item('kuzu_tonic', 2), item('wick_trim', 1), self_sw('A')]), page(cond={'self': 'A'}, g=dict(obj='chest'), list=[say(None, None, 'The chest is empty.')])])
+    m.event(27, 3, [page(cond={'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}, {'c': 'chestopen'}, item('kuzu_tonic', 2), item('wick_trim', 1), self_sw('A')]), page(cond={'self': 'A'}, g=dict(obj='chest_open'), list=[say(None, None, 'The chest is empty.')])])
     for (hx, hy) in [(26, 3), (27, 4)]:
         m.event(hx, hy, [page(cond={'nsw': 'hay_burnt'}, g=dict(obj='hay'), ft='burnable', list=[say(None, None, 'A bale of dry hay is wedged into the corner. Something glints behind it. A little flame would clear the way.')], fieldList=[{'c': 'se', 'name': 'fire'}, {'c': 'flash', 'color': 0xffa060, 'ms': 300}, say(None, None, 'The hay catches in a rush of orange and is gone in moments.'), sw('hay_burnt')])])
     # Daigo (Near only)
@@ -184,10 +191,19 @@ def build_well():
          'escape': [say('mio', 'Mio', 'Not like this. I’ll come back when I know what to say.'), {'c': 'move', 'route': ['left']}],
          'lose': [{'c': 'abort'}]}])])
     m.obj('both', 'stairs_up', 20, 15, fw=1, block=False)
-    m.event(20, 15, [page(trigger='touch', through=True, list=[{'c': 'transfer', 'map': 1, 'x': 5, 'y': 24, 'dir': 'up', 'se': 'grass'}])])
+    m.event(20, 15, [page(trigger='touch', through=True, list=[{'c': 'transfer', 'map': 1, 'x': 6, 'y': 24, 'dir': 'right', 'se': 'grass'}])])
     # Far enemies
     foe(m, 8, 5, 'tr_well_newt_gloam_bat', 'wisp2'); foe(m, 9, 8, 'tr_gloam_bat', 'wisp2'); foe(m, 19, 4, 'tr_hollow_villager', 'skeleton'); foe(m, 21, 11, 'tr_well_newt_well_newt', 'slime'); foe(m, 25, 19, 'tr_hollow_villager_gloam_bat', 'skeleton')
     m.event(7, 6, [page(g=NPC('ghostgirl', 'down'), list=[say('ghostgirl', 'Little Ghost', 'It’s lonely down here. The Well Spirit cries when it rains up top. Be kind to it.')])], realm='far')
+    # D5: fill the black void with cave rock (border.png cave_rock; contrasts with the CAVE floor/walls, unlike CAVE itself).
+    # Deterministic post-pass, no rng. The pit (x17..23, y3..11) stays a void so it still reads as a hole. Collision is untouched:
+    # no gid-0 cell is walkable in either realm, so every chest stays reachable.
+    if has_border():
+        PIT = {(x, y) for x in range(17, 24) for y in range(3, 12)}
+        for realm in ('near', 'far'):
+            for y in range(m.h):
+                for x in range(m.w):
+                    if (x, y) not in PIT and m.layers[realm]['g'][m.i(x, y)] == 0: m.tile(realm, x, y, CAVE_ROCK)
     return m
 def build_shrine1():
     m = Map(5, 'Bell Shrine — Lower Hall', 24, 24, 'shrine', 'shrine_far', seed=5); fill_walls(m)
@@ -208,7 +224,7 @@ def build_shrine1():
             m.event(x, y, [page(g=dict(obj='block_stone'), trigger='action', marker=False, list=[say(None, None, 'A sealed stone, humming faintly. It seems to exist only on this shore.'), tut('seal', 'Sealed stones block this shore only. Shift past them on the Far Shore.', 5500)])], realm='near')
     chest(m, 2, 10, [('dew_lens', 1)], realm='far'); foe(m, 3, 12, 'tr_gloam_bat_ofuda_moth', 'kettle', aggro=3, range=2)
     # L08: hidden alcove chest, only seen through the Dew Lens (Far)
-    m.event(1, 13, [page(cond={'item': 'dew_lens', 'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}, item('hearty_plum', 1), item('charm2', 1), self_sw('A')]), page(cond={'self': 'A'}, g=dict(obj='chest'), list=[say(None, None, 'The chest is empty.')])], realm='far')
+    m.event(1, 13, [page(cond={'item': 'dew_lens', 'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}, {'c': 'chestopen'}, item('hearty_plum', 1), item('charm2', 1), self_sw('A')]), page(cond={'self': 'A'}, g=dict(obj='chest_open'), list=[say(None, None, 'The chest is empty.')])], realm='far')
     chest(m, 21, 10, [('honey', 2), ('lucky_knot', 1), ('smoke_ball', 1)])
     # pedestals (order: white -> red -> blue)
     peds = [(8, 11, 'pedestal_red', 'red'), (11, 11, 'pedestal_w', 'white'), (14, 11, 'pedestal_blue', 'blue')]
@@ -232,7 +248,7 @@ def build_shrine1():
                     page(cond={'sw': 'ped_solved'}, trigger='touch', through=True, list=[{'c': 'transfer', 'map': 6, 'x': 8, 'y': 11, 'dir': 'up', 'se': 'door'}])])
     m.obj('both', 'stairs_up', 12, 6, fw=1, block=False)
     m.event(12, 6, [page(cond={'sw': 'ped_solved'}, trigger='touch', through=True, list=[{'c': 'transfer', 'map': 6, 'x': 8, 'y': 11, 'dir': 'up', 'se': 'door'}])])
-    m.door_touch(11, 23, 1, 18, 6, 'down', se='door'); m.door_touch(12, 23, 1, 18, 6, 'down', se='door')
+    m.door_touch(11, 23, 1, 18, 7, 'down', se='door'); m.door_touch(12, 23, 1, 18, 7, 'down', se='door')  # D7: was (18,6), the solid post tile one step from the gate
     foe(m, 9, 9, 'tr_hollow_villager_candle_spirit', 'skeleton'); foe(m, 14, 14, 'tr_candle_spirit_bell_mouse', 'lantern2'); foe(m, 8, 14, 'tr_ofuda_moth', 'kettle'); foe(m, 16, 9, 'tr_gloam_bat_gloam_bat', 'mouse2'); foe(m, 12, 13, 'tr_bell_mouse_ofuda_moth', 'mouse')
     sq03_shrine(m); sq04_shrine(m)
     return m
@@ -255,8 +271,7 @@ def build_summit():
     # L07: the Bell's clapper lies in a Far-only chest; the Keeper's arena answers only once you carry it
     chest(m, 13, 12, [('shrine_bell_clapper', 1)], realm='far')
     # field-spell nook (Clearing Gust, Kaze Lv6): drifted sand hides a cache
-    m.obj('both', 'chest', 3, 3, fw=1, block=False)
-    m.event(3, 3, [page(cond={'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}, item('honey', 2), item('lantern_oil', 2), self_sw('A')]), page(cond={'self': 'A'}, g=dict(obj='chest'), list=[say(None, None, 'The chest is empty.')])])
+    m.event(3, 3, [page(cond={'nself': 'A'}, g=dict(obj='chest'), list=[{'c': 'se', 'name': 'pickup'}, {'c': 'chestopen'}, item('honey', 2), item('lantern_oil', 2), self_sw('A')]), page(cond={'self': 'A'}, g=dict(obj='chest_open'), list=[say(None, None, 'The chest is empty.')])])
     for (sx, sy) in [(4, 3), (3, 4)]:
         m.event(sx, sy, [page(cond={'nsw': 'drift_gone'}, g=dict(obj='block_sand'), ft='wind_object', list=[say(None, None, 'Sand has drifted against the wall in a smooth heap, hiding something that glints. A good gust would clear it.')], fieldList=[{'c': 'se', 'name': 'strange'}, {'c': 'shake', 'power': 1, 'ms': 400}, say(None, None, 'A gust sweeps the sand away!'), sw('drift_gone')])])
     m.event(8, 5, [page(cond={'nlock': 'L07'}, g=NPC('keeper', 'down', nofar=True), trigger='action', list=[say(None, None, 'Under the great bell, a robed figure kneels. The great bell hangs silent and strangely light.'),

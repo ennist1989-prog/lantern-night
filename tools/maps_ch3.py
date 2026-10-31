@@ -19,6 +19,10 @@ POST_LIGHT = 4                        # 4e: Ch3 lantern-post glow radius (was ma
 NEAR_TREES = ['tree_big', 'tree_l2', 'tree_big', 'tree_orange', 'tree_big', 'tree_pink']
 FAR_TREES = ['tree_white', 'pine_l', 'deadtree_l', 'tree_white', 'pine_l']
 
+# D6: exit trail cells on the map edge stay open (no rim): the path visibly continues off-screen. Map 112's east trail
+# (33,20-22) is not an edge exit and keeps its cap; the root path there is the (32,21) touch event.
+EXIT_OPEN = {10: {(0, 17), (0, 18), (0, 19), (49, 18), (49, 19), (24, 0), (25, 0), (26, 0)}, 111: {(0, 12), (0, 13), (45, 11), (45, 12), (45, 13)},
+             112: {(0, 19), (0, 20), (0, 21)}, 113: {(14, 25), (15, 25), (16, 25)}}
 class Area:
     """Collects walkable cells per realm; carve() makes them walkable (dirt trail or grass)."""
     def __init__(self): self.cells = {'near': set(), 'far': set()}; self.trail = {'near': set(), 'far': set()}
@@ -34,8 +38,24 @@ class Area:
         if origin is None: origin, sheet = (DIRT_O_FIX, CH3FIX) if CH3FIX_ON else (DIRT_O, FLOOR)
         for r in ('near', 'far'):
             for (x, y) in self.cells[r]: m.walk(r, x, y, True)
-            if self.trail[r]: m.blob(r, self.trail[r], origin=origin, sheet=sheet)
+            if self.trail[r]: m.blob(r, self.trail[r], origin=origin, sheet=sheet, open_cells=EXIT_OPEN.get(m.id, frozenset()))
 
+# Edge-exit art v1 (Ember, graded by New Bot): flank markers beside the trail exits, grove stones at the Misty Grove gap.
+# Each entry: map id -> [(obj, x, y, fh)]. The cells are already blocked; they are kept clear of woods() trees so they show.
+# Hollow fronds (#15/#16) and the six trail-opening pieces are held for v2 (placeholders: the open ch3fix/pack trail).
+EDGE_OBJS = {10: [('flank_stump', 0, 16, 1), ('flank_rock', 0, 20, 1), ('flank_stump', 49, 17, 1), ('flank_rock', 49, 21, 1),
+                  ('grove_stone_a', 23, 1, 2), ('grove_stone_b', 27, 1, 2)],
+             111: [('flank_stump', 0, 11, 1), ('flank_rock', 0, 15, 1)],
+             113: [('flank_stump', 13, 25, 1), ('flank_rock', 17, 25, 1)]}
+def edge_objs(m):
+    """Place EDGE_OBJS for this map (when the art is installed) and return the cells woods() must leave clear."""
+    clear = set()
+    for (n, x, y, fh) in EDGE_OBJS.get(m.id, []):
+        if n not in OBJ: continue
+        m.obj('both', n, x, y, fw=1, fh=fh); clear.update((x, y - j) for j in range(fh))
+    if m.id == 10 and has_border():
+        for x in (24, 25, 26): m.tile('both', x, 0, FOG_LIP, layer='o')   # #13: mist lip where the grove path leaves the map
+    return clear
 def woods(m, A, seed=0, far_only=False, clear=(), low=()):
     """Trees on blocked ground so every blocked cell reads as forest: big canopies on a staggered 3-grid, then small pines
     and bushes in the gaps next to paths (canopies may overhang paths a little). Cells in `low` only get 1-tile bushes (no
@@ -95,7 +115,7 @@ def build_forest():
     A.rect(35, 7, 42, 13); A.rect(38, 14, 39, 17, trail=True)         # Rustle glade (NE)
     A.rect(21, 23, 22, 29, trail=True); A.rect(12, 30, 38, 33); A.rect(37, 20, 38, 29, trail=True)   # south loop
     A.rect(3, 28, 10, 34); A.rect(10, 31, 12, 32, trail=True)         # SW pocket
-    A.carve(m); woods(m, A, 3)
+    A.carve(m); woods(m, A, 3, clear=edge_objs(m))
     deco(m, A, 'near', ['flower_y', 'flower_w', 'fern', 'tuft1', 'clover'], 40, 1)
     deco(m, A, 'far', ['fern', 'tuft2', 'tuft3', 'clover'], 30, 2)
     m.region(0, 0, 49, 39, 3); m.encounter = dict(region=3, zone='z06')
@@ -179,8 +199,8 @@ def build_forest():
     foe(m, 16, 31, 'tr_forgotten_pilgrim_rustle_sprite', 'ghostman', aggro=3, range=2)
     for (x, y, its) in [(5, 29, [('kuzu_tonic', 2), ('lantern_oil', 1)]), (41, 8, [('small_bell', 1), ('umeboshi', 2)])]:
         got = [item(i, n) for i, n in its]
-        m.event(x, y, [page(cond={'item': 'oto_bell', 'nself': 'A'}, g=dict(obj='chest'), list=[say(None, None, 'Oto’s bell jingles by itself. There is something tucked under the roots.')] + got + [self_sw('A')]),
-                       page(cond={'item': 'oto_bell', 'self': 'A'}, g=dict(obj='chest'), list=[say(None, None, 'Empty. The bell is quiet now.')])])
+        m.event(x, y, [page(cond={'item': 'oto_bell', 'nself': 'A'}, g=dict(obj='chest'), list=[say(None, None, 'Oto’s bell jingles by itself. There is something tucked under the roots.'), {'c': 'chestopen'}] + got + [self_sw('A')]),
+                       page(cond={'item': 'oto_bell', 'self': 'A'}, g=dict(obj='chest_open'), list=[say(None, None, 'Empty. The bell is quiet now.')])])
     chest(m, 36, 32, [('herbal_tea', 2), ('marigold_petal', 2)]); chest(m, 19, 5, [('ward_salt', 1)], realm='far')
     pilgrim_memory(m, 6, 31, 1, ['A thread of light leads into the ferns. A young man, laughing, ties a cord around his little sister’s wrist so she won’t get lost at the festival.', '“Yoshi,” she calls him. The name hangs in the air like a firefly.'])
     m.light(12, 9, 4); m.light(25, 6, 4)
@@ -188,7 +208,7 @@ def build_forest():
 
 # =====================================================================================================  113  Misty Grove (Far)
 def build_grove():
-    m = Map(113, 'Misty Grove', 32, 26, 'forest_far', 'forest_far', seed=113)
+    m = Map(113, 'Misty Grove', 32, 26, 'grove', 'grove', seed=113)
     m.fill('both', 0, 0, 31, 25, GRASS, walk=False)
     A = Area()
     A.rect(12, 19, 19, 24); A.rect(14, 24, 16, 25, trail=True)        # entry clearing (both Shores)
@@ -198,7 +218,7 @@ def build_grove():
     A.rect(15, 4, 16, 8, 'far', trail=True); A.rect(13, 1, 18, 3, 'far')             # north guide stone
     A.rect(8, 11, 9, 16, 'far', trail=True); A.rect(4, 15, 9, 18, 'far')             # SW hollow (memory)
     A.carve(m)
-    woods(m, A, 5)
+    woods(m, A, 5, clear=edge_objs(m))
     deco(m, A, 'far', ['fern', 'tuft2', 'tuft3', 'flower_w'], 26, 4); deco(m, A, 'near', ['fern', 'tuft1'], 6, 5)
     m.region(0, 0, 31, 18, 3); m.encounter = dict(region=3, zone='z07')
     for x in (14, 15, 16): m.door_touch(x, 25, 10, 25, 2, 'down', se=None)
@@ -254,7 +274,7 @@ def build_crossing():
     A.rect(33, 4, 43, 22); A.rect(43, 11, 45, 13, trail=True)          # east bank -> Willow Hollow
     A.carve(m)
     river = [(x, y) for x in range(20, 25) for y in range(0, 26)]
-    m.blob('both', river, origin=WATER_G, sheet=WATER, walk=False)
+    m.blob('both', river, origin=WATER_G, sheet=WATER, walk=False, open_edge=True)  # the river runs off the screen edge
     for x in range(20, 25):
         for y in (12, 13): m.tile('far', x, y, (PLANK_TOP if y == 12 else PLANK_BOT) if CH3FIX_ON else PLANK, 'o')   # 2c: #7b473c rims on the long edges
     for x in (20, 24): m.tile('near', x, 12, PLANK, 'o')                 # broken Near bridge stubs
@@ -263,7 +283,7 @@ def build_crossing():
     # low bushes on the row under the ford, whose pine canopies used to overhang (31,12) and hide his body (grading/v3
     # map111_kappa_occlusion_v3.txt). Walkability is unchanged: these cells were and stay blocked ground.
     # Nothing directly under the Kappa ford tile (31,12): row-13 cells x30-32 stay clear so no bush/dead tree is drawn over the Kappa; neighbours stay low.
-    woods(m, A, 7, clear=set(river) | {(31, 11)} | {(x, 13) for x in (30, 31, 32)}, low={(x, 13) for x in (29, 33)})
+    woods(m, A, 7, clear=edge_objs(m) | set(river) | {(31, 11)} | {(x, 13) for x in (30, 31, 32)}, low={(x, 13) for x in (29, 33)})
     deco(m, A, 'near', ['flower_y', 'flower_r', 'tuft1', 'clover'], 26, 6); deco(m, A, 'far', ['tuft2', 'fern', 'flower_w'], 24, 7)
     m.region(0, 0, 45, 25, 3); m.encounter = dict(region=3, zone='z08')
     m.region(2, 5, 14, 15, 6)                                            # Hisa's yard is safe
@@ -375,7 +395,7 @@ def build_hollow():
     A.rect(26, 16, 32, 24); A.rect(33, 20, 33, 22, trail=True)         # wick glade (beyond the forgetting river)
     A.carve(m)
     river = [(x, y) for x in range(0, 34) for y in range(12, 16)]
-    m.blob('both', river, origin=WATER_P_FIX if CH3FIX_ON else WATER_P, sheet=CH3FIX if CH3FIX_ON else WATER, walk=False)
+    m.blob('both', river, origin=WATER_P_FIX if CH3FIX_ON else WATER_P, sheet=CH3FIX if CH3FIX_ON else WATER, walk=False, open_edge=True)  # runs off the edge
     for y in range(12, 16): m.tile('far', 8, y, STONE_W if CH3FIX_ON else STONE_STEP, 'o'); m.walk('far', 8, y, True)   # Far stepping stones
     for y in (6, 7):                                                                             # Near willow curtains
         for x in (13, 14): m.walk('near', x, y, False)
@@ -442,8 +462,8 @@ def build_hollow():
         tut('wick', 'The Whisper Wick is a Key Item. Use it from Menu → Items to raise max Lumen to 70.', 6000),
         {'c': 'heal', 'lumen': True}, sw('wick_got'), quest('ch3', 6), {'c': 'checkpoint'}]),
         page(cond={'sw': 'wick_got'}, list=[say(None, None, 'The grass where the wick floated is still warm.')])])
-    m.event(32, 21, [page(cond={'sw': 'wick_got'}, g=None, list=[say(None, None, 'A root path winds back toward the Crossing.'),
-        choice(['Follow it to the Crossing', 'Stay'], [[{'c': 'transfer', 'map': 111, 'x': 43, 'y': 12, 'dir': 'left'}], []])])])
+    # D6: post-quest root path back to the Crossing: walk onto it (was an action + choice). Placeholder marker until Ember's root-bridge end tile.
+    m.event(32, 21, [page(cond={'sw': 'wick_got'}, g=(dict(obj='root_bridge_end', dx=8, dy=16) if 'root_bridge_end' in OBJ else None), trigger='touch', through=True, list=[{'c': 'transfer', 'map': 111, 'x': 43, 'y': 12, 'dir': 'left', 'se': 'grass'}])])
     chest(m, 2, 4, [('lantern_oil', 2), ('marigold_petal', 2)]); chest(m, 31, 23, [('kuzu_tonic', 2)]); chest(m, 18, 24, [('ward_salt', 1)], realm='far')
     foe(m, 6, 5, 'tr_willow_sprout_willow_sprout', 'rustle', 'both', aggro=3, range=2)
     foe(m, 22, 5, 'tr_rusalka_reed_willow_sprout', 'ghostgirl', aggro=3, range=2)

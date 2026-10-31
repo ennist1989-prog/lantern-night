@@ -11,12 +11,21 @@ FLOOR, IFLOOR, WALL, WATER = 1, 2, 3, 4
 CH3FIX = 5   # art/custom/tiles/ch3fix.png (Ch3 Far-readability edits of pack tiles); only used when that file exists
 CH3FIX_PNG = os.path.join(ROOT, 'art/custom/tiles/ch3fix.png')
 def has_ch3fix(): return os.path.exists(CH3FIX_PNG)
+BORDER = 6   # art/custom/tiles/border.png (Ember edge-exit art, sheet 6): interior boards, canopy, stairs, cave rock; optional
+BORDER_PNG = os.path.join(ROOT, 'art/custom/tiles/border.png')
+def has_border(): return os.path.exists(BORDER_PNG)
 GRASS = [G(1,11,12)]*6 + [G(1,12,12), G(1,13,12), G(1,14,12)]
 PATH_O = (11, 7)
 INT_FLOOR = [G(2,1,13), G(2,2,13), G(2,1,14), G(2,2,14)]
 STONE = [G(2,12,7)]
 DARKBRICK = G(2,12,13); DARKBRICK2 = G(2,12,14)
 CAVE = [G(2,12,13), G(2,13,13), G(2,12,14), G(2,13,14)]
+# Plank floor for interiors (playtest D2): the oval-cobble INT_FLOOR read as the same pattern as the DARKBRICK walls.
+WOOD_FLOOR = [G(1,12,15)]*3 + [G(1,14,18)]
+PT_WALL = G(BORDER, 0, 0); PT_FACE = G(BORDER, 1, 0)   # dark vertical-board wall body / face row (border.png)
+CANOPY = [[G(BORDER, 2, 0), G(BORDER, 3, 0)], [G(BORDER, 2, 1), G(BORDER, 3, 1)]]   # 2x2 seamless fill: CANOPY[y%2][x%2]
+CANOPY_EDGE = dict(n=G(BORDER, 4, 0), s=G(BORDER, 5, 0), e=G(BORDER, 6, 0), w=G(BORDER, 7, 0))   # letter = side the canopy is on
+STAIRS_L = G(BORDER, 0, 1); STAIRS_R = G(BORDER, 1, 1); FOG_LIP = G(BORDER, 4, 1); CAVE_ROCK = G(BORDER, 5, 1)
 SHRINE_F = [G(2,1,1), G(2,2,1), G(2,1,2), G(2,2,2)]
 BRIDGE = [G(2,12,3)]
 class Map:
@@ -28,7 +37,7 @@ class Map:
         self.reg = [0]*n
         self.objs = {'near': [], 'far': []}
         self.events = []; self.lights = []; self.encounter = None; self.counters = []
-        self.bgm = {'near': bgm_near, 'far': bgm_far}; self.noShift = False; self._eid = 0
+        self.bgm = {'near': bgm_near, 'far': bgm_far}; self.noShift = False; self._eid = 0; self.bg = None
         self.markers = []; self.dyn = []
     # ---- helpers
     def i(self, x, y): return y * self.w + x
@@ -58,11 +67,14 @@ class Map:
         for y in range(cy - r, cy + r + 1):
             for x in range(cx - r, cx + r + 1):
                 if self.inb(x, y) and (x - cx) ** 2 + (y - cy) ** 2 <= r * r + 1: self.reg[self.i(x, y)] = v
-    def blob(self, realm, cells, origin=PATH_O, sheet=FLOOR, base=None, layer='g', walk=True):
-        """Autotile (4-neighbour) a set of cells with the 4x4 blob block starting at origin."""
-        S = set(cells); ox, oy = origin
+    def blob(self, realm, cells, origin=PATH_O, sheet=FLOOR, base=None, layer='g', walk=True, open_cells=frozenset(), open_edge=False):
+        """Autotile (4-neighbour) a set of cells with the 4x4 blob block starting at origin.
+        open_cells / open_edge (playtest D6): an out-of-map neighbour counts as present for those cells (or all cells), so an
+        exit trail or a river runs off the screen edge instead of being capped with a rim."""
+        S = set(cells); ox, oy = origin; OC = set(open_cells)
+        def has(x, y, nx, ny): return (nx, ny) in S or ((open_edge or (x, y) in OC) and not self.inb(nx, ny))
         for (x, y) in S:
-            n, e, s, w = (x, y-1) in S, (x+1, y) in S, (x, y+1) in S, (x-1, y) in S
+            n, e, s, w = has(x, y, x, y-1), has(x, y, x+1, y), has(x, y, x, y+1), has(x, y, x-1, y)
             if n and e and s and w: c = (1, 1)
             elif not e and not w:
                 c = (3, 3) if (not n and not s) else (3, 0) if not n else (3, 2) if not s else (3, 1)
@@ -102,7 +114,7 @@ class Map:
         self.event(x, y, [page(cond=cond, trigger='touch', list=l, through=True)], realm)
     def data(self):
         return dict(id=self.id, name=self.name, w=self.w, h=self.h, bgm=self.bgm, layers=self.layers, col=self.col, reg=self.reg,
-                    objs=self.objs, events=self.events, lights=self.lights, encounter=self.encounter, counters=self.counters, noShift=self.noShift, dyn=self.dyn)
+                    objs=self.objs, events=self.events, lights=self.lights, encounter=self.encounter, counters=self.counters, noShift=self.noShift, dyn=self.dyn, bg=self.bg)
     def dynwalk(self, realm, cells, cond, walk=True):
         """Collision that flips when an event condition holds (e.g. an Anchored bridge). Tiles stay as drawn."""
         self.dyn.append(dict(realm=realm, cells=[list(c) for c in cells], cond=cond, walk=walk))
@@ -112,6 +124,7 @@ class Map:
     def preview(self, realm, path, debug=False):
         sheets = {1: Image.open(os.path.join(ROOT, 'public/assets/tiles/floor.png')).convert('RGBA'), 2: Image.open(os.path.join(ROOT, 'public/assets/tiles/ifloor.png')).convert('RGBA'), 3: Image.open(os.path.join(ROOT, 'public/assets/tiles/wallsimple.png')).convert('RGBA'), 4: Image.open(os.path.join(ROOT, 'public/assets/tiles/water.png')).convert('RGBA')}
         if os.path.exists(CH3FIX_PNG): sheets[CH3FIX] = Image.open(CH3FIX_PNG).convert('RGBA')
+        if os.path.exists(BORDER_PNG): sheets[BORDER] = Image.open(BORDER_PNG).convert('RGBA')
         objs = Image.open(os.path.join(ROOT, 'public/assets/objects.png')).convert('RGBA')
         im = Image.new('RGBA', (self.w * TS, self.h * TS), (0, 0, 0, 255))
         for lname in ('g', 'o'):

@@ -31,6 +31,8 @@ for n in OBJS:
     ov = os.path.join(OBJ_CUSTOM, n + ".png")
     im = Image.open(ov).convert("RGBA") if os.path.exists(ov) else extract(*OBJS[n])   # size changes flow into objects.json
     if im is not None: ims.append((n, im))
+for fn in sorted(os.listdir(OBJ_CUSTOM)) if os.path.isdir(OBJ_CUSTOM) else []:   # custom-only cells (not in the pack), e.g. chest_open
+    if fn.endswith(".png") and fn[:-4] not in OBJS: ims.append((fn[:-4], Image.open(os.path.join(OBJ_CUSTOM, fn)).convert("RGBA")))
 ims.sort(key=lambda t: -t[1].height)
 W = 512; x = y = rh = 0; frames = {}
 placed = []
