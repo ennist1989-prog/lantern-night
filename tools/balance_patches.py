@@ -9,6 +9,11 @@ def dump(p, o): json.dump(o, open(p, 'w'), separators=(',', ':'), ensure_ascii=F
 bp = os.path.join(SPEC, 'bosses.json'); bosses = load(bp)
 # A2: Straw Warden was a speed bump (Mio L1 solo 100%, ends ~36/90 HP). +30% HP, EXP 40 (a level at the story beat).
 w = bosses['straw_warden']; w['stats']['mhp'] = 624; w['exp'] = max(w.get('exp', 0), 40)
+# PF2 #5 (playtest): the Warden (first spirit at the boulders) must not fall at L1 and should be a 5+ round fight at L3.
+# Tuned for the realistic party: Kaze joins at the Far post on the main path before the corridor (Daigo only joins later, in
+# the Well). 624 -> 2300 HP, a sharper Lumen weakness on the Far form. Mio+Kaze, Far, seeded sim: L1 0% | L2 ~6% |
+# L3 ~74% in ~8 rounds | L4+ 100%. Mio solo (skipping Kaze) is intentionally harder: L4 ~35%, L5 100% (tests/first_spirit_sim.cjs).
+w['stats'].update({'mhp': 2300, 'atk': 12, 'mat': 12, 'def': 3, 'mdf': 2}); w['forms']['far']['rates']['lumen'] = 2.0
 # A6: the Bell-Keeper reward re-granted the clapper the player already used, and claimed "Kaze joins permanently"
 # (Kaze joined in Chapter 1). Keep the tea; drop the duplicate key item and the stale unlock text.
 bk = bosses['bell_keeper']; r = bk.setdefault('rewards', {})
@@ -58,5 +63,19 @@ troops['tr_well_spirit'] = {'id': 'tr_well_spirit', 'name': 'Ido-no-Kami', 'enem
 # Battle art: reuse the Dust Wisp crop (tinted water-blue and drawn larger at runtime); boot loads mon/<id>.png.
 MON = os.path.join(ROOT, 'public', 'assets', 'mon'); shutil.copyfile(os.path.join(MON, 'dust_wisp.png'), os.path.join(MON, 'well_spirit.png'))
 bud = enemies['willow_bud']; bud['forms']['far']['outputMult'] = 0.8; bud['forms']['far']['rates']['phys'] = 0.75   # Willow Parley-only retune (above)
+# Playtest fixes 2 (#5): the first spirit past the Warden's boulder (Far, map 1 (8,22)) was a 1-2 hit Dust Wisp. It is now its
+# own slice-only enemy, the Hearth-Lost Wisp: 3.5x+ the wisp's HP and harder hits, so an L1 party loses, L2 rarely wins, L3 is a
+# real fight (5+ rounds) and L4 is comfortable. The common Dust Wisp (and every other troop) is unchanged. Sim: tests/first_spirit_sim.cjs.
+hw = json.loads(json.dumps(enemies['dust_wisp']))
+hw.update({'id': 'hearth_wisp', 'name': 'Hearth-Lost Wisp', 'role': 'First spirit past the Warden boulder: a grind check (L3+).', 'level': 3,
+           'rarity': 'uncommon', 'level_range': [3, 3], 'zones': [], 'exp': 30, 'gold': 20, 'tint': '#ffb070', 'scale': 6})
+HW_STATS = {'mhp': 820, 'msp': 0, 'atk': 14, 'def': 6, 'mat': 12, 'mdf': 14, 'agi': 11}
+hw['stats'] = dict(HW_STATS); hw['statsByLevel'] = {'3': dict(HW_STATS)}
+for f in hw['forms'].values(): f['outputMult'] = 1.0
+hw.pop('bond', None); hw['bond'] = None
+if isinstance(hw.get('parley'), dict): hw['parley']['recruit'] = False; hw['parley']['fragment'] = False
+enemies['hearth_wisp'] = hw
+troops['tr_hearth_wisp'] = {'id': 'tr_hearth_wisp', 'name': 'Hearth-Lost Wisp', 'enemies': ['hearth_wisp'], 'kind': 'normal', 'level': 3, 'exp': 30, 'gold': 20, 'events': []}
+shutil.copyfile(os.path.join(MON, 'dust_wisp.png'), os.path.join(MON, 'hearth_wisp.png'))
 dump(ep, enemies); dump(tp, troops)
 print('balance patches ok: warden mhp', w['stats']['mhp'], 'exp', w['exp'], '| bell_keeper atk', bk['stats']['atk'], '| bell_keeper rewards', r['items'], r['unlock'], '| kappa_toll', kt['stats'])
