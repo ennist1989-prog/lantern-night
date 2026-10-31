@@ -1,0 +1,110 @@
+{
+ "wisp1": {
+  "members": [
+   "dust_wisp"
+  ],
+  "intro": "A Dust Wisp drifts closer! It seems lonely… (Try Parley → Soothe!)"
+ },
+ "wisp2": {
+  "members": [
+   "dust_wisp",
+   "dust_wisp"
+  ]
+ },
+ "slime1": {
+  "members": [
+   "moss_slime"
+  ]
+ },
+ "mouse1": {
+  "members": [
+   "bell_mouse"
+  ],
+  "intro": "A Bell Mouse jingles into view."
+ },
+ "wisp_mouse": {
+  "members": [
+   "dust_wisp",
+   "bell_mouse"
+  ]
+ },
+ "slime_wisp": {
+  "members": [
+   "moss_slime",
+   "dust_wisp"
+  ]
+ },
+ "lantern1": {
+  "members": [
+   "paper_lantern"
+  ]
+ },
+ "lantern2": {
+  "members": [
+   "paper_lantern",
+   "paper_lantern"
+  ]
+ },
+ "watcher1": {
+  "members": [
+   "stone_watcher"
+  ]
+ },
+ "watcher_lantern": {
+  "members": [
+   "stone_watcher",
+   "paper_lantern"
+  ]
+ },
+ "ember1": {
+  "members": [
+   "hearth_ember"
+  ]
+ },
+ "ember_wisp": {
+  "members": [
+   "hearth_ember",
+   "dust_wisp"
+  ]
+ },
+ "ember2": {
+  "members": [
+   "hearth_ember",
+   "hearth_ember"
+  ]
+ },
+ "skel1": {
+  "members": [
+   "hollow_samurai"
+  ]
+ },
+ "skel_wisp": {
+  "members": [
+   "hollow_samurai",
+   "dust_wisp"
+  ]
+ },
+ "skel_lantern": {
+  "members": [
+   "hollow_samurai",
+   "paper_lantern"
+  ]
+ },
+ "well_spirit": {
+  "members": [
+   "well_spirit"
+  ],
+  "intro": "Ido-no-Kami rises from the dark water, sorrowing…",
+  "bgm": "boss",
+  "noEscape": true
+ },
+ "bell_keeper": {
+  "members": [
+   "bell_keeper"
+  ],
+  "intro": "The Bell-Keeper raises its bronze wings!",
+  "boss": true,
+  "noEscape": true,
+  "bgm": "boss"
+ }
+}
