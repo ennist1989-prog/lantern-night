@@ -323,7 +323,7 @@ export class BattleScene extends Phaser.Scene {
           const extra: any[] = []; if (a.bond) extra.push({ label: 'Possess', value: '50 BG', enabled: a.gauge >= 50 && !a.states.possessed, data: { possess: true, desc: SPEC.skills.bond_possess.desc } });
           const r = await pickSkill(L.bond, extra); if (!r) return; if (r.possess) return done({ type: 'possess' }); const t = await target(r.s.scope, r.id); if (!t) return back(); done({ type: 'skill', skill: r.id, targets: t });
         } else if (it.data === 'item') {
-          const its = Object.keys($.items).filter((k) => { const d = DB.items[k]; return d && (d.usable === true || d.usable === 'battle') && d.type === 'item' && $.items[k] > 0; }).map((k) => ({ label: DB.items[k].name, value: '×' + $.items[k], icon: iconOf(DB.items[k]), data: { ...DB.items[k], id: k } }));
+          const its = Object.keys($.items).filter((k) => { const d = DB.items[k]; return d && (d.usable === true || d.usable === 'battle') && d.type === 'item' && $.items[k] > 0; }).map((k) => ({ label: DB.items[k].name, value: '×' + $.items[k], icon: iconOf(DB.items[k]), data: { ...DB.items[k], id: k }, enabled: !(DB.items[k].effect?.lumen && !DB.items[k].effect.hp && this.B.lumen >= this.B.lumenMax) }));
           if (!its.length) { Audio.se('buzzer'); return back(); }
           const r = await this.pickFromList(its, (d: any) => d.desc); if (!r) return back();
           if (r.effect?.escape) { const t = await this.doSmoke(); if (t) return done({ type: 'escape' }); return back(); }

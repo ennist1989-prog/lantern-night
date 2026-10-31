@@ -96,6 +96,19 @@ try {
     else { const l = s.labels.find((x) => /^Spirit Elixir/.test(x)); if (l && !chose) { pre = r.n; await choose(l); chose = true; } else await press(page, 'Escape'); }
     await sleep(100); }
   ok(used && used.l === used.m && used.n === used.pre - 1, 'battle: Spirit Elixir fills the Lumen gauge to max ' + JSON.stringify(used));
+  // full Lumen in battle: the elixir must be refused (disabled in the Item list, no turn spent) and NOT consumed
+  { const n0 = await page.evaluate(() => window.__S.$.items.spirit_elixir); let tried = false, after = null;
+    for (let t = 0; t < 40; t++) { const s = await waitInput(page, 30000).catch(() => null); if (!s || s.ended) break;
+      const B = await page.evaluate(() => { const B = window.__game.scene.getScene('Battle').B; return { l: B.lumen, m: B.lumenMax }; });
+      if (tried) { if (s.win === 'target') { await press(page, 'Enter'); await sleep(150); continue; } if (s.labels.includes('Item') || s.labels.includes('Fight')) { after = { ...B, n: await page.evaluate(() => window.__S.$.items.spirit_elixir), stillInList: false }; break; }
+        after = { ...B, n: await page.evaluate(() => window.__S.$.items.spirit_elixir), stillInList: s.labels.some((x) => /^Spirit Elixir/.test(x)) }; break; }
+      if (s.win === 'target') await press(page, 'Enter');
+      else if (s.labels.includes('Fight')) await choose('Fight');
+      else if (s.labels.includes('Item')) await choose('Item');
+      else { const l = s.labels.find((x) => /^Spirit Elixir/.test(x)); if (l && B.l >= B.m) { await choose(l); tried = true; await sleep(400); } else await press(page, 'Escape'); }
+      await sleep(100); }
+    ok(tried && after && after.n === n0 && after.l === after.m && after.stillInList, 'battle at full Lumen: Spirit Elixir refused, not consumed, turn kept ' + JSON.stringify({ n0, after }));
+    for (let k = 0; k < 3; k++) { const s = await waitInput(page, 5000).catch(() => null); if (!s || s.labels.includes('Item') || s.labels.includes('Fight')) break; await press(page, 'Escape'); await sleep(200); } }
   await page.evaluate(() => window.__game.scene.getScene('Battle').B.foes.forEach((f) => (f.hp = 1)));
   ok(errors.filter((e) => !/willReadFrequently/.test(e)).length === 0, 'no console errors ' + JSON.stringify(errors.slice(0, 3)));
 } catch (e) { console.log('FAIL exception', e); fails++; }
