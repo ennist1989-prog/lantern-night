@@ -41,7 +41,7 @@ ok(box && box.pages[0].g.obj === 'supply_box' && box.pages[1].g.obj === 'supply_
   ok(tk && tk.x === 11 && tk.y === 3 && tk.realm === 'far' && tk.peek === false && !m7.col.far[3 * m7.w + 11], 'Old Tokubei: tokubei_far at (11,3), Far-only, peek:false, open cell');
   ok(hr && hr.x === 30 && hr.y === 3 && hr.realm === 'both', 'Haru at (30,3), both realms');
   ok(m7.lights.some((l) => l.x === 11 && l.y === 3 && l.realm === 'far' && l.a === 0.1 && l.tint === 0x548789), 'Tokubei glow: per-light alpha 0.1 / tint #548789, Far only');
-  ok(m7.lights.filter((l) => l.r === 4).length === 2 && m7.lights.filter((l) => l.r === 4).every((l) => l.fa === 0.45), 'maze lanterns: Far brightness 0.45');
+  ok(m7.lights.filter((l) => l.r === 4).length === 2 && m7.lights.filter((l) => l.r === 4).every((l) => l.fa === 0.3), 'maze lanterns: Far brightness 0.3');
   { const sy = JSON.parse(fs.readFileSync('public/data/system.json', 'utf8')); ok(sy.mapNames['7'] === 'Reedwind Maze' && sy.dungeonExit['7'] && sy.dungeonExit['7'].map === 1, 'map 7 named Reedwind Maze, crane exit to the village'); }
   ok(m7.lights.filter((l) => l.a == null).every((l) => l.tint == null), 'other lights keep the default tint'); }
 const objs = JSON.parse(fs.readFileSync('public/assets/objects.json', 'utf8')); ok(objs.supply_box && objs.supply_box_open, 'supply_box objects in the atlas');
