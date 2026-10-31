@@ -65,12 +65,17 @@ export class Interpreter {
         case 'lumenmax': { $.lumenMax += c.n; $.lumen = $.lumenMax; break; }
         case 'bgm': Audio.bgm(c.name === 'auto' ? S.mapBgm() : c.name, { fade: c.fade }); break;
         case 'se': Audio.se(c.name); break;
+        case 'chestopen': { // #8: the lid opens on screen right away; the self-switch page (obj chest_open) keeps it open after
+          const e = S.evs.find((v: any) => v.id === (c.ev ?? ctx.ev)); if (!e || !e.char) break; const far = $.realm === 'far';
+          e.char.setObject('chest_open', far, false); const sp = e.char.spr; const sy = sp.scaleY;
+          S.tweens.add({ targets: sp, scaleY: { from: sy * 0.8, to: sy }, duration: 140, ease: 'Back.easeOut' }); break; }
         case 'me': Audio.me(c.name); break;
         case 'move': await S.moveRoute(c.target ?? 'player', c.route, c.wait !== false, ctx); break;
         case 'turn': S.turnChar(c.target ?? 'player', c.dir, ctx); break;
         case 'balloon': await S.balloon(c.target ?? ctx.ev ?? 'player', c.icon || '!', ctx); break;
         case 'shake': await S.shake(c.power ?? 3, c.ms ?? 400); break;
         case 'flash': await S.flash(c.color ?? 0xffffff, c.ms ?? 300); break;
+        case 'ctltut': { if ($.tutorialsShown.ctl_on) break; $.tutorialsShown.ctl_on = true; $.tutorialsShown.controls = true; break; }   // D3: persistent controls checklist (MapScene.updateCtlTut)
         case 'tutorial': { if (c.once !== false && $.tutorialsShown[c.id]) break; $.tutorialsShown[c.id] = true; S.msg.toast(c.text, c.ms ?? 5200, 14, '#bff6ff'); break; }
         case 'checkpoint': S.autosave(c.boss ? 'boss' : 'cp'); break;
         case 'narrate': await S.msg.narrate(c.lines, c); break;

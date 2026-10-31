@@ -11,8 +11,8 @@ import { W, H, Win, COL, FONT, Fader, sleep } from '../ui/windows';
 import { MessageSystem } from '../ui/message';
 import { Char, TS, Dir, DV, OPP } from './character';
 import { Interpreter } from './interpreter';
-import { recolorCanvas, farTexture } from './recolor';
-const SHEETS = ['floor', 'ifloor', 'wallsimple', 'water', 'ch3fix'];   // gid sheet 5 = ch3fix (optional; maps only use it when art/custom/tiles/ch3fix.png exists)
+import { recolorCanvas, farTexture, farColor } from './recolor';
+const SHEETS = ['floor', 'ifloor', 'wallsimple', 'water', 'ch3fix', 'border'];   // gid sheet 5 = ch3fix (optional; maps only use it when art/custom/tiles/ch3fix.png exists)
 export interface GEvent { id: number; data: any; char: Char; page: any | null; pageIdx: number; wander: number; erased: boolean; aggro: boolean; stun: number; marker: Phaser.GameObjects.Text | null; home: { x: number; y: number }; running: boolean; }
 export class MapScene extends Phaser.Scene {
   world!: Phaser.GameObjects.Container; ui!: Phaser.GameObjects.Container; fxLayer!: Phaser.GameObjects.Container; msg!: MessageSystem; fader!: Fader; interp!: Interpreter;
@@ -20,6 +20,7 @@ export class MapScene extends Phaser.Scene {
   ready = false; transitioning = false; overlay = false; shiftLocked = false; shifting = false; wasMoving = false; trail: { x: number; y: number }[] = []; shiftCool = 0;
   hud!: Win; hudG!: Phaser.GameObjects.Graphics; hudTxt!: Phaser.GameObjects.Text; hudLum!: Phaser.GameObjects.Text; vig!: Phaser.GameObjects.Image; glows: Phaser.GameObjects.Image[] = []; motes: { s: Phaser.GameObjects.Rectangle; vx: number; vy: number }[] = [];
   tintRect!: Phaser.GameObjects.Rectangle; banner: Win | null = null; stepsLeft = 50; scrollX = 0; scrollY = 0; camOverride: { x: number; y: number } | null = null; lowWarned = false; lastBgm = '';
+  ctlTxt: Phaser.GameObjects.Text | null = null;
   introBlack = false; saveIcon!: Phaser.GameObjects.Text; fadingNow = false; shake_ = 0; pendingMode: any; mapLights: any[] = [];
   constructor() { super('Map'); }
   init(data: any) { this.pendingMode = data || {}; }
@@ -103,6 +104,7 @@ export class MapScene extends Phaser.Scene {
   }
   applyRealmVisuals() {
     const far = $.realm === 'far';
+    const bg = this.mapData?.bg; this.cameras.main.setBackgroundColor(bg ? (far ? farColor(bg) : bg) : 0x000000);   // D5: small interiors tint the letterbox to their wall colour
     this.groundImgs.near.setVisible(!far); this.groundImgs.far.setVisible(far);
     this.objs.forEach((o) => o.setVisible((o as any).realm === (far ? 'far' : 'near')));
     this.player.setSheet('mio', false, this.player.dir); this.followers.forEach((f, i) => f.setSheet($.party[i + 1], false, f.dir));
@@ -126,18 +128,23 @@ export class MapScene extends Phaser.Scene {
     const p = e.page, c = e.char; const far = $.realm === 'far' || (e.data.realm === 'far' && $.buffs.peek > 0);
     if (!p || !p.g) { c.spr.setVisible(false); c.visible = false; return; }
     c.tint = p.g.tint ?? 0xffffff; c.opacity = p.g.alpha ?? 1; c.walkAnim = p.g.anim !== false; c.stepAnim = !!p.g.step; c.through = !!p.through;
+    c.gdx = p.g?.dx || 0; c.gdy = p.g?.dy || 0;
     if (p.g.obj) c.setObject(p.g.obj, far && !p.g.nofar, !!p.g.flat); else c.setSheet(p.g.sheet, far && !p.g.nofar, p.g.dir || c.dir);
     c.spr.setVisible(true); c.visible = true; c.refreshPos();
   }
   eventsAt(tx: number, ty: number, solidOnly = false) { return this.evs.filter((e) => e.page && (e.char.visible || !e.page.g) && (e.char.tx === tx && e.char.ty === ty) && (!solidOnly || (!e.char.through && !e.page.through))); }
   ctxOf(e: GEvent) { return { ev: e.id, map: this.mapData.id }; }
-  async triggerEvent(e: GEvent) {
-    if (!e.page || e.running) return;
+  async triggerEvent(e: GEvent, bump = false) {
+    if (!e.page || e.running) return; const map0 = this.mapData.id, px0 = this.player.tx, py0 = this.player.ty;
     if (e.data.realm === 'far' && $.realm === 'near') { Audio.se('cursor'); this.msg.toast('You can only glimpse it from here. Shift to reach it.', 2000, 14, COL.dim); return; } e.running = true; const p = e.page;
     try {
       if (p.enemy) { await this.enemyTouch(e, false); }
       else await this.interp.run(p.list || [], this.ctxOf(e));
-    } finally { e.running = false; this.refreshEvents(); Input.clear(); }
+    } finally {
+      e.running = false; this.refreshEvents(); Input.clear();
+      // D7: a touch event that didn't change map (locked gate, push-back) must not re-fire while the key that walked into it is still held
+      if (p.trigger === 'touch' && this.mapData.id === map0 && (bump || this.player.tx !== px0 || this.player.ty !== py0)) Input.latchDirs();
+    }
   }
   checkAutoRun() {
     if (!this.ready || this.interp.busy || this.transitioning) return;
@@ -168,7 +175,9 @@ export class MapScene extends Phaser.Scene {
     if (!this.ready) return; const dt = Math.min(dtRaw, 50);
     const free = this.isFree(); if (free) $.playtime += dt / 1000;
     const wasM = this.player.moving;
+    if (free && this.ctlStep() === 'ready' && Input.anyTriggered()) { $.tutorialsShown.ctl_done = true; Input.clear(); Audio.se('ok'); }   // D3: dismissed only by a press
     if (free && !this.player.moving) this.playerInput();
+    this.updateCtlTut();
     this.player.update(dt);
     if (wasM && !this.player.moving) this.onPlayerStep();
     this.followers.forEach((f) => f.update(dt));
@@ -179,8 +188,23 @@ export class MapScene extends Phaser.Scene {
     if (this.shiftCool > 0) this.shiftCool -= dt;
     if (free) this.checkAutoRun();
   }
+  /** D3 controls tutorial: a checklist that stays up until every control has been used, then until a button press. Progress
+   *  lives in $.tutorialsShown (ctl_*), so it survives saves without a SAVE_VERSION bump; old saves never set ctl_on. */
+  static CTL: [string, string][] = [['ctl_move', 'Move: Arrows / WASD'], ['ctl_dash', 'Dash: hold Shift while moving'], ['ctl_ok', 'Talk / Confirm: Z / Enter'],
+    ['ctl_menu', 'Menu: X / Esc (X again closes)'], ['ctl_shift', 'Realm Shift: Q / Tab']];
+  ctlStep(): 'off' | 'todo' | 'ready' { const t = $.tutorialsShown; if (!t.ctl_on || t.ctl_done) return 'off'; return MapScene.CTL.every(([k]) => t[k]) ? 'ready' : 'todo'; }
+  ctlMark(k: string) { if (this.ctlStep() === 'todo' && !$.tutorialsShown[k]) { $.tutorialsShown[k] = true; Audio.se('cursor', 0.5); } }
+  updateCtlTut() {
+    const st = this.ctlStep(); const show = st !== 'off' && !this.msg.busy && !this.overlay && !this.transitioning;
+    if (!show) { this.ctlTxt?.setVisible(false); return; }
+    if (!this.ctlTxt) { this.ctlTxt = this.add.text(W - 12, 12, '', { fontFamily: FONT, fontSize: '16px', color: '#bff6ff', backgroundColor: '#0d1220dd', padding: { x: 10, y: 8 }, lineSpacing: 4, stroke: '#000', strokeThickness: 2 }).setOrigin(1, 0).setName('ctltut'); this.ui.add(this.ctlTxt); }
+    const t = $.tutorialsShown; const lines = ['Controls — try each one:', ...MapScene.CTL.map(([k, s]) => (t[k] ? '✓ ' : '☐ ') + s)];
+    if (st === 'ready') lines.push('', 'All set! Press any button.');
+    const s = lines.join('\n'); if (this.ctlTxt.text !== s) this.ctlTxt.setText(s); this.ctlTxt.setVisible(true);
+  }
   playerInput() {
     const P = this.player;
+    if (this.ctlStep() === 'todo') { if (Input.isTriggered('shift')) this.ctlMark('ctl_shift'); if (Input.isTriggered('menu')) this.ctlMark('ctl_menu'); if (Input.isTriggered('ok')) this.ctlMark('ctl_ok'); }
     if (Input.isTriggered('shift')) { Input.consume('shift'); this.tryShift(); return; }
     if (Input.isTriggered('menu')) { Input.consume('menu'); Input.consume('cancel'); this.openMenu(); return; }
     if (Input.isTriggered('ok')) { Input.consume('ok'); this.action(); return; }
@@ -189,11 +213,12 @@ export class MapScene extends Phaser.Scene {
       const dash = Input.isDown('dash') !== Settings.data.alwaysRun;
       P.face(d);
       if (this.canMove(P, d, true)) {
+        if (this.ctlStep() === 'todo') { this.ctlMark('ctl_move'); if (Input.isDown('dash')) this.ctlMark('ctl_dash'); }
         P.start(d, this.moveDur(dash)); this.trail.push({ x: P.tx, y: P.ty }); if (this.trail.length > 8) this.trail.shift(); this.moveFollowers(this.moveDur(dash));
       } else {
         // bump into blocking event -> touch trigger
         const nx = P.tx + DV[d][0], ny = P.ty + DV[d][1];
-        const evs = this.eventsAt(nx, ny).filter((e) => e.page.trigger === 'touch'); if (evs.length) this.triggerEvent(evs[0]);
+        const evs = this.eventsAt(nx, ny).filter((e) => e.page.trigger === 'touch'); if (evs.length) this.triggerEvent(evs[0], true);
       }
     }
   }
@@ -390,6 +415,7 @@ export class MapScene extends Phaser.Scene {
     Audio.se(o.se || 'door', 0.6);
     await this.fader.out(this, o.fast ? 150 : 320, o.white ? 0xffffff : 0x000000);
     await this.loadMap(mapId, x, y, dir, { resetDefeated: !sameMap });
+    Input.latchDirs(dir);   // D7: only the arrival (inward) direction keeps walking; others need a fresh press
     if (o.setRespawn) $.respawn = { map: mapId, x, y, dir };
     await this.fader.in(this, o.fast ? 150 : 320); this.transitioning = false;
     if (!sameMap) { this.showBanner(mapName(mapId)); if (!o.noAuto) this.autosave('transfer'); }
