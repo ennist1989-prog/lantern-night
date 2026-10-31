@@ -195,7 +195,9 @@ def build_village():
     # ---- Straw Warden (Ch.1 boss): stands in the Far corridor to the Well; Near boulder blocks the same corridor
     wd_cond = {'nsw': 'warden_done'}
     for wy in (22, 23, 24):
-        m.event(10, wy, [page(cond=wd_cond, trigger='touch', through=True, list=[
+        m.event(10, wy, [page(cond=wd_cond, trigger='touch', through=True, list=[IF({'nsw': 'kaze_joined'}, [   # PF2 #7: old saves inside the corridor without Kaze are sent back east
+            say('mio', 'Mio', '(That scarecrow is watching me. I shouldn’t face it alone. I should find that fox on the Far Shore first.)'),
+            {'c': 'move', 'route': ['face:right', 'right', 'right', 'face:right']}], [
             IF({'sw': 'warden_seen'}, [], [say(None, None, 'A scarecrow stands in the corridor — but on the Far Shore its straw shivers, and two hollow eyes open.'), sw('warden_seen')]),
             IF({'nsw': 'flame_seen'}, [say(None, None, 'In its chest, one small flame burns perfectly still. No flicker, no wind. It is the only steady fire in Ashiro tonight.'), sw('flame_seen')]),
             IF({'nlvl': 3}, [IF({'sw': 'kaze_joined'}, [say('kaze', 'Kaze', 'Hm. That’s a Warden. I’d feel better if we were Level 3 first. Those wisps in the fields would make good practice — and the Post by the Well road is a safe place to rest.')],
@@ -212,7 +214,7 @@ def build_village():
                          {'c': 'wait', 'ms': 600}, narr('Dusk. Mio sits on the rim of the Old Well, the Lantern in her lap.', 'Far Ashiro glows below, ghost-lit and gentle. No one speaks.'),
                          say(None, 'Sachi (a voice)', 'You are holding the lantern like a rope.'), {'c': 'wait', 'ms': 500},
                          sw('warden_done'), quest('main', 3, quiet=True), {'c': 'toast', 'text': 'Night 2: six nights to Lantern Night.'}], 'lose': [{'c': 'abort'}]}],
-                [{'c': 'move', 'route': ['face:right', 'right', 'right', 'face:right']}]])])], realm='far')   # PF2 #4: 'Not yet' turns Mio around and walks her back to the east side (x=12), never past the Warden
+                [{'c': 'move', 'route': ['face:right', 'right', 'right', 'face:right']}]])])])], realm='far')   # PF2 #4: 'Not yet' turns Mio around and walks her back to the east side (x=12), never past the Warden
     m.event(10, 23, [page(cond=wd_cond, g=NPC('statue', 'down', step=False), trigger='action', list=[say(None, None, 'The straw figure watches you. It seems to be waiting.')])], realm='far')
     # Granny Sachi's Far-side friend: Zashiki Child (special spawn, parley only)
     m.event(9, 16, [page(cond={'nself': 'A'}, g=NPC('child', 'down', step=False), trigger='action', list=[
@@ -245,6 +247,14 @@ def build_village():
             IF({'nlock': 'L02'}, [{'c': 'se', 'name': 'buzzer'}, say('villager3', 'Gate Guard', 'Halt. No one climbs to the Shrine after dusk without the Elder’s seal. Orders.')],
                [IF({'lock': 'L06'}, [IF({'nsw': 'gate_open'}, [say('villager3', 'Gate Guard', 'Ah, the seal. All in order. Go on up.'), {'c': 'se', 'name': 'door'}, say(None, None, 'The Shrine Key turns with a soft chime. The gate swings open.'), sw('gate_open')]), {'c': 'transfer', 'map': 5, 'x': 11, 'y': 20, 'dir': 'up', 'se': 'door'}],
                   [say('villager3', 'Gate Guard', 'Seal’s fine, miss, but the shrine gate is locked. You’ll need the Shrine Key.')])])])], realm='near')
+    # PF2 #7: the Warden corridor (x 11-16, rows 22-24; walls on rows 21 and 25) needs Kaze. A gate column at x=14, both shores,
+    # new events appended after all existing ones. Without kaze_joined (and before warden_done, for old saves): Mio says so and
+    # always steps out to the east side (15,y), facing east, so a save already inside the corridor walks out, never in.
+    for y in (22, 23, 24):
+        m.event(14, y, [page(trigger='touch', through=True, list=[
+            IF({'nsw': 'kaze_joined'}, [IF({'nsw': 'warden_done'}, [
+                say('mio', 'Mio', '(This path to the Well feels watched. I shouldn’t go on alone. That fox on the Far Shore by the square post… I should find him first.)'),
+                {'c': 'move', 'route': ['face:right', 'right', 'face:right']}])])])], realm='both')
     return m
 def canopy_border(m, stairs):
     """D5/edge-exit art: lay the canopy (border.png) on the map-1 border band under the existing trees, and its ragged edge on the

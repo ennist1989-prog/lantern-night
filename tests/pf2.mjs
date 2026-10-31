@@ -21,6 +21,23 @@ try {
   ok(/Gate Guard/.test(await shown()), 'stepping toward the first stair (17,2) from (17,3) triggers the Gate Guard message: ' + (await shown()).slice(0, 80));
   ok(p.x === 17 && p.y === 3, 'locked: stays at the stair foot (17,3), got ' + JSON.stringify(p));
   ok(await free(), 'map is free afterwards (no soft-lock)');
+  // ---- #7 Kaze gate (x=14, rows 22-24, both shores): no Kaze -> message + back east; old save inside -> walks out east; with Kaze -> through
+  const step = async (k, ms = 260) => { await page.keyboard.down(k); await sleep(ms); await page.keyboard.up(k); await mashUntil(page, () => window.__game.scene.getScene('Map').isFree() && !window.__game.scene.getScene('Map').player.moving, null, 40); return pos(); };
+  await page.evaluate(() => { window.__S.$.setSw('kaze_joined', false); window.__S.$.setSw('warden_done', false); });
+  for (const realm of ['near', 'far']) for (const row of [22, 23, 24]) {
+    await page.evaluate((r) => { window.__S.$.realm = r; window.__game.scene.getScene('Map').applyRealmVisuals?.(); window.__shown = []; }, realm); await teleport(page, 1, 15, row, 'left');
+    const q = await step('ArrowLeft'); ok(q.x === 15 && q.y === row && q.dir === 'right' && /find him first/.test(await shown()) && await free(), `${realm} row ${row}: without Kaze the gate stops Mio with a message, back at x=15 facing east: ` + JSON.stringify(q));
+    const q2 = await step('ArrowRight'); ok(q2.x >= 16, `${realm} row ${row}: can walk away east after the gate ` + JSON.stringify(q2));
+  }
+  await page.evaluate(() => { window.__S.$.realm = 'far'; window.__game.scene.getScene('Map').applyRealmVisuals?.(); }); await teleport(page, 1, 12, 23, 'right');
+  p = await step('ArrowRight', 600); ok(p.x >= 15 && await free(), 'old save inside the corridor without Kaze walks out east through the gate: ' + JSON.stringify(p));
+  await teleport(page, 1, 11, 23, 'left'); await page.evaluate(() => { window.__shown = []; }); p = await step('ArrowLeft');
+  ok(p.x >= 12 && p.dir === 'right' && /fox/.test(await shown()) && await free(), 'old save next to the Warden without Kaze is turned back east, no fight: ' + JSON.stringify(p));
+  await page.evaluate(() => { window.__S.$.setSw('warden_done', true); }); await teleport(page, 1, 15, 22, 'left'); p = await step('ArrowLeft', 900);
+  ok(p.x <= 13, 'old save already past the Warden (warden_done, no kaze_joined) is not blocked: ' + JSON.stringify(p));
+  await page.evaluate(() => { window.__S.$.setSw('warden_done', false); window.__S.$.setSw('kaze_joined', true); });
+  for (const realm of ['near', 'far']) { await page.evaluate((r) => { window.__S.$.realm = r; window.__game.scene.getScene('Map').applyRealmVisuals?.(); }, realm); await teleport(page, 1, 15, 22, 'left'); p = await step('ArrowLeft', 700);
+    ok(p.x <= 13, `${realm}: with Kaze Mio walks through the gate toward the ${realm === 'near' ? 'boulders' : 'Warden'}: ` + JSON.stringify(p)); }
   // ---- #4 Warden 'Not yet' (Far): turned around and walked back to the east side of the boulders
   for (const row of [22, 24]) {
     await page.evaluate(() => { window.__S.$.realm = 'far'; window.__game.scene.getScene('Map').applyRealmVisuals?.(); }); await teleport(page, 1, 11, row, 'left');

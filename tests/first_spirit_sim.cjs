@@ -15,10 +15,10 @@ const w = (r) => parseInt(r.win); for (const r of rows) {
   if (r.lv === 3 && (w(r) < 70 || +r.rounds < 5)) ok = false; if (r.lv >= 4 && w(r) < 95) ok = false; }
 // The Straw Warden at the boulders (boss, first spirit fight): >= 3x the old 624 HP. Realistic party = Mio + Kaze (Kaze joins
 // at the Far post on the main path, before the corridor; Daigo joins later in the Well). Targets for Mio+Kaze, both bots:
-// L1 ~0% (<=2), L2 <=25%, L3 60-90% with >= 5 rounds, L4+ >= 95%. Mio solo is a sanity band: L1-L2 lose, L5 >= 95%.
+// L1 ~0% (<=2), L2 <=25%, L3 60-90% with >= 5 rounds, L4+ >= 95%. Mio solo is diagnostic only (printed, not asserted): the Kaze gate (PF2 #7) means she never meets the Warden alone.
 const W = sim.SPEC.bosses.straw_warden; if (W.stats.mhp < 3 * 624) ok = false; console.log('straw_warden mhp', W.stats.mhp);
 for (const party of [['mio', 'kaze'], ['mio']]) for (const style of ['auto', 'shift']) for (const lv of [1, 2, 3, 4, 5]) {
   const r = sim.run('boss_straw_warden', party, lv, { realm: 'far', n: 400, style }); console.log('warden', party.join('+'), JSON.stringify(r)); const x = w(r);
   if (party.length === 2) { if (lv === 1 && x > 2) ok = false; if (lv === 2 && x > 25) ok = false; if (lv === 3 && (x < 60 || x > 90 || +r.rounds < 5)) ok = false; if (lv >= 4 && x < 95) ok = false; }
-  else { if (lv <= 2 && x > 2) ok = false; if (lv === 5 && x < 95) ok = false; } }
+  else console.log('  (diagnostic only, Mio solo: not asserted)'); }
 console.log(ok ? 'PASS first spirit: L1 loses, L2 low, L3 >=5-round fight, L4+ comfortable' : 'FAIL first spirit balance'); if (!ok) process.exitCode = 1;
