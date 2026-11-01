@@ -13,11 +13,13 @@ subprocess.check_call([sys.executable, os.path.join(os.path.dirname(os.path.absp
 for _t in ('ch3_assets.py', 'ch3_data.py'): subprocess.check_call([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), _t)], cwd=os.path.dirname(os.path.abspath(__file__)))
 # art/custom always wins: ch3_assets/ch3_data run after spec_import's overlay, so copy the hand-made art (and its boss meta,
 # aliases and the optional-asset manifest) once more as the last asset step. `npm run art` stays a no-op afterwards.
+from hidden_elixirs import add as add_hidden_elixirs
 from art_custom import overlay as art_overlay, manifest as art_manifest
 art_overlay(); art_manifest()
 maps = [build_village(), build_sachi(), build_tea(), build_well(), build_shrine1(), build_summit(), build_forest(), build_grove(), build_crossing(), build_hollow()]
 os.makedirs(os.path.join(ROOT, 'screenshots', 'maps'), exist_ok=True)
 for m in maps:
+    add_hidden_elixirs(m)   # appended after each map's own events: ids stay stable
     m.save()
     for r in ('near', 'far'): m.preview(r, os.path.join(ROOT, 'screenshots', 'maps', f'map{m.id}_{r}.png'), debug=(len(sys.argv) > 1 and sys.argv[1] == 'debug'))
 print('maps:', [m.id for m in maps])

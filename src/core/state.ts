@@ -3,6 +3,8 @@ import { gearBonus, traitSum } from './gear';
 import { SPEC } from '../battle/spec';
 import { migrateGame, SAVE_VERSION } from './migrate';
 export { SAVE_VERSION };
+export const GOLD_MAX = 999999;
+export function clampGold(v: any) { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.max(0, Math.min(GOLD_MAX, n)) : 0; }
 export interface Actor { id: string; level: number; exp: number; hp: number; sp: number; equips: Record<string, string | null>; skills: string[]; states: string[]; perm?: Record<string, number>; }
 export const SLOTS = ['weapon', 'armor', 'acc', 'acc2', 'keepsake', 'bond'];
 export const SLOT_NAMES: Record<string, string> = { weapon: 'Weapon', armor: 'Armor', acc: 'Charm', acc2: 'Charm 2', keepsake: 'Keepsake', bond: 'Bond' };
@@ -13,7 +15,7 @@ export class GameState {
   party: string[] = [];
   actors: Record<string, Actor> = {};
   items: Record<string, number> = {};
-  gold = 0;
+  gold!: number;                                // clamped to [0, GOLD_MAX] by an own accessor (see constructor)
   quests: Record<string, { stage: number; done: boolean }> = {};
   seen: Record<string, boolean> = {};          // read-skip: message hashes seen
   bestiary: Record<string, { seen: boolean; weak: string[]; defeated: number; calmed: number; recruited?: boolean; parleyed?: boolean }> = {};
@@ -41,7 +43,7 @@ export class GameState {
   permUsed: Record<string, number> = {};        // permanent stat items consumed per stat
   litPost: { map: number; x: number; y: number; dir: string } | null = null;
   __reloadRequest?: any; __titleRequest?: any;
-  constructor() { /* new game set by newGame() */ }
+  constructor() { let g = 0; Object.defineProperty(this, 'gold', { enumerable: true, configurable: true, get: () => g, set: (v: number) => { g = clampGold(v); } }); /* new game set by newGame() */ }
   newGame() {
     Object.assign(this, new GameState());
     const sys = DB.system;
