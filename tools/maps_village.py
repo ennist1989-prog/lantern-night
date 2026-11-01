@@ -127,7 +127,7 @@ def build_village():
             say('mio', 'Mio', 'The Lantern Post is cold and dark… Granny said it would wake for the Lantern.'),
             {'c': 'flash', 'color': 0xcff6ff, 'ms': 500}, {'c': 'se', 'name': 'powerup'},
             say(None, None, 'Mio lifts the Lantern. The wick catches, and the post blooms with pale light.'),
-            sw('post_lit'), {'c': 'litpost'}, {'c': 'lumen', 'n': 100}, quest('main', 1),
+            sw('post_lit'), {'c': 'litpost'}, {'c': 'lumen', 'n': 100}, quest('main', 1), {'c': 'autosave'},
             say(None, 'Tip', 'Lantern Posts: rest, save, and Shift for free nearby. Now press Q (or Tab) to Shift to the Far Shore!')]),
         page(cond={'sw': 'post_lit'}, g=dict(obj='lantern_post'), trigger='action', marker=True, list=[{'c': 'post'}])]
     # ---- NPCs (Near)

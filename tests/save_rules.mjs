@@ -9,23 +9,28 @@ const slot0 = () => page.evaluate(() => { const d = window.__S.SaveManager.read(
 const clear0 = () => page.evaluate(() => localStorage.removeItem('lotfs.save.0'));
 const menuSave = async () => { await press(page, 'x'); await waitScene(page, 'Menu'); await sleep(450); await page.evaluate(() => { const M = window.__game.scene.getScene('Menu'); M.lastSaveRefused = undefined; });
   for (let i = 0; i < 14; i++) { const c = await page.evaluate(() => { const M = window.__game.scene.getScene('Menu'); return M.cmd.items[M.cmd.index]?.label; }); if (c === 'Save') break; await press(page, 'ArrowDown'); await sleep(80); }
-  await press(page, 'Enter'); await sleep(700); const sc = await activeScenes(page); const refused = await page.evaluate(() => window.__game.scene.getScene('Menu').lastSaveRefused || false); return { sc, refused }; };
+  const grey = await page.evaluate(() => { const M = window.__game.scene.getScene('Menu'); return !!M.cmd.items.find((i) => i.label === 'Save')?.color; });
+  await press(page, 'Enter'); await sleep(700); const sc = await activeScenes(page); const refused = await page.evaluate(() => window.__game.scene.getScene('Menu').lastSaveRefused || false); return { sc, refused, grey }; };
 const closeAll = async () => { await page.evaluate(() => { const g = window.__game; g.scene.getScenes(true).forEach((s) => { if (s.sys.settings.key === 'SaveLoad') s.close?.(); }); g.scene.getScene('Menu').close?.(); }); await sleep(500); await mashUntil(page, idle, null, 10); };
 await newGame(page); await mashUntil(page, () => window.__S.$.sw('intro_done') && !window.__game.scene.getScene('Map').msg.busy && !window.__game.scene.getScene('Map').interp.busy);
 // 1. Menu > Save refused away from a save point
 await teleport(page, 1, 8, 6, 'down'); let r = await menuSave();
-ok(r.refused === 'away' && !r.sc.includes('SaveLoad'), `Menu > Save refused in the open village ("The lantern isn't lit here") ${JSON.stringify(r.sc)}`);
+ok(r.grey, 'Menu > Save is greyed out away from a save point'); ok(r.refused === 'away' && !r.sc.includes('SaveLoad'), `Menu > Save refused in the open village ("The lantern isn't lit here") ${JSON.stringify(r.sc)}`);
 await page.screenshot({ path: OUT + '/save_refused_away.png' });
 await press(page, 'Enter'); await sleep(300); await closeAll();
 // 1b. refused beside an UNLIT Post
 await page.evaluate(() => window.__S.$.setSw('post_lit', false)); await teleport(page, 1, 16, 17, 'up'); r = await menuSave();
-ok(r.refused === 'unlit' && !r.sc.includes('SaveLoad'), 'Menu > Save refused beside the unlit Post with "Light the lantern first" (' + r.refused + ')');
+ok(r.grey, 'Menu > Save is greyed out beside the unlit Post'); ok(r.refused === 'unlit' && !r.sc.includes('SaveLoad'), 'Menu > Save refused beside the unlit Post with "Light the lantern first" (' + r.refused + ')');
 await page.screenshot({ path: OUT + '/save_refused_unlit_post.png' });
 await press(page, 'Enter'); await sleep(300); await closeAll();
 // 2. Menu > Save works beside the lit Post
 await page.evaluate(() => window.__S.$.setSw('post_lit', true)); await teleport(page, 1, 16, 17, 'up'); r = await menuSave();
-ok(!r.refused && r.sc.includes('SaveLoad'), 'Menu > Save opens the slot list beside the lit Lantern Post');
+ok(!r.grey, 'Menu > Save is not greyed beside the lit Post'); ok(!r.refused && r.sc.includes('SaveLoad'), 'Menu > Save opens the slot list beside the lit Lantern Post');
 await closeAll();
+// 2a. lighting the first Lantern Post is a milestone: it autosaves once
+await page.evaluate(() => window.__S.$.setSw('post_lit', false)); await teleport(page, 1, 16, 17, 'up'); await clear0();
+await press(page, 'Enter'); await sleep(400); await mashUntil(page, () => window.__S.$.sw('post_lit') && (() => { const m = window.__game.scene.getScene('Map'); return m.ready && !m.msg.busy && !m.interp.busy; })(), null, 30); await sleep(1200);
+const sp = await slot0(); ok(sp && sp.map === 1, 'lighting the first Lantern Post autosaves (slot 0: ' + JSON.stringify(sp) + ')');
 // 2b. the Teahouse inn (map 3, saves) is its map's save point; Old Hisa's inn (map 111, noSave) is not, its Post is
 await teleport(page, 3, 4, 4, 'up'); ok(await page.evaluate(() => window.__game.scene.getScene('Map').canSaveHere()), 'beside Tama (map 3 inn) counts as a save point');
 await teleport(page, 111, 7, 11, 'up'); ok(!(await page.evaluate(() => window.__game.scene.getScene('Map').canSaveHere())), 'beside Old Hisa (map 111 noSave inn) is not a save point');

@@ -25,7 +25,9 @@ export class MenuScene extends Phaser.Scene {
     const L: any[] = [{ label: 'Item' }, { label: 'Skill' }, { label: 'Equip' }, { label: 'Status' }, { label: 'Formation' }, { label: 'Quests' }, { label: 'Key Items' }];
     if ($.has('smith_tongs')) L.push({ label: 'Forge' });
     if ($.has('collectors_book')) L.push({ label: 'Bonds' }, { label: 'Bestiary' });   // Keeper's Ledger unlocks the collection screens (lock L09)
-    L.push({ label: 'Notes' }, { label: 'Options' }, { label: 'Save' }, { label: 'Game End' }); return L;
+    L.push({ label: 'Notes' }, { label: 'Options' }, { label: 'Save', color: this.saveOk() ? undefined : COL.dim }, { label: 'Game End' }); return L;   // greyed away from a lit Post/saving inn (still selectable: shows why)
+  }
+  saveOk() { const ms: any = this.scene.get('Map'); return !(ms && typeof ms.canSaveHere === 'function' && !ms.canSaveHere());
   }
   mk<T extends Win>(w: T) { this.wins.push(w); return w; }
   rm(w: Win) { w.destroy(); this.wins = this.wins.filter((x) => x !== w); if ((w as any).__panel && !this.wins.some((x) => (x as any).__panel)) this.party.setVisible(true); }
