@@ -126,10 +126,21 @@ def objects_overlay(log=True):
         if (w, h) != im.size:
             y = atlas.height + 1; x = 0; grown = Image.new('RGBA', (max(atlas.width, im.width), y + im.height), (0, 0, 0, 0))
             grown.alpha_composite(atlas, (0, 0)); atlas = grown; frames[n] = [x, y, im.width, im.height]; changed = True
+        if x + im.width > atlas.width or y + im.height > atlas.height:   # rect recorded in objects.json past the canvas (e.g. a merge kept a
+            # shorter objects.png than the objects.json it came with): grow the canvas to hold it instead of letting paste() clip it
+            grown = Image.new('RGBA', (max(atlas.width, x + im.width), max(atlas.height, y + im.height)), (0, 0, 0, 0))
+            grown.alpha_composite(atlas, (0, 0)); atlas = grown; changed = True
+            if log: print(f'art/custom objects: grew objects.png to {atlas.size} for {n} at {frames[n]}')
         cur = atlas.crop((x, y, x + im.width, y + im.height))
         if cur.tobytes() != im.tobytes():
             atlas.paste(Image.new('RGBA', im.size, (0, 0, 0, 0)), (x, y)); atlas.paste(im, (x, y)); changed = True
         done.append(n)
+    bad = [(k, r) for k, r in frames.items() if r[0] < 0 or r[1] < 0 or r[0] + r[2] > atlas.width or r[1] + r[3] > atlas.height]
+    if bad: raise SystemExit(f'art/custom objects: FAIL cells outside objects.png {atlas.size}: {bad}')
+    for n in done:   # a pasted override must land whole (never clipped)
+        x, y, w, h = frames[n]
+        if atlas.crop((x, y, x + w, y + h)).tobytes() != Image.open(os.path.join(d, n + '.png')).convert('RGBA').tobytes():
+            raise SystemExit(f'art/custom objects: FAIL {n} at {frames[n]} does not match art/custom/objects/{n}.png')
     if changed: atlas.save(png); json.dump(frames, open(js, 'w'))
     if log: print('art/custom objects:', done, '(atlas updated)' if changed else '(already applied)')
     return done
