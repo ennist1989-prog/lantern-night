@@ -79,7 +79,7 @@ print('missing sprites:', missing)
 
 # ---------------- items: convert to the build's item shape
 ICON = {'rice_ball': 'onigiri', 'big_rice_ball': 'onigiri', 'rice_feast': 'sushi', 'herbal_tea': 'tea', 'sweet_tea': 'tea', 'moon_tea': 'tea', 'lantern_oil': 'lifepot', 'warm_ember': 'heart', 'antidote_salt': 'medipack', 'ward_salt': 'medipack', 'smoke_ball': 's_mist',
-        'cucumber': 'water', 'mochi': 'cookie', 'paper_charm': 'scroll', 'incense_stick': 'stick', 'milk_bowl': 'milk', 'fried_fish': 'fish', 'sake_cup': 'gourd', 'silk_thread': 'scroll', 'marigold_petal': 'scrollplant', 'wind_chime': 'flute', 'memento': 'book', 'flower_bundle': 'scrollplant'}
+        'cucumber': 'water', 'mochi': 'mochi', 'paper_charm': 'scroll', 'incense_stick': 'stick', 'milk_bowl': 'milk', 'fried_fish': 'fish', 'sake_cup': 'gourd', 'silk_thread': 'scroll', 'marigold_petal': 'scrollplant', 'wind_chime': 'flute', 'memento': 'book', 'flower_bundle': 'scrollplant'}
 old = json.load(open(os.path.join(PUB, 'data/items.json')))
 keep = {}
 # keep story/key items and a few legacy ones; drop legacy gear/consumables that the spec replaces
@@ -126,6 +126,8 @@ for g in items_spec['gear']:
 CHT = {'charm2': [{'stateResist': {'hollow_touch': 0.5}}], 'charm3': [{'spRegen': 2}], 'charm4': [{'stateResist': {'burn': 0.5}}], 'charm5': [{'stateResist': {'chill': 0.5}}], 'charm6': [{'stateResist': {'wilt': 0.5}}], 'charm7': [{'crit': 0.08}], 'charm8': [{'elemDmg': {'lumen': 1.1}}]}
 for k, v in CHT.items():
     if k in items: items[k]['traits'] = v
+if 'mochi' in items:   # training maze: icons.png slot 74 (maze-v1), real +30 HP to match its description
+    items['mochi'].pop('iconV2', None); items['mochi'].update(icon='mochi', effect={'hp': 30})
 dump(os.path.join(PUB, 'data/items.json'), items)
 
 # ---------------- actors (spec anchors + learn levels)

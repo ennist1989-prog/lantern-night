@@ -79,3 +79,11 @@ troops['tr_hearth_wisp'] = {'id': 'tr_hearth_wisp', 'name': 'Hearth-Lost Wisp', 
 shutil.copyfile(os.path.join(MON, 'dust_wisp.png'), os.path.join(MON, 'hearth_wisp.png'))
 dump(ep, enemies); dump(tp, troops)
 print('balance patches ok: warden mhp', w['stats']['mhp'], 'exp', w['exp'], '| bell_keeper atk', bk['stats']['atk'], '| bell_keeper rewards', r['items'], r['unlock'], '| kappa_toll', kt['stats'])
+
+# Training maze (map 7, Reedwind Maze): the early leveling field west of Ashiro. Uses only the Ch1 (z01) troops, but unlike the
+# village fields the Near Shore has encounters too, so grinding works before the first Shift. Existing troops/zones untouched.
+zp = os.path.join(SPEC, 'zones.json'); zones = load(zp); z1 = zones['z01']
+zones['z01m'] = dict(id='z01m', name='Reedwind Maze', chapter=1, kind='field', levelRange=[1, 4], realms=['near', 'far'],
+    encounterSteps={'near': 22, 'far': 20}, graceSteps=6, bgm='calm', tables={'near': z1['tables']['near'], 'far': z1['tables']['far']},
+    lumenDrain=True, recLevel=2, note='Training maze: Ch1 troops on both Shores; no Lantern Post (saves are a reward for progress).')
+dump(zp, zones)

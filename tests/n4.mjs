@@ -35,7 +35,7 @@ try {
   await page.evaluate(() => { const { $ } = window.__S; for (let i = 0; i < 5; i++) { $.setSw('sq03_h' + i, true); $.setSw('sq03_m' + i, true); } });
   const f0 = await page.evaluate(() => window.__S.$.fragments); await run(13, 18, 'far');
   const f1 = await page.evaluate(() => ({ f: window.__S.$.fragments, d: window.__S.$.sw('sq03_done') })); ok(f1.d && f1.f === f0 + 2, 'sq03 complete: +2 Name Fragments');
-  await page.screenshot({ path: '/workspace/lantern-night/screenshots/n4-sq.png' });
+  await page.screenshot({ path: (process.env.SHOTS || process.env.SS || '/workspace/lantern-night/screenshots') + '/n4-sq.png' });
   const errs = errors.filter((e) => !/willReadFrequently|Canvas2D/.test(e)); console.log('errors', errs);
 } catch (e) { console.log('EXC', e.message); fails++; }
 await browser.close(); console.log(fails ? 'FAILS ' + fails : 'ALL OK'); process.exit(fails ? 1 : 0);

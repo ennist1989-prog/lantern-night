@@ -1,6 +1,6 @@
 // Slice integration: locks on real maps, field-spell targets, key-item gating
 import { launch, press, sleep, newGame, mashUntil, teleport } from './lib.mjs';
-const SS = '/workspace/lantern-night/screenshots';
+const SS = (process.env.SHOTS || process.env.SS || '/workspace/lantern-night/screenshots');   // SHOTS env: screenshot root (default: the shared checkout)
 const { browser, page, errors } = await launch();
 let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 

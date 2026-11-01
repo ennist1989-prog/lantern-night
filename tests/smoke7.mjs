@@ -5,7 +5,7 @@ const st = () => page.evaluate(() => { const S = window.__S, m = window.__game.s
 try {
   await newGame(page);
   await mashUntil(page, () => window.__S.$.sw('intro_done'));
-  await sleep(500); await teleport(page, 1, 20, 12, 'down');
+  await sleep(500); await page.evaluate(() => window.__S.$.setSw('post_lit', true)); await teleport(page, 1, 16, 17, 'up');   // Menu > Save works only beside a lit Lantern Post
   await page.evaluate(() => { const S = window.__S; S.$.addActor('kaze'); S.$.gold = 123; S.$.gain('onigiri', 3); S.$.lumen = 47; S.$.setSw && S.$.setSw('kaze_joined', true); });
   // Save into slot 3 through the real UI. The slot list starts with the Autosave row (index 0), so steer by the cursor's slot, not a fixed key count.
   await press(page, 'x'); await waitScene(page, 'Menu'); await sleep(400);
