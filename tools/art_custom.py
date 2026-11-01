@@ -134,7 +134,7 @@ def objects_overlay(log=True):
     if log: print('art/custom objects:', done, '(atlas updated)' if changed else '(already applied)')
     return done
 
-ICON_SLOTS = {'mochi': 74}   # art/custom/icons/<name>.png (24x24) -> public/assets/icons.png slot (16 per row) + icons.json key
+ICON_SLOTS = {'mochi': 74, 'spirit_elixir': 75}   # art/custom/icons/<name>.png (24x24) -> public/assets/icons.png slot (16 per row) + icons.json key
 def icons_overlay(log=True):
     png = os.path.join(ASSETS, 'icons.png'); js = os.path.join(ASSETS, 'icons.json'); d = os.path.join(CUSTOM, 'icons')
     if not (os.path.isdir(d) and os.path.exists(png)): return []

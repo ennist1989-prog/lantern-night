@@ -44,6 +44,9 @@ if 'mochi' in items:   # training maze: own 24px icon (icons.png slot 74, maze-v
     items['mochi'].pop('iconV2', None); items['mochi'].update(icon='mochi', effect={'hp': 30}, type='item', usable=True, scope='ally', offer=True)   # usable in battle (+30 HP) and still an offering, like Honey
 items['chime_offering'] = {'name': 'Wind Chime', 'type': 'offering', 'icon': 'flute', 'iconV2': 'I_Clock', 'desc': 'Offering: spirits that like sound.', 'price': 40, 'usable': False, 'offer': True, 'cats': ['sound'], 'shop': ['ch2'], 'rarity': 'common'}
 items['honey'] = {'name': 'Honey', 'type': 'item', 'icon': 'honey', 'iconV2': 'I_C_Honey' if 'I_C_Honey' in ic2 else 'I_C_Pie', 'desc': 'Restores 70 HP. Also a lovely offering: spirits with a sweet tooth adore it.', 'price': 14, 'usable': True, 'scope': 'ally', 'effect': {'hp': 70}, 'offer': True, 'cats': ['food'], 'rarity': 'common'}
+# Spirit Elixir (Thomas): fills the Lantern's spirit gauge (Lumen) to max. Hidden pickups only (tools/hidden_elixirs.py), never stocked.
+# icon = Ember's art/custom/icons/spirit_elixir.png at icons.png slot 75; no iconV2 (iconOf prefers it). noSell: kept out of every shop's Sell list for now (bigger market later); price stays 3000.
+items['spirit_elixir'] = {'name': 'Spirit Elixir', 'type': 'item', 'icon': 'spirit_elixir', 'desc': 'A lantern-glass vial of pure spirit light. Mio: fills the Lumen gauge completely. Can\'t be sold.', 'price': 3000, 'noSell': True, 'usable': True, 'scope': 'self', 'effect': {'lumen': 999}, 'rarity': 'rare'}
 for k in ('anvil_core', 'garden_core'):   # heirloom catalysts: peaceful routes also yield them (designer decision)
     if k in items: items[k]['type'] = 'material'
 # equipment table: gear metadata (sets, rarity, realm, forge flag)
