@@ -25,7 +25,9 @@ export class MenuScene extends Phaser.Scene {
     const L: any[] = [{ label: 'Item' }, { label: 'Skill' }, { label: 'Equip' }, { label: 'Status' }, { label: 'Formation' }, { label: 'Quests' }, { label: 'Key Items' }];
     if ($.has('smith_tongs')) L.push({ label: 'Forge' });
     if ($.has('collectors_book')) L.push({ label: 'Bonds' }, { label: 'Bestiary' });   // Keeper's Ledger unlocks the collection screens (lock L09)
-    L.push({ label: 'Notes' }, { label: 'Options' }, { label: 'Save' }, { label: 'Game End' }); return L;
+    L.push({ label: 'Notes' }, { label: 'Options' }, { label: 'Save', color: this.saveOk() ? undefined : COL.dim }, { label: 'Game End' }); return L;   // greyed away from a lit Post/saving inn (still selectable: shows why)
+  }
+  saveOk() { const ms: any = this.scene.get('Map'); return !(ms && typeof ms.canSaveHere === 'function' && !ms.canSaveHere());
   }
   mk<T extends Win>(w: T) { this.wins.push(w); return w; }
   rm(w: Win) { w.destroy(); this.wins = this.wins.filter((x) => x !== w); if ((w as any).__panel && !this.wins.some((x) => (x as any).__panel)) this.party.setVisible(true); }
@@ -143,7 +145,16 @@ export class MenuScene extends Phaser.Scene {
     list.onSelect = (it) => { det.clear(); if (it) { det.txt(it.data.title, 16, 10, { size: 24, color: COL.gold }); det.txt(it.data.text, 16, 52, { size: 19, wrap: 520 }); } };
     list.setItems(notes.map((n: any) => ({ label: n.title, data: n }))); list.active = true; await new Promise<void>((res) => (list.onCancel = () => res())); [list, det, panel].forEach((x) => this.rm(x));
   }
-  async save() { this.cmd.active = false; await new Promise<void>((res) => { this.scene.launch('SaveLoad', { mode: 'save', onClose: () => { this.scene.stop('SaveLoad'); Input.clear(); res(); } }); this.scene.bringToTop('SaveLoad'); }); }
+  async save() {
+    const ms: any = this.scene.get('Map');
+    if (ms && typeof ms.canSaveHere === 'function' && !ms.canSaveHere()) {   // saves are a reward: only at a lit Lantern Post (or a saving inn)
+      (this as any).lastSaveRefused = ms.nearUnlitPost?.() ? 'unlit' : 'away'; this.cmd.active = false; Audio.se('buzzer');
+      const w = this.mk(new Selectable(this, 250, 230, 400, 150, this.tone)); w.setDepth(400); w.rowH = 38; w.pad = 150; w.setItems([{ label: 'OK' }]);
+      const t = this.add.text(450, 244, ms.nearUnlitPost?.() ? "This Lantern Post is dark.\nLight the lantern first." : "The lantern isn't lit here.\nSave at a Lantern Post.", { fontFamily: FONT, fontSize: '18px', color: '#fff', align: 'center' }).setOrigin(0.5, 0).setDepth(401); w.active = true;
+      await new Promise<void>((res) => { w.onOk = () => res(); w.onCancel = () => res(); }); this.rm(w); t.destroy(); this.cmd.active = true; return;
+    }
+    (this as any).lastSaveRefused = false;
+    this.cmd.active = false; await new Promise<void>((res) => { this.scene.launch('SaveLoad', { mode: 'save', onClose: () => { this.scene.stop('SaveLoad'); Input.clear(); res(); } }); this.scene.bringToTop('SaveLoad'); }); }
   async gameEnd() {
     const w = this.mk(new Selectable(this, 300, 220, 300, 190, this.tone)); w.setDepth(400); w.rowH = 38; w.pad = 44; w.setItems([{ label: 'Return to Title' }, { label: 'Cancel' }]); const t = this.add.text(450, 232, 'Return to the title screen?\n(Unsaved progress is lost.)', { fontFamily: FONT, fontSize: '17px', color: '#fff', align: 'center' }).setOrigin(0.5, 0).setDepth(401); w.active = true;
     const r = await new Promise<number>((res) => { w.onOk = (_i, i) => res(i); w.onCancel = () => res(1); }); this.rm(w); t.destroy();

@@ -5,6 +5,7 @@ from mapkit import *
 from maps_village import build_village
 from maps_rest import *
 from maps_ch3 import build_forest, build_grove, build_crossing, build_hollow
+from maps_maze import build_maze
 gen_db.write()
 import subprocess; subprocess.check_call([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spec_import.py')], cwd=os.path.dirname(os.path.abspath(__file__)))
 subprocess.check_call([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'items_import.py')], cwd=os.path.dirname(os.path.abspath(__file__)))
@@ -15,7 +16,7 @@ for _t in ('ch3_assets.py', 'ch3_data.py'): subprocess.check_call([sys.executabl
 # aliases and the optional-asset manifest) once more as the last asset step. `npm run art` stays a no-op afterwards.
 from art_custom import overlay as art_overlay, manifest as art_manifest
 art_overlay(); art_manifest()
-maps = [build_village(), build_sachi(), build_tea(), build_well(), build_shrine1(), build_summit(), build_forest(), build_grove(), build_crossing(), build_hollow()]
+maps = [build_village(), build_sachi(), build_tea(), build_well(), build_shrine1(), build_summit(), build_forest(), build_grove(), build_crossing(), build_hollow(), build_maze()]
 os.makedirs(os.path.join(ROOT, 'screenshots', 'maps'), exist_ok=True)
 for m in maps:
     m.save()
