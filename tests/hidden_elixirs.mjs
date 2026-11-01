@@ -82,6 +82,20 @@ try {
   // menu (field) use
   const fu = await page.evaluate(() => { const { $, Field } = window.__S; $.lumen = 3; const a = Field.useItemGlobal('spirit_elixir'); const o = { a, lumen: $.lumen, max: $.lumenMax, n: $.items.spirit_elixir }; o.full = Field.useItemGlobal('spirit_elixir'); o.n2 = $.items.spirit_elixir; return o; });
   ok(fu.a.ok && fu.lumen === fu.max && fu.n === 19 && /fully/.test(fu.a.msg) && !fu.full.ok && fu.n2 === 19, 'menu: fills Lumen to max, 1 used, not wasted when already full ' + JSON.stringify(fu));
+  // Items menu (Near and Far): a noSell item shows "Can't be sold." and no "Sells for" line
+  fs.mkdirSync('screenshots/hidden_elixirs', { recursive: true });
+  for (const realm of ['near', 'far']) {
+    await page.evaluate((r) => { window.__S.$.realm = r; }, realm); await sleep(200);
+    await press(page, 'x'); await waitScene(page, 'Menu'); await sleep(600);
+    const mt = await page.evaluate(async () => { const M = window.__game.scene.getScene('Menu'); const c = M.cmd; const i = c.items.findIndex((x) => /^Items?$/.test(x.label)); c.index = i; c.onOk(c.items[i], i);
+      await new Promise((r) => setTimeout(r, 600)); const L = M.wins.find((w) => w.items?.some?.((x) => x.label === 'Spirit Elixir')); if (!L) return null;
+      const j = L.items.findIndex((x) => x.label === 'Spirit Elixir'); L.index = j; L.refresh(); L.onSelect(L.items[j], j); await new Promise((r) => setTimeout(r, 300));
+      const out = []; const walk = (o) => { if (o.type === 'Text' && o.visible) out.push(o.text); (o.list || []).forEach(walk); }; M.children.list.forEach(walk); return out.join(' | '); });
+    await page.screenshot({ path: `screenshots/hidden_elixirs/items_menu_elixir_${realm}.png` });
+    ok(mt && /Can't be sold/.test(mt) && !/Sells for/.test(mt), `Items menu (${realm}): elixir shows "Can't be sold." and no "Sells for" line ` + JSON.stringify((mt || '').match(/.{0,40}(Sells for|Can't be sold).{0,20}/g)));
+    for (let k = 0; k < 8 && await page.evaluate(() => window.__game.scene.isActive('Menu')); k++) { await press(page, 'Escape'); await sleep(350); }
+    await settle(); }
+  await page.evaluate(() => { window.__S.$.realm = 'near'; });
   // shop: the elixir can't be sold (hidden from the Sell list like key items; a forced sell is refused)
   { await page.evaluate(() => { window.__game.scene.getScene('Map').openShop({ items: ['onigiri'], name: 'Test Shop' }); }); await waitScene(page, 'Shop', 10000); await sleep(600);
     const g0 = await page.evaluate(() => window.__S.$.gold);
