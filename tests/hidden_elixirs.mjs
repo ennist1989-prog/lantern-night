@@ -38,7 +38,8 @@ for (const m of Object.values(maps)) { const seen = reach(m);
       ok(D.some(([dx, dy]) => (dx || dy !== -1) && seen.has(`${r},${e.x + dx},${e.y + 1 + dy}`)), `map ${m.id} ev ${e.id} [${r}]: can walk back out of the nook`);
     } } }
 ok(spots.length === 20, `20 hidden elixirs (found ${spots.length})`);
-ok(Object.keys(maps).every((id) => spots.some((s) => s.map === +id)), 'every map has at least one');
+const ELIXIR_MAPS = [1, 2, 3, 4, 5, 6, 10, 111, 112, 113];   // integration-1031: map 7 (PR #52 Reedwind training maze) has no elixir by design
+ok(ELIXIR_MAPS.every((id) => maps[id] && spots.some((s) => s.map === id)), 'every elixir map has at least one');
 // ---- browser
 const { browser, page, errors } = await launch(process.env.BASE || process.argv[2]);
 const free = () => page.evaluate(() => window.__game.scene.getScene('Map').isFree());
