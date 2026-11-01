@@ -83,7 +83,7 @@ OBJS.update({
  "dresser":      cell("TilesetElement.png",6,7,3,2),
  "stool":        cell("TilesetElement.png",5,7,1,1),
  "counter":      cell("TilesetElement.png",2,10,3,1),
- "rug_red":      cell("TilesetElement.png",7,9,2,1),
+ "rug_red":      cell("TilesetElement.png",7,9,1,1),
  "curtain":      cell("TilesetElement.png",9,9,3,1),
  "stairs_up":    cell("TilesetElement.png",6,11,1,1),
  "stairs_down":  cell("TilesetElement.png",6,12,1,1),

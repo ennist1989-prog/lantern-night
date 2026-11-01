@@ -87,13 +87,16 @@ class Map:
                 c = (0 if not w else 2 if not e else 1, 0 if not n else 2 if not s else 1)
             self.tile(realm, x, y, G(sheet, ox + c[0], oy + c[1]), layer)
             for r in self.rs(realm): self.col[r][self.i(x, y)] = 0 if walk else 1
-    def obj(self, realm, name, tx, ty, fw=None, fh=1, dx=0, dy=0, block=True, flat=False, blockrect=None):
+    def obj(self, realm, name, tx, ty, fw=None, fh=1, dx=0, dy=0, block=True, flat=False, blockrect=None, above=False, sx=None, sy=None):
         w, h = OBJ[name][2], OBJ[name][3]
         tw = fw if fw is not None else max(1, math.ceil(w / 16))
         x = tx * TS + tw * 8 + dx; y = (ty + 1) * TS + dy
         for r in self.rs(realm):
             d = {'n': name, 'x': x, 'y': y}
             if flat: d['flat'] = True
+            if above: d['above'] = True   # drawn over the player/events (RPG Maker 'above characters' priority); collision unchanged
+            if sx: d['sx'] = sx
+            if sy: d['sy'] = sy
             self.objs[r].append(d)
             if block:
                 if blockrect: x0, y0, x1, y1 = blockrect
