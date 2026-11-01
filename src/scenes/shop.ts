@@ -20,7 +20,7 @@ export class ShopScene extends Phaser.Scene {
       if (it.traits?.length) { side.txt(it.traits.map(traitText).filter(Boolean).join(', '), 14, y, { size: 14, color: COL.green, wrap: 262 }); y += 20 * Math.ceil(it.traits.map(traitText).join(', ').length / 30); }
       if (['weapon', 'armor', 'acc'].includes(it.type)) { for (const pid of $.party.filter((q) => !it.who || it.who.includes(q))) { const a = $.actors[pid]; const cur = a.equips[it.slot || it.type]; const curP = cur ? DB.items[cur].params || {} : {}; let diff = ''; for (const k of Object.keys(it.params || {})) diff += `${k.toUpperCase()}${(it.params[k] - (curP[k] || 0)) >= 0 ? '+' : ''}${it.params[k] - (curP[k] || 0)} `; side.txt(`${DB.actors[pid].name}: ${diff}`, 14, y, { size: 16, color: COL.sys }); y += 22; } } };
     const buyOk = (id: string) => { const it = DB.items[id]; if (!it) return false; if ((it.shopChapter ?? 1) > ($.chapter || 1)) return false; if (it.who?.length && it.who.every((w: string) => w === 'daigo') && !$.party.includes('daigo')) return false; return true; };
-    const showList = () => { const ids: string[] = mode === 'buy' ? this.d.items.filter(buyOk) : Object.keys($.items).filter((k) => DB.items[k] && DB.items[k].type !== 'key' && DB.items[k].price && $.items[k] > 0 && DB.items[k].rarity !== 'relic');
+    const showList = () => { const ids: string[] = mode === 'buy' ? this.d.items.filter(buyOk) : Object.keys($.items).filter((k) => DB.items[k] && DB.items[k].type !== 'key' && !DB.items[k].noSell && DB.items[k].price && $.items[k] > 0 && DB.items[k].rarity !== 'relic');
       list.setItems(ids.map((id) => ({ label: DB.items[id].name, icon: iconOf(DB.items[id]), value: mode === 'buy' ? String(DB.items[id].price) + ' G' : (Math.floor(DB.items[id].price / 2)) + ' G ×' + $.items[id], enabled: mode === 'buy' ? $.gold >= DB.items[id].price : true, color: RARITY_COL(DB.items[id].rarity), data: id })), true);
       if (!ids.length) { list.clear(); list.txt('Nothing to sell.', 20, 20, { color: COL.dim }); } };
     list.onSelect = (it) => { desc.clear(); if (it) { desc.txt(DB.items[it.data].desc, 16, 8, { size: 19, wrap: 760 }); sideInfo(it.data); } else sideInfo(null); };
@@ -30,7 +30,7 @@ export class ShopScene extends Phaser.Scene {
     cmd.onCancel = () => this.d.onClose?.();
     list.onCancel = toCmd;
     list.onOk = (it) => { const id = it.data; const p = DB.items[id].price;
-      if (mode === 'buy') { if ($.gold < p) { Audio.se('buzzer'); return; } $.gold -= p; $.gain(id, 1); Audio.se('coin'); } else { if (!$.has(id)) return; $.gain(id, -1); $.gold += Math.floor(p / 2); Audio.se('coin'); }
+      if (mode === 'buy') { if ($.gold < p) { Audio.se('buzzer'); return; } $.gold -= p; $.gain(id, 1); Audio.se('coin'); } else { if (!$.has(id)) return; if (DB.items[id].noSell) { Audio.se('buzzer'); talk.clear(); talk.txt((this.d.name ? this.d.name + ': ' : '') + "Sorry, I can't buy that.", 16, 12, { size: 20, wrap: 300 }); return; } $.gain(id, -1); $.gold += Math.floor(p / 2); Audio.se('coin'); }
       drawGold(); const idx = list.index; showList(); list.index = Math.min(idx, Math.max(0, list.items.length - 1)); list.refresh(); list.onSelect(list.current, list.index); };
     void H; void FONT;
   }

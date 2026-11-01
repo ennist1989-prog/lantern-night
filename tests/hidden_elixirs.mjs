@@ -10,7 +10,7 @@ const maps = {}; for (const f of fs.readdirSync('public/data/maps')) if (/^map\d
 const items = JSON.parse(fs.readFileSync('public/data/items.json', 'utf8')); const icons = JSON.parse(fs.readFileSync('public/assets/icons.json', 'utf8'));
 const it = items.spirit_elixir;
 ok(it && it.icon === 'spirit_elixir' && !('iconV2' in it) && icons.spirit_elixir === 75, 'item uses icon slot 75, no iconV2');
-ok(it && it.price === 3000 && it.sell === 1500 && it.usable && it.effect.lumen >= 999, 'price 3000, sell 1500, usable, fills Lumen');
+ok(it && it.price === 3000 && it.noSell === true && !('sell' in it) && /can't be sold/i.test(it.desc) && it.usable && it.effect.lumen >= 999, 'price 3000, noSell (no sell price, desc says so), usable, fills Lumen');
 const shopsTxt = fs.readdirSync('public/data').filter((f) => /shop/i.test(f)).map((f) => fs.readFileSync('public/data/' + f, 'utf8')).join('');
 ok(!shopsTxt.includes('spirit_elixir'), 'not stocked in any shop (hidden pickups only)');
 // ---- data: reachability (BFS like edge_exits: collision + solid / touch events), entries = transfer arrivals, new game, respawn
@@ -82,6 +82,14 @@ try {
   // menu (field) use
   const fu = await page.evaluate(() => { const { $, Field } = window.__S; $.lumen = 3; const a = Field.useItemGlobal('spirit_elixir'); const o = { a, lumen: $.lumen, max: $.lumenMax, n: $.items.spirit_elixir }; o.full = Field.useItemGlobal('spirit_elixir'); o.n2 = $.items.spirit_elixir; return o; });
   ok(fu.a.ok && fu.lumen === fu.max && fu.n === 19 && /fully/.test(fu.a.msg) && !fu.full.ok && fu.n2 === 19, 'menu: fills Lumen to max, 1 used, not wasted when already full ' + JSON.stringify(fu));
+  // shop: the elixir can't be sold (hidden from the Sell list like key items; a forced sell is refused)
+  { await page.evaluate(() => { window.__game.scene.getScene('Map').openShop({ items: ['onigiri'], name: 'Test Shop' }); }); await waitScene(page, 'Shop', 10000); await sleep(600);
+    const g0 = await page.evaluate(() => window.__S.$.gold);
+    await page.evaluate(() => { const S = window.__game.scene.getScene('Shop'); S.wins[0].onOk({ label: 'Sell' }, 1); }); await sleep(400);   // Buy / Sell / Leave -> Sell
+    const sh = await page.evaluate(() => { const L = window.__game.scene.getScene('Shop').wins[2]; const labels = (L.items || []).map((x) => x.label);
+      try { L.onOk({ data: 'spirit_elixir' }, 0); } catch (e) {} return { labels, n: window.__S.$.items.spirit_elixir, gold: window.__S.$.gold }; });
+    ok(sh.labels.length > 0 && !sh.labels.includes('Spirit Elixir') && sh.n === 19 && sh.gold === g0, "shop: Spirit Elixir not in the Sell list and can't be sold " + JSON.stringify({ ...sh, g0 }));
+    for (let k = 0; k < 8 && await page.evaluate(() => window.__game.scene.isActive('Shop')); k++) { await press(page, 'Escape'); await sleep(350); } await settle(); }
   // battle use via the real Item command
   await page.evaluate(() => { const m0 = window.__game.scene.getScene('Map'); if (m0.__et) m0.enemyTouch = m0.__et; const { $ } = window.__S; $.realm = 'near'; $.healAll(); window.__done = null; window.__game.scene.getScene('Map').startBattle('tr_dust_wisp', { random: true, zone: 'z02' }).then((r) => (window.__done = r)); });
   await waitScene(page, 'Battle', 15000); let used = null, chose = false, pre = null;
