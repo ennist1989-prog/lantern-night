@@ -1,10 +1,11 @@
 // B2: chapter advances at story transitions, old saves infer it, save slots show it.
-import { launch, sleep, newGame, waitScene } from './lib.mjs';
-import fs from 'fs';
+import { launch, sleep, newGame, waitScene, SSDIR } from './lib.mjs';
+import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url';
+const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'data');   // cwd-independent
 const { browser, page, errors } = await launch(process.argv[2]);
 let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 try {
-  const m4 = JSON.stringify(JSON.parse(fs.readFileSync('public/data/maps/map004.json', 'utf8'))); const m6 = JSON.stringify(JSON.parse(fs.readFileSync('public/data/maps/map006.json', 'utf8')));
+  const m4 = JSON.stringify(JSON.parse(fs.readFileSync(path.join(DATA, 'maps/map004.json'), 'utf8'))); const m6 = JSON.stringify(JSON.parse(fs.readFileSync(path.join(DATA, 'maps/map006.json'), 'utf8')));
   ok(/"key_got"[^\]]*?\{"c":"chapter","n":2\}/.test(m4), 'Well: Shrine Key win sets chapter 2');
   ok(/"boss_done"[^\]]*?\{"c":"chapter","n":3\}/.test(m6), 'Bell-Keeper win sets chapter 3');
   await newGame(page); await sleep(400);
@@ -19,7 +20,7 @@ try {
   ok(r.start === 1 && r.after2 === 2 && r.noRegress === 2 && r.after3 === 3, 'chapter command advances and never regresses');
   ok(r.meta1 === 3 && r.meta2 === 2, 'save-slot meta carries chapter (old save inferred 2)'); ok(r.loaded2 === 2 && r.ver === 3, 'loading v2 save migrates chapter -> 2, ver 3');
   await page.evaluate(() => { window.__game.scene.getScene('Map').openSave(); }); await waitScene(page, 'SaveLoad'); await sleep(700);
-  fs.mkdirSync('/workspace/lantern-night/screenshots/b2', { recursive: true }); await page.screenshot({ path: '/workspace/lantern-night/screenshots/b2/save_slots_chapter.png' });
+  fs.mkdirSync(SSDIR + '/b2', { recursive: true }); await page.screenshot({ path: SSDIR + '/b2/save_slots_chapter.png' });
   const txt = await page.evaluate(() => window.__game.scene.getScene('SaveLoad').children.list.flatMap((c) => (c.list || [c])).flatMap((c) => (c.list || [c])).filter((c) => c.type === 'Text').map((c) => c.text));
   ok(txt.includes('Ch 3') && txt.includes('Ch 2'), 'save slots show Ch 3 / Ch 2');
   ok(errors.filter((e) => !/willReadFrequently/.test(e)).length === 0, 'no console errors ' + JSON.stringify(errors.slice(0, 3)));

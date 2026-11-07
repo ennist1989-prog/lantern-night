@@ -5,4 +5,6 @@ live/
 *.zip
 .env
 .env.local
+test-results/
 __pycache__/
+*.pyc

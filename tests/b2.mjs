@@ -1,5 +1,5 @@
-import { launch, press, sleep, waitScene, newGame, mashUntil, teleport, activeScenes } from './lib.mjs';
-const SS = '/workspace/lantern-night/screenshots';
+import { launch, press, sleep, waitScene, newGame, mashUntil, teleport, activeScenes, SSDIR } from './lib.mjs';
+const SS = SSDIR;
 const troop = process.argv[2] || 'tr_dust_wisp_dust_wisp'; const lvl = +(process.argv[3] || 2); const realm = process.argv[4] || 'far'; const tag = process.argv[5] || 'b2';
 const { browser, page, errors } = await launch();
 try {

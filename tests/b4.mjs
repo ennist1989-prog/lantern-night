@@ -1,6 +1,6 @@
-import { launch, press, sleep, waitScene, newGame, mashUntil, teleport, activeScenes } from './lib.mjs';
+import { launch, press, sleep, waitScene, newGame, mashUntil, teleport, activeScenes, SSDIR } from './lib.mjs';
 import { state, waitInput, pick, target, cmd } from './bdrive.mjs';
-const SS = '/workspace/lantern-night/screenshots';
+const SS = SSDIR;
 const troop = process.argv[2] || 'tr_straw_hound'; const mode = process.argv[3] || 'invite';
 const { browser, page, errors } = await launch();
 const shot = async (n) => { await sleep(300); await page.screenshot({ path: `${SS}/${n}.png` }); };

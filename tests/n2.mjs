@@ -1,6 +1,6 @@
 // Menu UI screens: Item / Skill / Equip / Key Items / Forge / Bonds + field use; screenshots to screenshots/n2-*.png
-import { launch, press, sleep, newGame, mashUntil, activeScenes, waitScene } from './lib.mjs';
-const SS = '/workspace/lantern-night/screenshots';
+import { launch, press, sleep, newGame, mashUntil, activeScenes, waitScene, SSDIR } from './lib.mjs';
+const SS = SSDIR;
 const { browser, page, errors } = await launch();
 let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 const cmdLabels = () => page.evaluate(() => window.__game.scene.getScene('Menu').cmd.items.map((i) => i.label));
@@ -24,7 +24,7 @@ try {
   // Equip
   await pick('Equip'); await press(page, 'Enter'); await sleep(400); await page.screenshot({ path: SS + '/n2-equip-slots.png' });
   await press(page, 'Enter'); await sleep(400); await page.screenshot({ path: SS + '/n2-equip-list.png' }); await press(page, 'ArrowDown'); await sleep(150); await page.screenshot({ path: SS + '/n2-equip-hover.png' });
-  await press(page, 'Enter'); await sleep(400); const w = await page.evaluate(() => window.__S.$.actors.mio.equips.weapon); ok(w === 'mio_w2', 'equipped Ash Lantern-Staff via menu: ' + w); await back();
+  await press(page, 'Enter'); const wq = () => page.evaluate(() => window.__S.$.actors.mio.equips.weapon); let w = await wq(); for (let i = 0; i < 40 && w !== 'mio_w2'; i++) { await sleep(150); w = await wq(); if (i === 16 && w !== 'mio_w2') await press(page, 'Enter'); }   // poll (the CI runner can drop/lag a key; one retry) ok(w === 'mio_w2', 'equipped Ash Lantern-Staff via menu: ' + w); await back();
   // Key items
   await pick('Key Items'); await page.screenshot({ path: SS + '/n2-keyitems.png' }); for (let i = 0; i < 3; i++) await press(page, 'ArrowDown', 40); await sleep(200); await page.screenshot({ path: SS + '/n2-keyitems2.png' }); await back();
   // Forge

@@ -1,6 +1,6 @@
-import { launch, press, sleep, waitScene, newGame, mashUntil, teleport, activeScenes } from './lib.mjs';
+import { launch, press, sleep, waitScene, newGame, mashUntil, teleport, activeScenes, SSDIR } from './lib.mjs';
 import fs from 'fs';
-const SS = '/workspace/lantern-night/screenshots';
+const SS = SSDIR;
 const { browser, page, errors } = await launch();
 try {
   await newGame(page);

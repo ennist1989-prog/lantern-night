@@ -1,6 +1,6 @@
-import { launch, sleep, press, hold, waitScene, waitFor, activeScenes, ev } from './lib.mjs';
+import { launch, sleep, press, hold, waitScene, waitFor, activeScenes, ev, SSDIR } from './lib.mjs';
 const { browser, page, errors } = await launch();
-const shot = (n) => page.screenshot({ path: `screenshots/${n}.png` });
+const shot = (n) => page.screenshot({ path: `${SSDIR}/${n}.png` });
 try {
   await waitScene(page, 'Title', 30000); await sleep(800);
   await press(page, 'Enter'); await waitScene(page, 'Map', 15000);
