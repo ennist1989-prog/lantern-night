@@ -31,7 +31,7 @@ def build_sachi():
     m.event(5, 1, [page(cond={'nsw': 'warden_done'}, trigger='action', list=[say(None, None, 'A paper calendar by the door. Seven days are crossed out in Sachi’s hand, and the last is circled: LANTERN NIGHT. Seven nights left.')]),
                    page(cond={'sw': 'warden_done'}, trigger='action', list=[say(None, None, 'The wall calendar. Night 2 is crossed out. Six nights to Lantern Night, circled in red. Mio’s wick drawer is half open beneath it.')])])
     m.light(9, 4, 4); m.light(3, 3, 3)
-    m.door_touch(6, 9, 1, 7, 15, 'down', se='door')
+    m.door_touch(6, 9, 1, 6, 15, 'down', se='door')
     # intro (autorun)
     intro = [narr('Ashiro Village, on the eve of the Lantern Festival.', 'Every year the villagers light one lantern for each spirit who has walked beside them.', 'This year, the Shrine Bell has not rung… and the lanterns will not light.'),
         say('sachi', 'Granny Sachi', 'Mio, child. Come here by the lamp. Your hands are cold.'),

@@ -10,7 +10,7 @@ def build_village():
         for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1): cells.add((x, y))
     rect(15, 15, 20, 18); rect(17, 3, 18, 14); rect(5, 16, 14, 17); rect(21, 16, 35, 17); rect(17, 19, 18, 24); rect(5, 22, 16, 24)
-    rect(7, 15, 7, 15); rect(25, 15, 25, 15); rect(12, 12, 12, 15); rect(24, 9, 24, 15); rect(3, 21, 9, 26)
+    rect(6, 15, 6, 15); rect(25, 15, 25, 15); rect(12, 12, 12, 15); rect(24, 9, 24, 15); rect(3, 21, 9, 26)
     STAIRS = {(x, y) for x in (17, 18) for y in (0, 1, 2)}   # D6 #1: the shrine path climbs on as stone stairs into the north gap
     if has_border(): cells |= STAIRS
     m.fill('both', 34, 13, 35, 19, GRASS, walk=False)
@@ -40,7 +40,7 @@ def build_village():
     m.light(16, 5, 3); m.light(20, 5, 3)
     m.obj('both', 'statue_fox', 15, 6, fw=1); m.obj('both', 'statue_fox', 21, 6, fw=1)
     # ---- buildings
-    m.obj('both', 'house_orange', 5, 14, fh=3); m.walk('both', 7, 14, True)          # Sachi's
+    m.obj('both', 'house_orange', 5, 14, fh=3); m.walk('both', 6, 14, True)          # Sachi's (door is drawn in the house's 2nd column, x=6)
     m.obj('both', 'shop', 24, 14, fh=3); m.walk('both', 25, 14, True)                 # teahouse
     m.obj('both', 'house_timber', 11, 11, fh=3); m.walk('both', 12, 11, True)         # forge
     m.obj('both', 'house_tan', 26, 8, fw=4, fh=3); m.walk('both', 27, 8, True)       # elder (locked)
@@ -99,7 +99,7 @@ def build_village():
     for (px, py, r) in [(16, 16, 3), (18, 6, 2), (8, 23, 3)]: m.region_circle(px, py, r, 6)
     m.encounter = dict(region=3, zone='z01'); m.region(5, 22, 16, 24, 3)
     # ---- Sachi's door & teahouse door & locked buildings
-    m.event(7, 14, [page(trigger='touch', through=True, list=[IF({'sw': 'intro_done'}, [{'c': 'transfer', 'map': 2, 'x': 6, 'y': 8, 'dir': 'up'}], [say('mio', 'Mio', '(I should talk to Granny first.)'), {'c': 'move', 'route': ['down']}])])])
+    m.event(6, 14, [page(trigger='touch', through=True, list=[IF({'sw': 'intro_done'}, [{'c': 'transfer', 'map': 2, 'x': 6, 'y': 8, 'dir': 'up'}], [say('mio', 'Mio', '(I should talk to Granny first.)'), {'c': 'move', 'route': ['down']}])])])
     m.event(25, 14, [page(trigger='touch', through=True, list=[{'c': 'transfer', 'map': 3, 'x': 7, 'y': 8, 'dir': 'up'}])])
     m.event(12, 11, [page(trigger='touch', through=True, list=[
         IF({'sw': 'daigo_joined'}, [say('daigo', 'Daigo', 'The forge’s cold, but I’ll get it going again. Soon as the Bell rings.'), {'c': 'move', 'route': ['down']}],
