@@ -1,0 +1,278 @@
+{
+ "strike": {
+  "name": "Strike",
+  "type": "phys",
+  "scope": "enemy",
+  "sp": 0,
+  "attack": true,
+  "fx": "cut",
+  "icon": "s_punch",
+  "formula": "a.atk*4 - b.def*2",
+  "desc": "Swing the Lantern."
+ },
+ "claw": {
+  "name": "Claw",
+  "type": "phys",
+  "scope": "enemy",
+  "sp": 0,
+  "attack": true,
+  "fx": "claw",
+  "icon": "s_cut",
+  "formula": "a.atk*4 - b.def*2",
+  "desc": "Slash with fox claws."
+ },
+ "hammer": {
+  "name": "Hammer",
+  "type": "phys",
+  "scope": "enemy",
+  "sp": 0,
+  "attack": true,
+  "fx": "slash",
+  "icon": "hammer",
+  "formula": "a.atk*4 - b.def*2",
+  "desc": "A solid smith’s blow."
+ },
+ "lumen_flare": {
+  "name": "Lumen Flare",
+  "type": "mag",
+  "scope": "enemy",
+  "sp": 5,
+  "element": "lumen",
+  "fx": "spark",
+  "se": "magic",
+  "icon": "s_light",
+  "formula": "a.mat*3 + 14 - b.mdf*2",
+  "desc": "A burst of Lantern light. Strong on the Far Shore."
+ },
+ "radiance": {
+  "name": "Radiance",
+  "type": "mag",
+  "scope": "enemies",
+  "sp": 10,
+  "element": "lumen",
+  "fx": "spark",
+  "se": "magic",
+  "icon": "s_sun",
+  "formula": "a.mat*2.4 + 8 - b.mdf*1.5",
+  "desc": "Light floods the whole field."
+ },
+ "soothe": {
+  "name": "Soothe",
+  "type": "parley",
+  "scope": "enemy",
+  "sp": 3,
+  "mood": 25,
+  "fx": "circle",
+  "se": "magic2",
+  "icon": "s_sing",
+  "desc": "Speak gently. Raises the target’s Mood (+25)."
+ },
+ "remember": {
+  "name": "Remember",
+  "type": "parley",
+  "scope": "enemy",
+  "sp": 5,
+  "mood": 15,
+  "moodSorrow": 40,
+  "fx": "circle",
+  "se": "magic2",
+  "icon": "s_talk",
+  "desc": "Recall what it once was. Big Mood gain on sorrowful spirits."
+ },
+ "hum": {
+  "name": "Hum",
+  "type": "parley",
+  "scope": "enemy",
+  "sp": 2,
+  "mood": 15,
+  "moodCurious": 28,
+  "fx": "circle",
+  "se": "magic2",
+  "icon": "s_sing",
+  "desc": "Kaze hums an old tune. Curious spirits love it."
+ },
+ "send": {
+  "name": "Send",
+  "type": "send",
+  "scope": "enemy",
+  "sp": 6,
+  "fx": "spirit",
+  "se": "magic2",
+  "icon": "s_moon",
+  "desc": "Guide a calmed (or nearly broken) spirit onward. 0 gold, but a kinder reward."
+ },
+ "mend": {
+  "name": "Mend",
+  "type": "heal",
+  "scope": "ally",
+  "sp": 6,
+  "formula": "a.mat*3 + 25",
+  "fx": "spark",
+  "se": "heal",
+  "icon": "s_heal",
+  "desc": "Restore HP to one ally."
+ },
+ "foxfire": {
+  "name": "Foxfire",
+  "type": "mag",
+  "scope": "enemy",
+  "sp": 4,
+  "element": "flame",
+  "fx": "flam",
+  "se": "fire",
+  "icon": "s_fire",
+  "formula": "a.mat*3.4 + 10 - b.mdf*2",
+  "desc": "Spirit flame. Burns dusty things."
+ },
+ "howl": {
+  "name": "Howl",
+  "type": "buff",
+  "scope": "allies",
+  "sp": 6,
+  "state": "atkup",
+  "turns": 3,
+  "popup": "ATK↑",
+  "fx": "circle",
+  "se": "powerup",
+  "icon": "s_atkup",
+  "desc": "Raise the whole party’s Attack for 3 turns."
+ },
+ "gale_dash": {
+  "name": "Gale Dash",
+  "type": "phys",
+  "scope": "enemies",
+  "sp": 7,
+  "element": "gale",
+  "fx": "slash",
+  "se": "slash",
+  "icon": "s_wind",
+  "formula": "a.atk*2.6 + a.mat - b.def*1.5",
+  "desc": "A whirlwind dash that hits every enemy."
+ },
+ "bulwark": {
+  "name": "Bulwark",
+  "type": "buff",
+  "scope": "allies",
+  "sp": 5,
+  "state": "protected",
+  "turns": 3,
+  "popup": "DEF↑",
+  "fx": "shield",
+  "se": "powerup",
+  "icon": "s_defup",
+  "desc": "Raise the whole party’s Defense for 3 turns."
+ },
+ "forge_strike": {
+  "name": "Forge Strike",
+  "type": "phys",
+  "scope": "enemy",
+  "sp": 5,
+  "element": "flame",
+  "fx": "flam",
+  "se": "fire",
+  "icon": "s_explo",
+  "formula": "a.atk*4.8 - b.def*2",
+  "desc": "A white-hot hammer blow."
+ },
+ "chain_smash": {
+  "name": "Chain Smash",
+  "type": "phys",
+  "scope": "enemy",
+  "sp": 8,
+  "hits": 2,
+  "fx": "cutx",
+  "se": "hit",
+  "icon": "s_counter",
+  "formula": "a.atk*2.8 - b.def*2",
+  "desc": "Two heavy hits in a row."
+ },
+ "e_strike": {
+  "name": "Strike",
+  "type": "phys",
+  "scope": "enemy",
+  "sp": 0,
+  "attack": true,
+  "fx": "claw",
+  "formula": "a.atk*4 - b.def*2"
+ },
+ "e_bite": {
+  "name": "Bite",
+  "type": "phys",
+  "scope": "enemy",
+  "sp": 0,
+  "attack": true,
+  "fx": "claw",
+  "formula": "a.atk*4.2 - b.def*2"
+ },
+ "e_puff": {
+  "name": "Dust Puff",
+  "type": "mag",
+  "scope": "enemy",
+  "sp": 0,
+  "fx": "spark",
+  "formula": "a.mat*3.5 - b.mdf*2"
+ },
+ "e_ember": {
+  "name": "Ember",
+  "type": "mag",
+  "scope": "enemy",
+  "sp": 0,
+  "fx": "flam",
+  "se": "fire",
+  "formula": "a.mat*4 - b.mdf*2"
+ },
+ "e_splash": {
+  "name": "Splash",
+  "type": "mag",
+  "scope": "enemy",
+  "sp": 0,
+  "fx": "water",
+  "se": "water",
+  "formula": "a.mat*3.6 - b.mdf*2"
+ },
+ "e_howl": {
+  "name": "Hollow Howl",
+  "type": "mag",
+  "scope": "enemies",
+  "sp": 0,
+  "fx": "circle",
+  "se": "strange",
+  "formula": "a.mat*2.2 - b.mdf*1.5"
+ },
+ "e_clang": {
+  "name": "Clang",
+  "type": "phys",
+  "scope": "enemy",
+  "sp": 0,
+  "fx": "cutx",
+  "se": "hit2",
+  "formula": "a.atk*4.6 - b.def*2"
+ },
+ "bell_toll": {
+  "name": "Bell Toll",
+  "type": "phys",
+  "scope": "enemies",
+  "sp": 0,
+  "fx": "circle",
+  "se": "bell",
+  "formula": "a.atk*3.4 - b.def*1.4"
+ },
+ "e_sorrow": {
+  "name": "Sorrowing Tide",
+  "type": "mag",
+  "scope": "enemies",
+  "sp": 0,
+  "fx": "water",
+  "se": "water",
+  "formula": "a.mat*2.6 - b.mdf*1.5"
+ },
+ "e_lantern": {
+  "name": "Cold Flame",
+  "type": "mag",
+  "scope": "enemy",
+  "sp": 0,
+  "fx": "flam",
+  "se": "fire",
+  "formula": "a.mat*4.2 - b.mdf*2"
+ }
+}
