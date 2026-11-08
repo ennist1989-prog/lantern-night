@@ -43,7 +43,7 @@ class Map:
         self.objs = {'near': [], 'far': []}
         self.events = []; self.lights = []; self.encounter = None; self.counters = []
         self.bgm = {'near': bgm_near, 'far': bgm_far}; self.noShift = False; self._eid = 0; self.bg = None
-        self.markers = []; self.dyn = []
+        self.markers = []; self.dyn = []; self.covers = []
     # ---- helpers
     def i(self, x, y): return y * self.w + x
     def inb(self, x, y): return 0 <= x < self.w and 0 <= y < self.h
@@ -128,7 +128,10 @@ class Map:
         self.event(x, y, [page(cond=cond, trigger='touch', list=l, through=True)], realm)
     def data(self):
         return dict(id=self.id, name=self.name, w=self.w, h=self.h, bgm=self.bgm, layers=self.layers, col=self.col, reg=self.reg,
-                    objs=self.objs, events=self.events, lights=self.lights, encounter=self.encounter, counters=self.counters, noShift=self.noShift, dyn=self.dyn, bg=self.bg)
+                    objs=self.objs, events=self.events, lights=self.lights, encounter=self.encounter, counters=self.counters, noShift=self.noShift, dyn=self.dyn, bg=self.bg) | ({'covers': self.covers} if self.covers else {})
+    def cover(self, realm, cells, cond):
+        """Switch-conditional ground: cells = [(x, y, {layer: gid})] drawn over the baked ground while cond holds (mapscene bakeCovers)."""
+        self.covers.append(dict(realm=realm, cells=[[x, y, L] for (x, y, L) in cells], cond=cond))
     def dynwalk(self, realm, cells, cond, walk=True):
         """Collision that flips when an event condition holds (e.g. an Anchored bridge). Tiles stay as drawn."""
         self.dyn.append(dict(realm=realm, cells=[list(c) for c in cells], cond=cond, walk=walk))

@@ -280,6 +280,7 @@ def west_road(m, cells, stairs):
     the rng stream and every older event ID are unchanged; the new events are appended after them."""
     import copy
     keep = (copy.deepcopy(m.layers), copy.deepcopy(m.col))
+    objs0 = copy.deepcopy(m.objs)   # Thomas 11/07: the loop-back road stays hidden (main's canopy) until the maze is cleared
     m.blob('both', cells | WEST, open_cells={(35, 16), (35, 17), (0, 16), (0, 17)} | stairs)
     # only the west road cells take the re-blobbed tiles/collision; everything else (stairs, rest of the road) stays as on main
     for r in ('near', 'far'):
@@ -309,3 +310,24 @@ def west_road(m, cells, stairs):
     for x in (22, 23, 24):
         m.event(x, 29, [page(trigger='touch', through=True, list=[IF({'sw': 'post_lit'}, [{'c': 'transfer', 'map': 7, 'x': 27, 'y': 1, 'dir': 'down'}],
             [say('mio', 'Mio', '(The old reed field trail. Granny is waiting for me. I should see her first.)'), {'c': 'move', 'route': ['up']}])])])
+    hide_west_road(m, keep, objs0)
+def hide_west_road(m, keep, objs0):
+    """Thomas 11/07: the maze exit's loop-back road (x 0..5, rows 15..18) must not show on the village map before the first
+    maze clear. Before maze_cleared the spot draws exactly what main drew there (cover tiles + the two border trees and
+    flowers) and keeps main's collision (dyn, walk=False); the banner posts show only after. The road events (0,16)/(0,17)
+    and every event ID are untouched; walking out of the maze exit still works and sets maze_cleared before the transfer."""
+    hide = {'nsw': 'maze_cleared'}
+    for r in ('near', 'far'):
+        cells, block = [], []
+        for y in range(14, 20):
+            for x in range(0, 6):
+                i = y * m.w + x
+                if any(keep[0][r][l][i] != m.layers[r][l][i] for l in m.layers[r]) or keep[1][r][i] != m.col[r][i]:
+                    cells.append((x, y, {l: keep[0][r][l][i] for l in m.layers[r]}))
+                    if keep[1][r][i] != 0 and m.col[r][i] == 0: block.append((x, y))
+        m.cover(r, cells, hide)
+        if block: m.dynwalk(r, block, hide, walk=False); m.dyn[-1]['cover'] = True
+        old = [o for o in objs0[r] if o not in m.objs[r] and o['x'] < 6 * 16]
+        for o in m.objs[r]:
+            if o not in objs0[r] and o['x'] < 6 * 16: o['cond'] = {'sw': 'maze_cleared'}; o['condOpen'] = True
+        for o in old: m.objs[r].append(dict(o, cond=hide))
