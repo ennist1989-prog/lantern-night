@@ -14,6 +14,14 @@ Redeploy after any change (URL stays the same): `npm run deploy`
 (= `bash scripts/deploy.sh`: builds with Vite `base: './'`, force-pushes `dist/` to `gh-pages`; requires `gh auth login`).
 Source on `main`: `git add -A && git commit -m "..." && git push`.
 
+## Error reporting (Sentry)
+`src/sentry.ts` (browser SDK) starts only when `VITE_SENTRY_DSN` is set at build time (in the gitignored `.env` or the shell). The DSN is never committed.
+- Release: `lantern-night@<package.json version>+<short git sha>`, injected through Vite `define` (`__APP_RELEASE__` in `vite.config.ts`). It is `+nogit` when git is unavailable.
+- Environment: the Vite mode (`production` for builds), unless `VITE_SENTRY_ENV` overrides it.
+- Local hosts (`localhost`, `127.0.0.1`, `::1`, `0.0.0.0`, `*.localhost`, `file://`): events and transactions are dropped in `beforeSend` / `beforeSendTransaction`, with no sessions and no tracing, unless the build sets `VITE_SENTRY_DEV=1`.
+- Tags: `map`, `realm` and `chapter` (set in `MapScene.loadMap` and the interpreter's `chapter` op) and `scene` (the top active Phaser scene). They are refreshed again right before each event is sent.
+- `npm run test:sentry` unit-tests the host filter, tag normalisation and the release format.
+
 ## Controls
 | Action | Keyboard | Gamepad | Touch |
 |---|---|---|---|
