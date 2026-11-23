@@ -216,17 +216,28 @@ function safeJoin(root, rel) {
   return out === base || out.startsWith(base + path.sep) ? out : null;
 }
 
+// Bounds for the central-directory reader. A real record is 46 bytes plus the
+// name, so a sane directory is a few hundred bytes per file; anything claiming
+// more than this, or more than the archive itself, is malformed.
+const MAX_CD_BYTES = 64 * 1024 * 1024;
+const MAX_CD_ENTRIES = 200000;
+const CD_RECORD_MIN = 46;
+
 /** Per-file byte sizes straight from the zip's central directory, so a dry run
- *  can report real totals without extracting anything. Returns null for zip64
- *  or anything odd, and the caller falls back to extracting and measuring. */
+ *  can report real totals without extracting anything. Returns null for zip64,
+ *  for a directory that does not fit the file, and for anything odd; the caller
+ *  then falls back to extracting and measuring. Every field read out of the
+ *  archive is treated as an attacker-controlled number, never trusted for an
+ *  allocation. */
 function readCentralDirectory(file) {
   let fd;
   try {
     fd = fs.openSync(file, 'r');
     const st = fs.fstatSync(fd);
+    if (st.size < 22) return null;
     const tailLen = Math.min(st.size, 65557);
     const tail = Buffer.alloc(tailLen);
-    fs.readSync(fd, tail, 0, tailLen, st.size - tailLen);
+    if (fs.readSync(fd, tail, 0, tailLen, st.size - tailLen) !== tailLen) return null;
     let eocd = -1;
     for (let i = tail.length - 22; i >= 0; i -= 1) if (tail.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
     if (eocd < 0) return null;
@@ -234,19 +245,29 @@ function readCentralDirectory(file) {
     const cdSize = tail.readUInt32LE(eocd + 12);
     const cdOffset = tail.readUInt32LE(eocd + 16);
     if (count === 0xffff || cdSize === 0xffffffff || cdOffset === 0xffffffff) return null;   // zip64: measure by extracting
+    // A malformed archive can put any 32-bit number in these fields (a 60-byte
+    // file claiming a 4 GB directory), so check all three before allocating:
+    // the directory must be non-empty, no larger than the file, no larger than
+    // our own cap, and its records must fit in the space it claims.
+    if (cdSize === 0 || cdSize > MAX_CD_BYTES || cdSize > st.size) return null;
+    if (cdOffset > st.size || cdOffset + cdSize > st.size) return null;
+    if (count === 0 || count > MAX_CD_ENTRIES || count * CD_RECORD_MIN > cdSize) return null;
     const cd = Buffer.alloc(cdSize);
-    if (cdSize) fs.readSync(fd, cd, 0, cdSize, cdOffset);
+    if (fs.readSync(fd, cd, 0, cdSize, cdOffset) !== cdSize) return null;
     const entries = [];
     let p = 0; let seen = 0;
-    while (seen < count && p + 46 <= cd.length && cd.readUInt32LE(p) === 0x02014b50) {
+    while (seen < count) {
+      if (p + CD_RECORD_MIN > cd.length || cd.readUInt32LE(p) !== 0x02014b50) return null;
       const usize = cd.readUInt32LE(p + 24);
       const nlen = cd.readUInt16LE(p + 28); const elen = cd.readUInt16LE(p + 30); const clen = cd.readUInt16LE(p + 32);
+      const next = p + CD_RECORD_MIN + nlen + elen + clen;
+      if (next > cd.length) return null;   // lengths that run past the buffer
       const mode = cd.readUInt32LE(p + 38) >>> 16;
-      const name = cd.toString('utf8', p + 46, p + 46 + nlen);
+      const name = cd.toString('utf8', p + CD_RECORD_MIN, p + CD_RECORD_MIN + nlen);
       if (usize === 0xffffffff) return null;
       const isDir = name.endsWith('/') || (mode & 0o170000) === 0o040000;
       if (!isDir && name) entries.push({ name, size: usize });
-      p += 46 + nlen + elen + clen;
+      p = next;
       seen += 1;
     }
     return entries.length ? { entries } : null;

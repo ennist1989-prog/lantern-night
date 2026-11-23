@@ -114,6 +114,13 @@ the usual case), truncated, or that fails to extract is **skipped, not fatal**:
 Extraction is tried with `tar`, `unzip`, Python's `zipfile` and (on Windows)
 PowerShell, in that order, so one bad handler is not a failed pack.
 
+Sizes come from the zip's central directory, and those fields are never trusted
+blind: the directory has to fit inside the file, stay under 64 MB and 200,000
+entries, and its records have to fit exactly the space it claims - otherwise the
+reader gives up and measures by extracting. A 52-byte file that says its
+directory is 1.9 GB gets no 1.9 GB buffer; it is read the slow way, fails there
+too, and is skipped like any other unreadable zip.
+
 ## Category size and the budget
 
 Two separate guards, both per category folder:
@@ -167,7 +174,7 @@ node tools/asset-sort/sort-downloads.test.mjs
 ```
 
 Builds a throwaway git repo and a throwaway downloads folder, then runs the real
-sorter against five embedded zips (two good, three bad) and checks 21 things:
+sorter against six embedded zips (two good, four bad) and checks 22 things:
 
 | fixture | what it proves |
 |---|---|
@@ -176,6 +183,7 @@ sorter against five embedded zips (two good, three bad) and checks 21 things:
 | `Broken_Zeldisaac.zip` - an HTML error page named `.zip` | caught before extraction, reported as "not a zip" |
 | `Corrupt_KayKit.zip` - a real `PK` header followed by garbage | passes the signature check, then fails every extractor, and is still skipped rather than aborting the run |
 | `Fantasy_Props_zipslip.zip` - an entry named `../escaped.txt` | refused from the central directory, before extraction, named in the summary and the log, and nothing lands outside the pack folder |
+| `Fantasy_Props_hugecd.zip` - 52 bytes whose directory claims 256 MB | the size field is refused instead of allocated, the archive falls back to extraction, is skipped, and the run still sorts and commits the good packs |
 
 The cap is covered by configuration rather than another zip, in a second throwaway
 repo: `--max-category-mb 0.00002` (21 bytes) is smaller than one good pack (24
@@ -189,8 +197,8 @@ sizes printed, nothing written), then `--apply` with a budget far below the
 packs (exit 2, no files, no commits, the category named), then the same run with
 `--allow-over-budget` (finishes, flags the overage).
 
-The rest of the assertions are the point of the test: exit 0 with all three bad zips present,
-all three named in the run summary and in `tasks/freebuff-results.md`, no files from
+The rest of the assertions are the point of the test: exit 0 with all four bad zips present,
+all four named in the run summary and in `tasks/freebuff-results.md`, no files from
 them in the repo, the good packs copied and committed one category at a time, a
 clean working tree afterwards, junk still stripped, and `--strict` flipping the
 same run to exit 1. The zips are base64 in the test file, so it needs no zip

@@ -52,6 +52,22 @@ const downloads = path.join(work, 'downloads');
 const repo = path.join(work, 'repo');
 const capRepo = path.join(work, 'cap-repo');
 
+// An archive that claims a 256 MB central directory in a 52-byte file. The
+// reader must refuse the size field instead of allocating it, fall back to
+// extraction (which cannot read it either), and skip the pack like any other
+// bad zip - the run has to survive it.
+function bogusCentralDirectoryZip() {
+  const local = Buffer.alloc(30);
+  local.writeUInt32LE(0x04034b50, 0);            // a real local-file signature, so looksLikeZip passes
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(1, 8);                      // one entry on this disk
+  eocd.writeUInt16LE(1, 10);                     // one entry in total
+  eocd.writeUInt32LE(256 * 1024 * 1024, 12);     // directory size: absurd for a 52-byte file
+  eocd.writeUInt32LE(30, 16);                    // directory offset: just past this header
+  return Buffer.concat([local, eocd]);
+}
+
 function makeRepo(dir) {
   fs.mkdirSync(path.join(dir, 'tasks'), { recursive: true });
   fs.mkdirSync(path.join(dir, 'public', 'assets'), { recursive: true });
@@ -74,6 +90,7 @@ try {
   fs.writeFileSync(path.join(downloads, 'Broken_Zeldisaac.zip'), Buffer.from('<html><body>404 not found</body></html>', 'utf8'));
   fs.writeFileSync(path.join(downloads, 'Corrupt_KayKit.zip'), Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('this is not a zip body, only the first four bytes pretend to be')]));
   fs.writeFileSync(path.join(downloads, 'Fantasy_Props_zipslip.zip'), Buffer.from(SLIP_B64, 'base64'));
+  fs.writeFileSync(path.join(downloads, 'Fantasy_Props_hugecd.zip'), bogusCentralDirectoryZip());
 
   const baseArgs = [TOOL, '--src', downloads, '--dest', path.join('public', 'assets'), '--max-category-mb', '10'];
 
@@ -119,13 +136,13 @@ try {
     if (!/continuing because --allow-over-budget/.test(out)) throw new Error('override not explained');
   });
 
-  check('the run exits 0 with three bad zips in the folder', () => {
+  check('the run exits 0 with four bad zips in the folder', () => {
     if (run.status !== 0) throw new Error(`exit ${run.status}: ${out.split('\n').filter(Boolean).slice(-4).join(' | ')}`);
   });
 
-  check('all three bad zips are named in the run summary', () => {
-    for (const n of ['Broken_Zeldisaac', 'Corrupt_KayKit']) if (!out.includes(n)) throw new Error(`summary does not mention ${n}`);
-    if (!/Survived 3 unreadable pack\(s\)/.test(out)) throw new Error('summary does not count 3 unreadable packs');
+  check('all four bad zips are named in the run summary', () => {
+    for (const n of ['Broken_Zeldisaac', 'Corrupt_KayKit', 'Fantasy_Props_hugecd']) if (!out.includes(n)) throw new Error(`summary does not mention ${n}`);
+    if (!/Survived 4 unreadable pack\(s\)/.test(out)) throw new Error('summary does not count 4 unreadable packs');
   });
 
   check('each broken zip is reported with a reason, not silently dropped', () => {
@@ -140,6 +157,16 @@ try {
     if (exists(path.join(repo, 'public', 'assets', 'other-game', 'fantasy-props-megakit'))) {
       throw new Error('a zip-slip pack folder was created');
     }
+  });
+
+  check('a zip claiming a huge central directory is skipped, not allocated', () => {
+    if (!/Fantasy Props MegaKit: SKIPPED - cannot extract Fantasy_Props_hugecd\.zip/.test(out)) {
+      throw new Error('bogus central directory not reported as an unreadable archive');
+    }
+    if (exists(path.join(repo, 'public', 'assets', 'other-game', 'fantasy-props-megakit'))) {
+      throw new Error('a pack folder was created from the bogus archive');
+    }
+    if (/RangeError|Invalid typed array length|Cannot allocate/.test(out)) throw new Error('the run blew up on the size field');
   });
 
   check('nothing from the zip-slip archive lands outside the pack folder', () => {
@@ -196,6 +223,7 @@ try {
     if (!/Broken_Zeldisaac\.zip: bad zip/.test(log)) throw new Error('log does not record the HTML-as-zip download');
     if (!/Corrupt_KayKit\.zip: bad zip/.test(log)) throw new Error('log does not record the corrupt archive');
     if (!/Fantasy_Props_zipslip\.zip: bad zip - 1 entry point outside the archive/.test(log)) throw new Error('log does not record the zip-slip archive');
+    if (!/Fantasy_Props_hugecd\.zip: bad zip - cannot extract/.test(log)) throw new Error('log does not record the bogus central directory');
     if (!/Zeldisaac_noroot\.zip \(Zeldisaac\)/.test(log)) throw new Error('log does not record the sorted no-top-folder pack');
     if (!/KayKit_Adventurers_top\.zip/.test(log)) throw new Error('log does not record the sorted top-folder pack');
     if (!/Skipped, not fatal/.test(log)) throw new Error('log has no skipped section');
