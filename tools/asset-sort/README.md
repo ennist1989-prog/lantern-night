@@ -167,7 +167,7 @@ node tools/asset-sort/sort-downloads.test.mjs
 ```
 
 Builds a throwaway git repo and a throwaway downloads folder, then runs the real
-sorter against four embedded zips (two good, two broken) and checks 15 things:
+sorter against five embedded zips (two good, three bad) and checks 21 things:
 
 | fixture | what it proves |
 |---|---|
@@ -175,14 +175,22 @@ sorter against four embedded zips (two good, two broken) and checks 15 things:
 | `KayKit_Adventurers_top.zip` - everything under one folder | that folder is stripped, so the pack starts at its own content |
 | `Broken_Zeldisaac.zip` - an HTML error page named `.zip` | caught before extraction, reported as "not a zip" |
 | `Corrupt_KayKit.zip` - a real `PK` header followed by garbage | passes the signature check, then fails every extractor, and is still skipped rather than aborting the run |
+| `Fantasy_Props_zipslip.zip` - an entry named `../escaped.txt` | refused from the central directory, before extraction, named in the summary and the log, and nothing lands outside the pack folder |
+
+The cap is covered by configuration rather than another zip, in a second throwaway
+repo: `--max-category-mb 0.00002` (21 bytes) is smaller than one good pack (24
+bytes) and larger than the other (9 bytes). The big pack must be skipped whole
+with its size in the message, its category left absent, the fitting pack in the
+other category still copied and committed, the skip recorded in the results log,
+and `--strict` must turn it into exit 1.
 
 It runs the tool three ways first: a dry run (real per-zip and per-category
 sizes printed, nothing written), then `--apply` with a budget far below the
 packs (exit 2, no files, no commits, the category named), then the same run with
 `--allow-over-budget` (finishes, flags the overage).
 
-The rest of the assertions are the point of the test: exit 0 with both broken zips present,
-both named in the run summary and in `tasks/freebuff-results.md`, no files from
+The rest of the assertions are the point of the test: exit 0 with all three bad zips present,
+all three named in the run summary and in `tasks/freebuff-results.md`, no files from
 them in the repo, the good packs copied and committed one category at a time, a
 clean working tree afterwards, junk still stripped, and `--strict` flipping the
 same run to exit 1. The zips are base64 in the test file, so it needs no zip
