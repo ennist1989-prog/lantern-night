@@ -465,6 +465,7 @@ for (const row of plan) {
     continue;
   }
   const junk = entries.filter(isJunk);
+  row.skippedLarge = [];   // re-measured from the extracted files; the plan's list came from the zip's own sizes
   let links = 0, unsafe = 0;
   const files = [];
   for (const rel of entries) {
@@ -526,7 +527,7 @@ for (const row of plan) {
     for (const name of row.skippedLarge.slice(0, 10)) console.log(`    ${name}`);
     if (row.skippedLarge.length > 10) console.log(`    ... and ${row.skippedLarge.length - 10} more`);
   }
-  agg.skipped.push(...row.skippedLarge);
+  agg.skipped.push(...row.skippedLarge.map((s) => `${row.name}: ${s}`));
 }
 
 for (const [category, agg] of results) {
@@ -577,7 +578,27 @@ if (buildAfter) {
 }
 
 // --------------------------------------------------------------------- log
-if (fs.existsSync(logPath)) {
+// A run that changed nothing (a second `--apply` on the same folder) should not
+// leave a commit behind just to say so. It logs when it copied something, capped
+// or failed at something new, or has a skip the log has not recorded yet - so a
+// repeated bad zip does not append the same lines on every rerun.
+const logExists = fs.existsSync(logPath);
+let logText = '';
+if (logExists) { try { logText = fs.readFileSync(logPath, 'utf8'); } catch { /* unreadable log: log anyway */ } }
+const skippedLines = [
+  ...plan.filter((r) => r.status === 'bad').map((r) => `    ${r.name}: bad zip - ${r.problem} (left in ${src}, nothing committed)`),
+  ...plan.filter((r) => r.status === 'capped').map((r) => `    ${r.name}: not copied - ${r.problem} (left in ${src})`),
+  ...CATEGORIES.flatMap((c) => results.get(c).skipped.map((s) => `    ${s}: over the ${maxFileMb} MB per-file limit (not copied)`)),
+  ...CATEGORIES.flatMap((c) => results.get(c).copyErrors.map((e) => `    copy failed: ${e}`)),
+];
+const copiedFiles = CATEGORIES.reduce((n, c) => n + results.get(c).files, 0);
+const cappedPacks = CATEGORIES.flatMap((c) => results.get(c).capped);
+const copyErrors = CATEGORIES.flatMap((c) => results.get(c).copyErrors);
+const newSkipped = skippedLines.filter((l) => !logText.includes(l.trim()));
+const logWorthy = copiedFiles > 0 || cappedPacks.length > 0 || copyErrors.length > 0 || newSkipped.length > 0;
+if (!logWorthy) {
+  console.log('\nNothing changed: no files copied, no commits, no log entry.');
+} else if (logExists) {
   const lines = plan
     .filter((r) => r.status === 'sorted' || r.status === 'present')
     .map((r) => {
@@ -586,11 +607,7 @@ if (fs.existsSync(logPath)) {
       return `    ${r.name} (${r.label}) - ${r.category}${sha ? ` (commit ${sha})` : ''}: ${r.status === 'present' ? 'already in the repo, nothing new' : `${r.keep.length} file(s) packed`}, ${r.junk.length} junk dropped${r.skippedLarge.length ? `, ${r.skippedLarge.length} over the ${maxFileMb} MB per-file limit` : ''}; category total ${mb(agg.bytes)} of the ${maxCategoryMb} MB cap.`;
     })
     .join('\n');
-  const skipped = [
-    ...plan.filter((r) => r.status === 'bad').map((r) => `    ${r.name}: bad zip - ${r.problem} (left in ${src}, nothing committed)`),
-    ...plan.filter((r) => r.status === 'capped').map((r) => `    ${r.name}: not copied - ${r.problem} (left in ${src})`),
-    ...CATEGORIES.flatMap((c) => results.get(c).copyErrors.map((e) => `    copy failed: ${e}`)),
-  ].join('\n');
+  const skipped = skippedLines.join('\n');
   const entry = [
     '',
     `- date: ${date}`,

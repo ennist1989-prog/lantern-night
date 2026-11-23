@@ -80,7 +80,7 @@ before anything ships. Check each pack's original terms before using its art.
 | `--strict` | off | exit 1 if any zip was bad or any pack was left out by the soft cap (default is to survive and report) |
 | `--no-build` | off | skip `npm run build` |
 | `--move-zips` | off | move sorted zips into `<src>\_sorted-<date>\` |
-| `--log <file>` | `tasks/freebuff-results.md` | append the run here, if the branch has it |
+| `--log <file>` | `tasks/freebuff-results.md` | append the run here, if the branch has it; a run that copies nothing and has no new skip prints `Nothing changed` and commits nothing |
 | `--keep-temp` | off | keep the extraction scratch folder for inspection |
 
 ## What it does on `--apply`, in order
@@ -137,7 +137,9 @@ Two separate guards, both per category folder:
   run still finishes and no pack is half-copied.
 
 The single-file limit (`--max-file-mb`, 95 MB; GitHub refuses over 100 MB) still
-applies inside a pack that fits. A category of several GB is a git problem
+applies inside a pack that fits: the oversized file is left out, counted once and
+named with its size in the output and in the results log, and the rest of the
+pack is copied and committed normally. A category of several GB is a git problem
 regardless of the per-file limit, so raise the budget deliberately.
 
 ### What a dry run prints
@@ -173,8 +175,8 @@ yourself.
 node tools/asset-sort/sort-downloads.test.mjs
 ```
 
-Builds a throwaway git repo and a throwaway downloads folder, then runs the real
-sorter against six embedded zips (two good, four bad) and checks 22 things:
+Builds throwaway git repos and downloads folders, then runs the real sorter
+against seven embedded zips (three good, four bad) and checks 27 things:
 
 | fixture | what it proves |
 |---|---|
@@ -184,6 +186,7 @@ sorter against six embedded zips (two good, four bad) and checks 22 things:
 | `Corrupt_KayKit.zip` - a real `PK` header followed by garbage | passes the signature check, then fails every extractor, and is still skipped rather than aborting the run |
 | `Fantasy_Props_zipslip.zip` - an entry named `../escaped.txt` | refused from the central directory, before extraction, named in the summary and the log, and nothing lands outside the pack folder |
 | `Fantasy_Props_hugecd.zip` - 52 bytes whose directory claims 256 MB | the size field is refused instead of allocated, the archive falls back to extraction, is skipped, and the run still sorts and commits the good packs |
+| `Fantasy_Props_bigfile.zip` - one 12-byte file and one 100-byte file | with `--max-file-mb 0.00005` (52 bytes) the big file is left out, counted once, named with its size in the output and the log, and the small file is still copied and committed |
 
 The cap is covered by configuration rather than another zip, in a second throwaway
 repo: `--max-category-mb 0.00002` (21 bytes) is smaller than one good pack (24
@@ -191,6 +194,13 @@ bytes) and larger than the other (9 bytes). The big pack must be skipped whole
 with its size in the message, its category left absent, the fitting pack in the
 other category still copied and committed, the skip recorded in the results log,
 and `--strict` must turn it into exit 1.
+
+A second `--apply` over the same folder is asserted to be a no-op: no new files,
+no new commit of any kind (including the results log), an unchanged asset tree
+and an unchanged log. That is why the tool only logs a run that changed
+something or has a skip the log has not recorded yet - a rerun that finds every
+pack already in place prints `Nothing changed: no files copied, no commits, no
+log entry.` and stops there.
 
 It runs the tool three ways first: a dry run (real per-zip and per-category
 sizes printed, nothing written), then `--apply` with a budget far below the

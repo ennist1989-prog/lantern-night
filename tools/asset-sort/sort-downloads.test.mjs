@@ -29,6 +29,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TOOL = path.join(HERE, 'sort-downloads.mjs');
 
 const NOROOT_B64 = 'UEsDBBQAAAAAAKQdd13rDBqYCwAAAAsAAAAPAAAAdGlsZXMvZ3Jhc3MucG5nZ3Jhc3MtYnl0ZXNQSwMEFAAAAAAApB13XWAdJfsNAAAADQAAABAAAAByb290X3BhbGV0dGUucG5ncGFsZXR0ZS1ieXRlc1BLAwQUAAAAAACkHXddo6TZ3QMAAAADAAAACwAAAExJQ0VOU0UudHh0Y2MwUEsBAhQDFAAAAAAApB13XesMGpgLAAAACwAAAA8AAAAAAAAAAAAAAIABAAAAAHRpbGVzL2dyYXNzLnBuZ1BLAQIUAxQAAAAAAKQdd11gHSX7DQAAAA0AAAAQAAAAAAAAAAAAAACAATgAAAByb290X3BhbGV0dGUucG5nUEsBAhQDFAAAAAAApB13XaOk2d0DAAAAAwAAAAsAAAAAAAAAAAAAAIABcwAAAExJQ0VOU0UudHh0UEsFBgAAAAADAAMAtAAAAJ8AAAAAAA==';
+const BIGFILE_B64 = 'UEsDBBQAAAAIAG4gd10y5iJ+DQAAAAsAAAAXAAAAQmlnUGFjay9hc3NldHMvdGlueS5wbmcrycyr1E2qLEkt5gIAUEsDBBQAAAAIAG4gd13bPcWuBgAAAGQAAAAXAAAAQmlnUGFjay9hc3NldHMvaHVnZS5iaW7LyKA9AABQSwMEFAAAAAgAbiB3XWUt1X0GAAAABAAAABMAAABCaWdQYWNrL0xJQ0VOU0UudHh0S0424AIAUEsBAhQDFAAAAAgAbiB3XTLmIn4NAAAACwAAABcAAAAAAAAAAAAAAIABAAAAAEJpZ1BhY2svYXNzZXRzL3RpbnkucG5nUEsBAhQDFAAAAAgAbiB3Xds9xa4GAAAAZAAAABcAAAAAAAAAAAAAAIABQgAAAEJpZ1BhY2svYXNzZXRzL2h1Z2UuYmluUEsBAhQDFAAAAAgAbiB3XWUt1X0GAAAABAAAABMAAAAAAAAAAAAAAIABfQAAAEJpZ1BhY2svTElDRU5TRS50eHRQSwUGAAAAAAMAAwDLAAAAtAAAAAAA';
 const SLIP_B64 = 'UEsDBBQAAAAIAIQed11bIOTxLwAAAC8AAAAOAAAALi4vZXNjYXBlZC50eHQFwUEOABAMBMC7V+zXRFcqGhUt7zeTOgKhfk2w+HhgdQn8ZgwhUold20R3E57yAVBLAwQUAAAACACEHndd7sIkMAsAAAAJAAAABgAAAG9rLnR4dMtILMrNSS0u5gIAUEsBAhQDFAAAAAgAhB53XVsg5PEvAAAALwAAAA4AAAAAAAAAAAAAAIABAAAAAC4uL2VzY2FwZWQudHh0UEsBAhQDFAAAAAgAhB53Xe7CJDALAAAACQAAAAYAAAAAAAAAAAAAAIABWwAAAG9rLnR4dFBLBQYAAAAAAgACAHAAAACKAAAAAAA=';
 const TOP_B64 = 'UEsDBBQAAAAAAKQdd13Asu+JCQAAAAkAAAAbAAAAQWR2ZW50dXJlcnMvbW9kZWxzL2hlcm8uZ2xiZ2xiLWJ5dGVzUEsDBBQAAAAAAKQdd12jpNndAwAAAAMAAAAWAAAAQWR2ZW50dXJlcnMvTElDRU5TRS5tZGNjMFBLAQIUAxQAAAAAAKQdd13Asu+JCQAAAAkAAAAbAAAAAAAAAAAAAACAAQAAAABBZHZlbnR1cmVycy9tb2RlbHMvaGVyby5nbGJQSwECFAMUAAAAAACkHXddo6TZ3QMAAAADAAAAFgAAAAAAAAAAAAAAgAFCAAAAQWR2ZW50dXJlcnMvTElDRU5TRS5tZFBLBQYAAAAAAgACAI0AAAB5AAAAAAA=';
 
@@ -40,6 +41,14 @@ function check(name, fn) {
 }
 const read = (p) => fs.readFileSync(p, 'utf8');
 const exists = (p) => fs.existsSync(p);
+const walkAll = (dir, root = dir, acc = []) => {
+  if (!exists(dir)) return acc;
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) walkAll(p, root, acc); else acc.push(path.relative(root, p));
+  }
+  return acc.sort();
+};
 
 function git(cwd, args) {
   const res = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -51,6 +60,8 @@ const work = fs.mkdtempSync(path.join(os.tmpdir(), 'asset-sort-test-'));
 const downloads = path.join(work, 'downloads');
 const repo = path.join(work, 'repo');
 const capRepo = path.join(work, 'cap-repo');
+const bigDownloads = path.join(work, 'big-downloads');
+const bigRepo = path.join(work, 'big-repo');
 
 // An archive that claims a 256 MB central directory in a 52-byte file. The
 // reader must refuse the size field instead of allocating it, fall back to
@@ -82,8 +93,11 @@ function makeRepo(dir) {
 
 try {
   fs.mkdirSync(downloads);
+  fs.mkdirSync(bigDownloads);
   makeRepo(repo);
   makeRepo(capRepo);
+  makeRepo(bigRepo);
+  fs.writeFileSync(path.join(bigDownloads, 'Fantasy_Props_bigfile.zip'), Buffer.from(BIGFILE_B64, 'base64'));
 
   fs.writeFileSync(path.join(downloads, 'Zeldisaac_noroot.zip'), Buffer.from(NOROOT_B64, 'base64'));
   fs.writeFileSync(path.join(downloads, 'KayKit_Adventurers_top.zip'), Buffer.from(TOP_B64, 'base64'));
@@ -229,7 +243,55 @@ try {
     if (!/Skipped, not fatal/.test(log)) throw new Error('log has no skipped section');
   });
 
-  // 4. The soft cap: a pack that does not fit is left out whole, the category is
+  // 4. Running --apply again over the same folder must be a no-op: the packs are
+  //    already there, so nothing is copied, committed or logged.
+  const assetsDir = path.join(repo, 'public', 'assets');
+  const headBefore = git(repo, ['rev-parse', 'HEAD']).trim();
+  const treeBefore = walkAll(assetsDir).map((f) => `${f}:${fs.statSync(path.join(assetsDir, f)).size}`).join('|');
+  const logBefore = read(path.join(repo, 'tasks', 'freebuff-results.md'));
+  const again = spawnSync(process.execPath, args, { cwd: repo, encoding: 'utf8' });
+  const againOut = `${again.stdout || ''}${again.stderr || ''}`;
+  check('a second --apply copies nothing new', () => {
+    if (again.status !== 0) throw new Error(`exit ${again.status}: ${againOut.slice(-300)}`);
+    if (!/no new file\(s\)/.test(againOut)) throw new Error('the rerun did not report "no new file(s)"');
+    if (!/already in the repo; nothing new committed for them/.test(againOut)) throw new Error('the rerun did not report the packs as already present');
+  });
+  check('a second --apply makes no commits and leaves the tree and log untouched', () => {
+    const headAfter = git(repo, ['rev-parse', 'HEAD']).trim();
+    if (headAfter !== headBefore) throw new Error(`a commit was made: ${headBefore} -> ${headAfter}`);
+    const treeAfter = walkAll(assetsDir).map((f) => `${f}:${fs.statSync(path.join(assetsDir, f)).size}`).join('|');
+    if (treeAfter !== treeBefore) throw new Error('the asset tree changed on the rerun');
+    if (read(path.join(repo, 'tasks', 'freebuff-results.md')) !== logBefore) throw new Error('the rerun appended a log entry');
+    if (git(repo, ['status', '--short']).trim()) throw new Error('the rerun left changes in the repo');
+    if (!/Nothing changed: no files copied, no commits, no log entry/.test(againOut)) throw new Error('the rerun did not say it changed nothing');
+  });
+
+  // 5. A file over --max-file-mb is left out while the rest of its pack lands.
+  //    The limit here is 0.00005 MB (52 bytes); the pack has a 12-byte file and a
+  //    100-byte one, so only the small one can be copied.
+  const bigArgs = [TOOL, '--src', bigDownloads, '--dest', path.join('public', 'assets'), '--max-file-mb', '0.00005', '--apply'];
+  const big = spawnSync(process.execPath, bigArgs, { cwd: bigRepo, encoding: 'utf8' });
+  const bigOut = `${big.stdout || ''}${big.stderr || ''}`;
+  const bigBase = path.join(bigRepo, 'public', 'assets', 'other-game', 'fantasy-props-megakit');
+  check('a file over --max-file-mb is skipped while the rest of its pack is copied', () => {
+    if (big.status !== 0) throw new Error(`exit ${big.status}: ${bigOut.slice(-300)}`);
+    if (!exists(path.join(bigBase, 'assets', 'tiny.png'))) throw new Error('the file under the limit was not copied');
+    if (exists(path.join(bigBase, 'assets', 'huge.bin'))) throw new Error('the file over the limit was copied anyway');
+  });
+  check('the oversized file is listed once, with its size, and the pack is still committed', () => {
+    if (!/OVER the 0\.00005 MB per-file limit/.test(bigOut)) throw new Error('no per-file limit notice');
+    if (!/1 file\(s\) over the 0\.00005 MB per-file limit/.test(bigOut)) throw new Error('the table did not count exactly one oversized file');
+    if (!/assets\/huge\.bin \(100 B\)/.test(bigOut)) throw new Error('the oversized file is not named with its size');
+    if (/2 file\(s\) over/.test(bigOut)) throw new Error('the oversized file was counted twice');
+    if (!/Add the other-game asset packs/.test(git(bigRepo, ['log', '--oneline']))) throw new Error('the rest of the pack was not committed');
+  });
+  check('the oversized skip is recorded in the results log', () => {
+    const log = read(path.join(bigRepo, 'tasks', 'freebuff-results.md'));
+    if (!/assets\/huge\.bin \(100 B\)/.test(log)) throw new Error('the log does not name the oversized file');
+    if (!/Skipped, not fatal/.test(log)) throw new Error('the log has no skipped section');
+  });
+
+  // 6. The soft cap: a pack that does not fit is left out whole, the category is
   //    untouched, and a pack that does fit in another category still commits.
   const capArgs = [TOOL, '--src', downloads, '--dest', path.join('public', 'assets'), '--max-category-mb', '0.00002'];
   const capped = spawnSync(process.execPath, [...capArgs, '--apply'], { cwd: capRepo, encoding: 'utf8' });
