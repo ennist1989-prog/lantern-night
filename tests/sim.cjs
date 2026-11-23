@@ -51,4 +51,27 @@ if (require.main === module) {
     const low = trial(1.7), high = trial(40); const ok = low.forcedNear && low.realm === 'near' && low.end === 'win' && !high.forcedNear && high.realm === 'far' && high.end === 'win';
     console.log((ok ? 'PASS' : 'FAIL') + ' N10 forced Near: Far fight at 1.7 Lumen ' + JSON.stringify(low) + ', at 40 Lumen ' + JSON.stringify(high)); if (!ok) process.exitCode = 1;
   }
+  // D2: the first Far-Shore Dust Wisp is the tutorial skirmisher ("dies in 1-2 hits") and must not be a coin flip for a new
+  // player who only presses Attack. Attack-only solo L1 Mio, Far Shore, standard: >= 90% wins. With the old 0.5 physical
+  // resist this was 52% over 2000 runs, and both probe fights ended at 11/90 and 2/90 HP.
+  {
+    const n = 600; let wins = 0;
+    for (let i = 0; i < n; i++) {
+      const party = mkParty(['mio'], 1);
+      const B = new Battle({ realm: 'far', lumen: 60, lumenMax: 60, difficulty: 'standard', items: {}, itemDB: ITEMS, pity: {}, flags: {} }, party, 'tr_dust_wisp');
+      let g = 0;
+      while (!B.ended && g++ < 60) {
+        B.startRound(); const foe = B.foesAlive()[0];
+        for (const p of B.party) if (p.hp > 0) p.action = { type: 'skill', skill: 'p_attack', targets: [foe.uid] };
+        B.buildOrder();
+        for (const b of B.order.slice()) { if (B.ended || b.hp <= 0 || b.gone) continue; B.act(b); }
+        if (!B.ended) B.endRound();
+        B.checkEnd();
+      }
+      if (B.ended === 'win') wins++;
+    }
+    const pct = Math.round((wins / n) * 100); const ok = pct >= 90;
+    console.log((ok ? 'PASS' : 'FAIL') + ' D2 attack-only L1 Mio vs tr_dust_wisp (Far): ' + pct + '% wins over ' + n + ' (need >= 90%)');
+    if (!ok) process.exitCode = 1;
+  }
 }
