@@ -11,8 +11,8 @@ import { W, H, Win, COL, FONT, Fader, sleep } from '../ui/windows';
 import { MessageSystem } from '../ui/message';
 import { Char, TS, Dir, DV, OPP } from './character';
 import { Interpreter } from './interpreter';
-import { recolorCanvas, farTexture } from './recolor';
-const SHEETS = ['floor', 'ifloor', 'wallsimple', 'water', 'ch3fix'];   // gid sheet 5 = ch3fix (optional; maps only use it when art/custom/tiles/ch3fix.png exists)
+import { recolorCanvas, farTexture, farColor } from './recolor';
+const SHEETS = ['floor', 'ifloor', 'wallsimple', 'water', 'ch3fix', 'border', 'maze'];   // sheet 7 = maze (training maze hedge, maze-v1); gid sheet 5 = ch3fix (optional; maps only use it when art/custom/tiles/ch3fix.png exists)
 export interface GEvent { id: number; data: any; char: Char; page: any | null; pageIdx: number; wander: number; erased: boolean; aggro: boolean; stun: number; marker: Phaser.GameObjects.Text | null; home: { x: number; y: number }; running: boolean; }
 export class MapScene extends Phaser.Scene {
   world!: Phaser.GameObjects.Container; ui!: Phaser.GameObjects.Container; fxLayer!: Phaser.GameObjects.Container; msg!: MessageSystem; fader!: Fader; interp!: Interpreter;
@@ -20,12 +20,15 @@ export class MapScene extends Phaser.Scene {
   ready = false; transitioning = false; overlay = false; shiftLocked = false; shifting = false; wasMoving = false; trail: { x: number; y: number }[] = []; shiftCool = 0;
   hud!: Win; hudG!: Phaser.GameObjects.Graphics; hudTxt!: Phaser.GameObjects.Text; hudLum!: Phaser.GameObjects.Text; vig!: Phaser.GameObjects.Image; glows: Phaser.GameObjects.Image[] = []; motes: { s: Phaser.GameObjects.Rectangle; vx: number; vy: number }[] = [];
   tintRect!: Phaser.GameObjects.Rectangle; banner: Win | null = null; stepsLeft = 50; scrollX = 0; scrollY = 0; camOverride: { x: number; y: number } | null = null; lowWarned = false; lastBgm = '';
+  ctlTxt: Phaser.GameObjects.Text | null = null;
   introBlack = false; saveIcon!: Phaser.GameObjects.Text; fadingNow = false; shake_ = 0; pendingMode: any; mapLights: any[] = [];
   constructor() { super('Map'); }
   init(data: any) { this.pendingMode = data || {}; }
   create() {
     this.cameras.main.setBackgroundColor(0x000000);
     this.world = this.add.container(0, 0).setScale(3); this.fxLayer = this.add.container(0, 0).setDepth(50); this.ui = this.add.container(0, 0).setDepth(100);
+    // click/tap a tile next to Mio: face it and act on it (same as the action button; e.g. the hidden Spirit Elixirs)
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => { if (!this.isFree() || !this.player || this.player.moving) return; this.clickTile(Math.floor((p.x / 3 + this.scrollX) / TS), Math.floor((p.y / 3 + this.scrollY) / TS)); });
     this.msg = new MessageSystem(this, this.ui); this.fader = new Fader(this, 99999); this.fader.rect.fillAlpha = 1; /* black from the first frame; start() reveals */ this.interp = new Interpreter(this);
     // darkness vignette (Far Shore): clear centre, dark edges
     const vw = 1632, vh = 1248; if (!this.textures.exists('vig')) { const vc = this.textures.createCanvas('vig', vw, vh)!; const vx = vc.getContext(); const g = vx.createRadialGradient(vw / 2, vh / 2, 250, vw / 2, vh / 2, 640);
@@ -86,7 +89,8 @@ export class MapScene extends Phaser.Scene {
     const md = this.mapData;
     for (const realm of ['near', 'far'] as const) for (const o of md.objs[realm] || []) {
       const key = realm === 'far' ? farTexture(this, 'objects') : 'objects';
-      const im = this.add.image(o.x, o.y, key, o.n).setOrigin(0.5, 1); im.setDepth(o.flat ? o.y - 5000 : o.y + (o.dy || 0)); (im as any).realm = realm; this.world.add(im); this.objs.push(im);
+      const im = this.add.image(o.x, o.y, key, o.n).setOrigin(0.5, 1); im.setDepth(o.flat ? o.y - 5000 : o.above ? 90000 + o.y : o.y + (o.dy || 0)); if (o.sx || o.sy) im.setScale(o.sx || 1, o.sy || 1);
+      (im as any).realm = realm; this.world.add(im); this.objs.push(im);   // PF2: 'above' objs draw over characters (below markers/balloons at 99999)
     }
   }
   buildEvents() {
@@ -103,6 +107,7 @@ export class MapScene extends Phaser.Scene {
   }
   applyRealmVisuals() {
     const far = $.realm === 'far';
+    const bg = this.mapData?.bg; this.cameras.main.setBackgroundColor(bg ? (far ? farColor(bg) : bg) : 0x000000);   // D5: small interiors tint the letterbox to their wall colour
     this.groundImgs.near.setVisible(!far); this.groundImgs.far.setVisible(far);
     this.objs.forEach((o) => o.setVisible((o as any).realm === (far ? 'far' : 'near')));
     this.player.setSheet('mio', false, this.player.dir); this.followers.forEach((f, i) => f.setSheet($.party[i + 1], false, f.dir));
@@ -110,7 +115,7 @@ export class MapScene extends Phaser.Scene {
     this.msg.setTone(far ? 'far' : 'near'); this.hud.setTone(far ? 'far' : 'near');
     // lantern glows
     this.glows.forEach((g) => g.destroy()); this.glows = [];
-    for (const l of this.mapData.lights || []) { if (l.realm && l.realm !== $.realm) continue; const g = this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setAlpha(far ? 0.75 : 0.28); (g as any).l = l; this.fxLayer.add(g); this.glows.push(g); }
+    for (const l of this.mapData.lights || []) { if (l.realm && l.realm !== $.realm) continue; const g = this.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setAlpha(l.a ?? (far ? (l.fa ?? 0.75) : 0.28)); if (l.tint != null) g.setTint(l.tint); (g as any).l = l; this.fxLayer.add(g); this.glows.push(g); }
     this.evs.forEach((e) => this.applyPageGraphic(e));
   }
   // ------------------------------------------------------------ events
@@ -131,13 +136,17 @@ export class MapScene extends Phaser.Scene {
   }
   eventsAt(tx: number, ty: number, solidOnly = false) { return this.evs.filter((e) => e.page && (e.char.visible || !e.page.g) && (e.char.tx === tx && e.char.ty === ty) && (!solidOnly || (!e.char.through && !e.page.through))); }
   ctxOf(e: GEvent) { return { ev: e.id, map: this.mapData.id }; }
-  async triggerEvent(e: GEvent) {
-    if (!e.page || e.running) return;
+  async triggerEvent(e: GEvent, bump = false) {
+    if (!e.page || e.running) return; const map0 = this.mapData.id, px0 = this.player.tx, py0 = this.player.ty;
     if (e.data.realm === 'far' && $.realm === 'near') { Audio.se('cursor'); this.msg.toast('You can only glimpse it from here. Shift to reach it.', 2000, 14, COL.dim); return; } e.running = true; const p = e.page;
     try {
       if (p.enemy) { await this.enemyTouch(e, false); }
       else await this.interp.run(p.list || [], this.ctxOf(e));
-    } finally { e.running = false; this.refreshEvents(); Input.clear(); }
+    } finally {
+      e.running = false; this.refreshEvents(); Input.clear();
+      // D7: a touch event that didn't change map (locked gate, push-back) must not re-fire while the key that walked into it is still held
+      if (p.trigger === 'touch' && this.mapData.id === map0 && (bump || this.player.tx !== px0 || this.player.ty !== py0)) Input.latchDirs();
+    }
   }
   checkAutoRun() {
     if (!this.ready || this.interp.busy || this.transitioning) return;
@@ -168,7 +177,9 @@ export class MapScene extends Phaser.Scene {
     if (!this.ready) return; const dt = Math.min(dtRaw, 50);
     const free = this.isFree(); if (free) $.playtime += dt / 1000;
     const wasM = this.player.moving;
+    if (free && this.ctlStep() === 'ready' && Input.anyTriggered()) { $.tutorialsShown.ctl_done = true; Input.clear(); Audio.se('ok'); }   // D3: dismissed only by a press
     if (free && !this.player.moving) this.playerInput();
+    this.updateCtlTut();
     this.player.update(dt);
     if (wasM && !this.player.moving) this.onPlayerStep();
     this.followers.forEach((f) => f.update(dt));
@@ -179,8 +190,23 @@ export class MapScene extends Phaser.Scene {
     if (this.shiftCool > 0) this.shiftCool -= dt;
     if (free) this.checkAutoRun();
   }
+  /** D3 controls tutorial: a checklist that stays up until every control has been used, then until a button press. Progress
+   *  lives in $.tutorialsShown (ctl_*), so it survives saves without a SAVE_VERSION bump; old saves never set ctl_on. */
+  static CTL: [string, string][] = [['ctl_move', 'Move: Arrows / WASD'], ['ctl_dash', 'Dash: hold Shift while moving'], ['ctl_ok', 'Talk / Confirm: Z / Enter'],
+    ['ctl_menu', 'Menu: X / Esc (X again closes)'], ['ctl_shift', 'Realm Shift: Q / Tab']];
+  ctlStep(): 'off' | 'todo' | 'ready' { const t = $.tutorialsShown; if (!t.ctl_on || t.ctl_done) return 'off'; return MapScene.CTL.every(([k]) => t[k]) ? 'ready' : 'todo'; }
+  ctlMark(k: string) { if (this.ctlStep() === 'todo' && !$.tutorialsShown[k]) { $.tutorialsShown[k] = true; Audio.se('cursor', 0.5); } }
+  updateCtlTut() {
+    const st = this.ctlStep(); const show = st !== 'off' && !this.msg.busy && !this.overlay && !this.transitioning;
+    if (!show) { this.ctlTxt?.setVisible(false); return; }
+    if (!this.ctlTxt) { this.ctlTxt = this.add.text(W - 12, 12, '', { fontFamily: FONT, fontSize: '16px', color: '#bff6ff', backgroundColor: '#0d1220dd', padding: { x: 10, y: 8 }, lineSpacing: 4, stroke: '#000', strokeThickness: 2 }).setOrigin(1, 0).setName('ctltut'); this.ui.add(this.ctlTxt); }
+    const t = $.tutorialsShown; const lines = ['Controls — try each one:', ...MapScene.CTL.map(([k, s]) => (t[k] ? '✓ ' : '☐ ') + s)];
+    if (st === 'ready') lines.push('', 'All set! Press any button.');
+    const s = lines.join('\n'); if (this.ctlTxt.text !== s) this.ctlTxt.setText(s); this.ctlTxt.setVisible(true);
+  }
   playerInput() {
     const P = this.player;
+    if (this.ctlStep() === 'todo') { if (Input.isTriggered('shift')) this.ctlMark('ctl_shift'); if (Input.isTriggered('menu')) this.ctlMark('ctl_menu'); if (Input.isTriggered('ok')) this.ctlMark('ctl_ok'); }
     if (Input.isTriggered('shift')) { Input.consume('shift'); this.tryShift(); return; }
     if (Input.isTriggered('menu')) { Input.consume('menu'); Input.consume('cancel'); this.openMenu(); return; }
     if (Input.isTriggered('ok')) { Input.consume('ok'); this.action(); return; }
@@ -189,11 +215,12 @@ export class MapScene extends Phaser.Scene {
       const dash = Input.isDown('dash') !== Settings.data.alwaysRun;
       P.face(d);
       if (this.canMove(P, d, true)) {
+        if (this.ctlStep() === 'todo') { this.ctlMark('ctl_move'); if (Input.isDown('dash')) this.ctlMark('ctl_dash'); }
         P.start(d, this.moveDur(dash)); this.trail.push({ x: P.tx, y: P.ty }); if (this.trail.length > 8) this.trail.shift(); this.moveFollowers(this.moveDur(dash));
       } else {
         // bump into blocking event -> touch trigger
         const nx = P.tx + DV[d][0], ny = P.ty + DV[d][1];
-        const evs = this.eventsAt(nx, ny).filter((e) => e.page.trigger === 'touch'); if (evs.length) this.triggerEvent(evs[0]);
+        const evs = this.eventsAt(nx, ny).filter((e) => e.page.trigger === 'touch'); if (evs.length) this.triggerEvent(evs[0], true);
       }
     }
   }
@@ -218,9 +245,13 @@ export class MapScene extends Phaser.Scene {
     const pool: any[] = zone.tables[$.realm] || []; if (!pool.length) return; let tot = 0; pool.forEach((p) => (tot += p.weight)); let r = Math.random() * tot; let pick = pool[0]; for (const p of pool) { r -= p.weight; if (r <= 0) { pick = p; break; } }
     this.interp.running++; try { await this.startBattle(pick.troop, { random: true, zone: zone.id }); } finally { this.interp.running--; }
   }
+  clickTile(tx: number, ty: number) {
+    const P = this.player; const d = (Object.keys(DV) as Dir[]).find((k) => P.tx + DV[k][0] === tx && P.ty + DV[k][1] === ty); if (!d) return;
+    if (P.dir !== d) P.face(d); this.action();
+  }
   action() {
     const P = this.player; const fx = P.tx + DV[P.dir][0], fy = P.ty + DV[P.dir][1];
-    let cands = this.eventsAt(fx, fy).filter((e) => e.page.trigger === 'action' || e.page.enemy);
+    let cands = this.eventsAt(fx, fy).filter((e) => (e.page.trigger === 'action' && (!e.page.faceDir || e.page.faceDir === P.dir)) || e.page.enemy);
     // counter-style: talk across a counter tile
     if (!cands.length && this.mapData.counters?.some((c: number[]) => c[0] === fx && c[1] === fy)) { const gx = fx + DV[P.dir][0], gy = fy + DV[P.dir][1]; cands = this.eventsAt(gx, gy).filter((e) => e.page.trigger === 'action'); }
     if (!cands.length) cands = this.eventsAt(P.tx, P.ty).filter((e) => e.page.trigger === 'action');
@@ -295,7 +326,7 @@ export class MapScene extends Phaser.Scene {
     await this.fader.in(this, 700);
     const lines = DB.system.fadingLines; const ln = lines[$.fades % lines.length];
     await this.msg.show(ln.face, ln.name, ln.text);
-    this.fadingNow = false; this.interp.running--; this.autosave('fade');
+    this.fadingNow = false; this.interp.running--;   // no autosave on a fade: the player respawns at the last lit Post; saving stays a reward
   }
   findShiftTarget(tx: number, ty: number, target: 'near' | 'far') {
     const ok = (x: number, y: number) => this.tileFree(x, y, target) && this.region(x, y) !== 2 && !this.eventsBlock(x, y, target);
@@ -352,7 +383,7 @@ export class MapScene extends Phaser.Scene {
       this.vig.setPosition((P.px - this.scrollX) * 3, (P.py - 8 - this.scrollY) * 3);
       for (const m of this.motes) { m.s.x += m.vx * dt / 1000; m.s.y += m.vy * dt / 1000; if (m.s.y < -10) { m.s.y = H + 10; m.s.x = Math.random() * W; } m.s.setAlpha(0.35 + 0.25 * Math.sin(this.time.now / 300 + m.s.x)); }
     }
-    for (const g of this.glows) { const l = (g as any).l; g.setPosition((l.x * TS + 8 - this.scrollX) * 3, (l.y * TS + 8 - this.scrollY) * 3).setScale((l.r || 4) * 0.6 * (1 + 0.05 * Math.sin(this.time.now / 260 + l.x))); }
+    for (const g of this.glows) { const l = (g as any).l; g.setPosition((l.x * TS + 8 - this.scrollX) * 3, (l.y * TS + 8 - this.scrollY) * 3).setScale((l.r || 4) * 0.6 * (l.a != null ? 1 : 1 + 0.05 * Math.sin(this.time.now / 260 + l.x))); }
     if (this.shake_ > 0) this.shake_ = Math.max(0, this.shake_ - dt / 120);
   }
   updateHud() {
@@ -370,12 +401,28 @@ export class MapScene extends Phaser.Scene {
   // ------------------------------------------------------------ event helpers for interpreter
   findChar(target: any, ctx: any): Char | null { if (target === 'player') return this.player; if (typeof target === 'string' && target.startsWith('f')) return this.followers[parseInt(target.slice(1)) - 1] || null; const id = target === 'self' ? ctx.ev : target; const e = this.evs.find((x) => x.id === id); return e ? e.char : null; }
   turnChar(target: any, dir: Dir | 'player' | 'away', ctx: any) { const ch = this.findChar(target, ctx); if (!ch) return; if (dir === 'player') { const dx = this.player.tx - ch.tx, dy = this.player.ty - ch.ty; ch.face(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up')); } else ch.face(dir as Dir); }
+  /** Can a char stand on (x,y)? Tile walkable and no blocking event char there. */
+  cellOpen(x: number, y: number, self?: Char) {
+    if (!this.tileFree(x, y)) return false;
+    for (const e of this.evs) { if (e.char === self || !e.page || !e.char.visible || e.page.through || e.char.through) continue; if (e.char.tx === x && e.char.ty === y) return false; }
+    return true;
+  }
+  /** 'back' route step (locked doors/gates): opposite of facing (= where the char came from) if that cell is open and not a dead end;
+   *  else any open neighbour with a further exit; else any open neighbour; else stay. Recovers saves standing in a dead-end pocket. */
+  backDir(ch: Char): Dir | null {
+    const order: Dir[] = [OPP[ch.dir as Dir], 'down', 'left', 'right', 'up'];
+    const open = (d: Dir) => this.cellOpen(ch.tx + DV[d][0], ch.ty + DV[d][1], ch);
+    const exits = (d: Dir) => { const x = ch.tx + DV[d][0], y = ch.ty + DV[d][1]; return (['down', 'left', 'right', 'up'] as Dir[]).some((e) => { const ex = x + DV[e][0], ey = y + DV[e][1]; return !(ex === ch.tx && ey === ch.ty) && this.cellOpen(ex, ey, ch); }); };
+    return order.find((d) => open(d) && exits(d)) ?? order.find(open) ?? null;
+  }
   async moveRoute(target: any, route: string[], wait: boolean, ctx: any) {
     const ch = this.findChar(target, ctx); if (!ch) return;
     for (const step of route) {
       if (step.startsWith('wait')) { await sleep(this, parseInt(step.split(':')[1] || '300')); continue; }
       if (step.startsWith('face:')) { ch.face(step.slice(5) as Dir); continue; }
-      const d = step as Dir; ch.face(d); const nx = ch.tx + DV[d][0], ny = ch.ty + DV[d][1];
+      let d = step as Dir;
+      if (step === 'back') { const b = this.backDir(ch); if (!b) continue; d = b; }   // D7: push back the way the char came, never into a dead end
+      ch.face(d); const nx = ch.tx + DV[d][0], ny = ch.ty + DV[d][1];
       if (!(ch.through || this.tileFree(nx, ny)) && target !== 'player') continue;
       ch.start(d, 190); if (target === 'player') { this.trail.push({ x: ch.tx, y: ch.ty }); this.moveFollowers(190); }
       await new Promise<void>((res) => { const t = this.time.addEvent({ delay: 16, loop: true, callback: () => { if (!ch.moving) { t.remove(); res(); } } }); });
@@ -390,11 +437,26 @@ export class MapScene extends Phaser.Scene {
     Audio.se(o.se || 'door', 0.6);
     await this.fader.out(this, o.fast ? 150 : 320, o.white ? 0xffffff : 0x000000);
     await this.loadMap(mapId, x, y, dir, { resetDefeated: !sameMap });
+    Input.latchDirs(dir);   // D7: only the arrival (inward) direction keeps walking; others need a fresh press
     if (o.setRespawn) $.respawn = { map: mapId, x, y, dir };
     await this.fader.in(this, o.fast ? 150 : 320); this.transitioning = false;
-    if (!sameMap) { this.showBanner(mapName(mapId)); if (!o.noAuto) this.autosave('transfer'); }
+    if (!sameMap) { this.showBanner(mapName(mapId)); if (!o.noAuto && o.milestone) this.queueMilestone(); }   // saves are a reward: no autosave on a plain map change, only on milestone transfers
   }
   // ------------------------------------------------------------ saving
+  /** Menu > Save works only at a save point: next to (or on) this map's working Lantern Post, or its inn keeper when that inn saves. */
+  /** True beside a Lantern Post that has a save page but is not lit yet (its active page is the lighting scene). */
+  nearUnlitPost(): boolean {
+    const p = this.player; if (!p) return false;
+    const has = (l: any[]): boolean => (l || []).some((c: any) => c && (c.c === 'post' || has(c.then) || has(c.else)));
+    return this.evs.some((e) => !e.erased && this.eventRealmOK(e) && Math.abs(e.data.x - p.tx) <= 1 && Math.abs(e.data.y - p.ty) <= 1 && (e.data.pages || []).some((pg: any) => has(pg.list)) && !(e.page && has(e.page.list)));
+  }
+  canSaveHere(): boolean {
+    const p = this.player; if (!p) return false;
+    const isSave = (l: any[]): boolean => (l || []).some((c: any) => c && (c.c === 'post' || (c.c === 'inn' && !c.noSave) || isSave(c.then) || isSave(c.else) || (Array.isArray(c.br) && c.br.some((b: any) => isSave(b)))));
+    return this.evs.some((e) => !e.erased && this.eventRealmOK(e) && Math.abs(e.data.x - p.tx) <= 1 && Math.abs(e.data.y - p.ty) <= 1 && !!e.page && isSave(e.page.list));
+  }
+  /** Milestone autosave, written once the running event has finished so the save never lands mid-cutscene. */
+  queueMilestone() { const tick = () => { if (!this.scene.isActive() && !this.scene.isPaused()) return; if (!this.ready || this.interp.busy || this.msg.busy || this.overlay) { this.time.delayedCall(200, tick); return; } this.autosave('milestone'); }; this.time.delayedCall(50, tick); }
   autosave(kind = 'auto') {
     if (kind === 'boss' || kind === 'cp') { $.checkpoint = null; const snap = SaveManager.snapshotString(); $.checkpoint = snap; }
     const r = SaveManager.auto(); if (r.ok) { this.saveIcon.setAlpha(1); this.tweens.add({ targets: this.saveIcon, alpha: 0, duration: 1600, delay: 600 }); }
@@ -438,7 +500,9 @@ export class MapScene extends Phaser.Scene {
     const i = await this.msg.choice([`Rest (${price} G)`, 'Never mind'], 1);
     if (i === 1) { await this.msg.show(c.face ?? null, who, c.no ?? 'Come back anytime.'); return; }
     if ($.gold < price) { Audio.se('buzzer'); await this.msg.show(c.face ?? null, who, c.poor ?? "Oh… you're a bit short. Next time, dear."); return; }
-    $.gold -= price; await this.fader.out(this, 500); $.healAll(); $.lumen = $.lumenMax; Audio.me('secret'); await sleep(this, 1200); this.autosave('inn'); await this.fader.in(this, 500);
+    $.gold -= price; await this.fader.out(this, 500); $.healAll(); $.lumen = $.lumenMax; Audio.me('secret'); await sleep(this, 1200); if (!c.noSave) this.autosave('inn');
+    // one-save-per-map: an inn on a map that has a Lantern Post rests only (noSave), it does not autosave
+    await this.fader.in(this, 500);
     await this.msg.show(c.face ?? null, who, c.yes ?? 'Sleep well? HP, SP and Lumen restored!');
   }
   async usePost(ctx: any) {
@@ -471,7 +535,7 @@ export class MapScene extends Phaser.Scene {
     this.overlay = false; Input.clear(); this.applyRealmVisuals(); this.refreshEvents(); $.setV('battle_peaceful', peaceful ? 1 : 0);
     Audio.bgm(this.mapBgm()); const zz = SPEC.zones[zid]; $.grace = zz?.graceSteps ?? 8; this.stepsLeft = Math.max(this.stepsLeft, this.rollSteps(false, zz?.encounterSteps?.[$.realm] || 26)); await this.fader.in(this, 300);
     if (res === 'lose') { await this.handleDefeat(boss, o); return 'lose'; }
-    this.autosave('battle');
+    if (boss) this.autosave('battle');   // milestone: a boss win (ordinary fights no longer autosave)
     return res as any;
   }
   async handleDefeat(boss: boolean, o: any) {
@@ -491,6 +555,6 @@ export class MapScene extends Phaser.Scene {
     }
     await this.fadeOutOfFar2();
   }
-  async fadeOutOfFar2() { await this.fader.out(this, 600, 0xffffff); $.fades++; $.realm = 'near'; $.lumen = Math.max(20, $.lumen); $.healAll(); const r = $.respawn; await this.loadMap(r.map, r.x, r.y, r.dir as Dir); await this.fader.in(this, 600); const ln = DB.system.fadingLines[$.fades % DB.system.fadingLines.length]; await this.msg.show(ln.face, ln.name, 'You blacked out… ' + ln.text); this.autosave('fade'); }
+  async fadeOutOfFar2() { await this.fader.out(this, 600, 0xffffff); $.fades++; $.realm = 'near'; $.lumen = Math.max(20, $.lumen); $.healAll(); const r = $.respawn; await this.loadMap(r.map, r.x, r.y, r.dir as Dir); await this.fader.in(this, 600); const ln = DB.system.fadingLines[$.fades % DB.system.fadingLines.length]; await this.msg.show(ln.face, ln.name, 'You blacked out… ' + ln.text); }   // no autosave on a blackout: the player wakes at the last rest point; saving stays a reward
 }
 export { Win, COL };

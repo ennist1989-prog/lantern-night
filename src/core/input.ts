@@ -74,10 +74,15 @@ class InputClass {
   consume(k: Key) { this.trig.delete(k); }
   anyTriggered() { return this.trig.size > 0; }
   clear() { this.trig.clear(); }
+  private latched = new Set<Key>();
+  /** D7: ignore the direction keys held right now until each is released (optionally keep one, e.g. the arrival facing after a
+   *  map change), so a held key can't walk straight back into the touch event/exit that just fired. */
+  latchDirs(allow?: Key | null) { this.latched = new Set((['up', 'down', 'left', 'right'] as Key[]).filter((k) => k !== allow && this.down.has(k))); this.updateDir4(); }
   private prefAxis: 'x' | 'y' = 'y'; private d4: Key | null = null;
   /** 4-way direction: opposite keys cancel; on a diagonal the axis pressed most recently wins (re-implementation of RM-style feel). */
   private updateDir4() {
-    const dn = (k: Key) => this.down.has(k); let x = (dn('right') ? 1 : 0) - (dn('left') ? 1 : 0), y = (dn('down') ? 1 : 0) - (dn('up') ? 1 : 0);
+    for (const k of [...this.latched]) if (!this.down.has(k)) this.latched.delete(k);
+    const dn = (k: Key) => this.down.has(k) && !this.latched.has(k); let x = (dn('right') ? 1 : 0) - (dn('left') ? 1 : 0), y = (dn('down') ? 1 : 0) - (dn('up') ? 1 : 0);
     if (x !== 0 && y !== 0) { if (this.prefAxis === 'x') y = 0; else x = 0; } else if (x !== 0) this.prefAxis = 'y'; else if (y !== 0) this.prefAxis = 'x';
     this.d4 = x > 0 ? 'right' : x < 0 ? 'left' : y > 0 ? 'down' : y < 0 ? 'up' : null;
   }

@@ -20,7 +20,7 @@ try {
       const inb = await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); return b?.B ? [b.B.round, b.B.foes[0].hp] : null; });
       // L3 vs the L5 Keeper can stall for minutes under Enter-mash; hasten the first loss so the Retry prompt is reached (the test is about Retry -> win -> aftermath)
       if (!retried && !globalThis.weakened && inb && inb[0] >= 2) { globalThis.weakened = 1; await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); for (const p of b.B.party) { p.hp = 1; } }); }
-      if (retried && !cheated && inb && inb[0] >= 2) { await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); b.B.foes[0].hp = 20; b.B.foes[0].dispHp = 20; }); cheated = true; }
+      if (retried && inb && inb[0] >= 2) { if (await page.evaluate(() => { const b = window.__game.scene.getScene('Battle'); if (!b?.B || b.B.__t3cheat) return false; b.B.__t3cheat = 1; for (const f of b.B.foes) if (f.hp > 0) { f.hp = Math.min(f.hp, 20); f.dispHp = f.hp; } return true; })) cheated = true; }   // every post-Retry fight (incl. a second loss -> Retry) and every foe (the Keeper summons adds): one-shot cheat on foes[0] stalled under load
     }
     const txt = await page.evaluate(() => { const m = window.__game.scene.getScene('Map'); return m?.msg?.choiceOpen ? 'choice' : ''; });
     await press(page, 'Enter', 50); await sleep(200);
@@ -31,5 +31,5 @@ try {
   const v = flow.verdict(); if (!retried) { v.ok = false; v.seen.push('no-retry-prompt'); } console.log((v.ok ? 'PASS' : 'FAIL') + ' Bell-Keeper aftermath flow', JSON.stringify(v.seen)); if (!v.ok) process.exitCode = 1;
   await shot('82-end');
   console.log('errors', errors.filter((e) => !e.includes('willReadFrequently')).slice(0, 6));
-} catch (e) { console.log('FAIL', e.message); console.log(errors.filter((e) => !e.includes('willReadFrequently')).slice(0, 8)); await shot('8x-fail'); }
+} catch (e) { process.exitCode = 1; console.log('FAIL', e.message); console.log(errors.filter((e) => !e.includes('willReadFrequently')).slice(0, 8)); await shot('8x-fail'); }
 await browser.close();

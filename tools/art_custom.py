@@ -17,7 +17,7 @@ SKIP = {'README.md', '.gitkeep'}
 EXT = {'chars': '.png', 'faces': '.png', 'boss': '.png', 'tiles': '.png', 'bgm': '.ogg', 'se': '.ogg', 'me': '.ogg'}
 # art/custom/objects/<name>.png are cell overrides of the objects.png atlas (not copied as files): build_assets.py packs them
 # when it rebuilds the atlas from the pack, and objects_overlay() below patches them into the committed atlas on every run.
-NO_COPY = {'objects'}
+NO_COPY = {'objects', 'icons'}
 # Delivered files whose name differs from what the game loads: also copied under the old name until the repo switches over
 # (ch3-redo-v2: the Willow Mother face ships as faces/willow_final.png, the game loads faces/willow.png). The field sprite
 # chars/willow_final.png is on HOLD, so its alias only takes effect once that file is added to art/custom/chars/.
@@ -107,7 +107,7 @@ def overlay(log=True):
                 meta[bid] = m
     if any(r.startswith('boss' + os.sep) for r in done): json.dump(meta, open(meta_p, 'w'))
     if log: print('art/custom overlay:', done or 'nothing to copy')
-    objects_overlay(log)
+    objects_overlay(log); icons_overlay(log)
     return done
 
 def objects_overlay(log=True):
@@ -121,17 +121,45 @@ def objects_overlay(log=True):
     for fn in sorted(os.listdir(d)):
         if not fn.endswith('.png'): continue
         n = fn[:-4]; im = Image.open(os.path.join(d, fn)).convert('RGBA')
-        if n not in frames: print('WARN objects overlay: no atlas cell named', n); continue
+        if n not in frames: frames[n] = [0, 0, 0, 0]; changed = True   # custom-only cell (e.g. chest_open): appended below the atlas
         x, y, w, h = frames[n]
         if (w, h) != im.size:
             y = atlas.height + 1; x = 0; grown = Image.new('RGBA', (max(atlas.width, im.width), y + im.height), (0, 0, 0, 0))
             grown.alpha_composite(atlas, (0, 0)); atlas = grown; frames[n] = [x, y, im.width, im.height]; changed = True
+        if x + im.width > atlas.width or y + im.height > atlas.height:   # rect recorded in objects.json past the canvas (e.g. a merge kept a
+            # shorter objects.png than the objects.json it came with): grow the canvas to hold it instead of letting paste() clip it
+            grown = Image.new('RGBA', (max(atlas.width, x + im.width), max(atlas.height, y + im.height)), (0, 0, 0, 0))
+            grown.alpha_composite(atlas, (0, 0)); atlas = grown; changed = True
+            if log: print(f'art/custom objects: grew objects.png to {atlas.size} for {n} at {frames[n]}')
         cur = atlas.crop((x, y, x + im.width, y + im.height))
         if cur.tobytes() != im.tobytes():
             atlas.paste(Image.new('RGBA', im.size, (0, 0, 0, 0)), (x, y)); atlas.paste(im, (x, y)); changed = True
         done.append(n)
+    bad = [(k, r) for k, r in frames.items() if r[0] < 0 or r[1] < 0 or r[0] + r[2] > atlas.width or r[1] + r[3] > atlas.height]
+    if bad: raise SystemExit(f'art/custom objects: FAIL cells outside objects.png {atlas.size}: {bad}')
+    for n in done:   # a pasted override must land whole (never clipped)
+        x, y, w, h = frames[n]
+        if atlas.crop((x, y, x + w, y + h)).tobytes() != Image.open(os.path.join(d, n + '.png')).convert('RGBA').tobytes():
+            raise SystemExit(f'art/custom objects: FAIL {n} at {frames[n]} does not match art/custom/objects/{n}.png')
     if changed: atlas.save(png); json.dump(frames, open(js, 'w'))
     if log: print('art/custom objects:', done, '(atlas updated)' if changed else '(already applied)')
+    return done
+
+ICON_SLOTS = {'mochi': 74, 'spirit_elixir': 75}   # art/custom/icons/<name>.png (24x24) -> public/assets/icons.png slot (16 per row) + icons.json key
+def icons_overlay(log=True):
+    png = os.path.join(ASSETS, 'icons.png'); js = os.path.join(ASSETS, 'icons.json'); d = os.path.join(CUSTOM, 'icons')
+    if not (os.path.isdir(d) and os.path.exists(png)): return []
+    atlas = Image.open(png).convert('RGBA'); idx = json.load(open(js)); done = []; changed = False
+    for n, slot in ICON_SLOTS.items():
+        f = os.path.join(d, n + '.png')
+        if not os.path.exists(f): continue
+        im = Image.open(f).convert('RGBA'); x, y = (slot % 16) * 24, (slot // 16) * 24
+        if atlas.crop((x, y, x + 24, y + 24)).tobytes() != im.tobytes():
+            atlas.paste(Image.new('RGBA', (24, 24), (0, 0, 0, 0)), (x, y)); atlas.paste(im, (x, y)); changed = True
+        if idx.get(n) != slot: idx[n] = slot; changed = True
+        done.append(n)
+    if changed: atlas.save(png); json.dump(idx, open(js, 'w'))
+    if log: print('art/custom icons:', done, '(updated)' if changed else '(already applied)')
     return done
 
 def manifest():

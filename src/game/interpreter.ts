@@ -40,7 +40,7 @@ export class Interpreter {
         case 'choice': { const i = await S.msg.choice(c.opts, c.cancel ?? -1); if (c.var) $.setV(c.var, i); if (c.br && c.br[i]) await this.exec(c.br[i], ctx); break; }
         case 'if': { if (this.cond(c.cond, ctx)) await this.exec(c.then, ctx); else if (c.else) await this.exec(c.else, ctx); break; }
         case 'set': $.setSw(c.sw, c.v !== false); $.refreshAllSkills(); S.refreshEvents(); break;
-        case 'chapter': $.chapter = Math.max($.chapter || 1, c.n); break;   // story chapter: shops stock gear with shopChapter <= chapter; shown on save slots
+        case 'chapter': { const up = c.n > ($.chapter || 1); $.chapter = Math.max($.chapter || 1, c.n); if (up) S.queueMilestone(); break; }   // a new chapter is a milestone autosave (after the event ends)   // story chapter: shops stock gear with shopChapter <= chapter; shown on save slots
         case 'var': { const cur = $.v(c.name); const v = c.v; $.setV(c.name, c.op === '+=' ? cur + v : c.op === '-=' ? cur - v : v); break; }
         case 'self': { const id = c.ev ?? ctx.ev; { const sk = $.selfKey(ctx.map ?? $.map.id, id, c.k); if (c.v === false) delete $.selfSwitches[sk]; else $.selfSwitches[sk] = true; } S.refreshEvents(); break; }
         case 'litpost': { const P = S.player; $.litPost = { map: S.mapData.id, x: P.tx, y: P.ty, dir: P.dir }; break; }
@@ -65,14 +65,20 @@ export class Interpreter {
         case 'lumenmax': { $.lumenMax += c.n; $.lumen = $.lumenMax; break; }
         case 'bgm': Audio.bgm(c.name === 'auto' ? S.mapBgm() : c.name, { fade: c.fade }); break;
         case 'se': Audio.se(c.name); break;
+        case 'chestopen': { // #8: the lid opens on screen right away; the self-switch page (obj chest_open) keeps it open after
+          const e = S.evs.find((v: any) => v.id === (c.ev ?? ctx.ev)); if (!e || !e.char) break; const far = $.realm === 'far';
+          e.char.setObject(c.obj || 'chest_open', far, false); const sp = e.char.spr; const sy = sp.scaleY;
+          S.tweens.add({ targets: sp, scaleY: { from: sy * 0.8, to: sy }, duration: 140, ease: 'Back.easeOut' }); break; }
         case 'me': Audio.me(c.name); break;
         case 'move': await S.moveRoute(c.target ?? 'player', c.route, c.wait !== false, ctx); break;
         case 'turn': S.turnChar(c.target ?? 'player', c.dir, ctx); break;
         case 'balloon': await S.balloon(c.target ?? ctx.ev ?? 'player', c.icon || '!', ctx); break;
         case 'shake': await S.shake(c.power ?? 3, c.ms ?? 400); break;
         case 'flash': await S.flash(c.color ?? 0xffffff, c.ms ?? 300); break;
+        case 'ctltut': { if ($.tutorialsShown.ctl_on) break; $.tutorialsShown.ctl_on = true; $.tutorialsShown.controls = true; break; }   // D3: persistent controls checklist (MapScene.updateCtlTut)
         case 'tutorial': { if (c.once !== false && $.tutorialsShown[c.id]) break; $.tutorialsShown[c.id] = true; S.msg.toast(c.text, c.ms ?? 5200, 14, '#bff6ff'); break; }
         case 'checkpoint': S.autosave(c.boss ? 'boss' : 'cp'); break;
+        case 'autosave': S.queueMilestone(); break;   // story milestone (chapter beat, area cleared): saves are a reward
         case 'narrate': await S.msg.narrate(c.lines, c); break;
         case 'bestiary': $.bst(c.id).seen = true; break;
         case 'end': await S.endGame(c); break;

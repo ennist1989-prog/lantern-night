@@ -28,7 +28,7 @@ export function useItemGlobal(id: string): UseResult {
   const it = DB.items[id]; const e = it.effect || {};
   if (e.repel) { $.gain(id, -1); $.repel = e.repel; return { ok: true, msg: `No wandering spirits for ${e.repel} steps.` }; }
   if (e.lumenMax) { if ($.lumenMax >= e.lumenMax) return { ok: false, msg: 'The Lantern already burns this bright.' }; $.gain(id, -1); $.lumenMax = e.lumenMax; $.lumen = $.lumenMax; return { ok: true, msg: `Max Lumen ${e.lumenMax}!` }; }
-  if (e.lumen && !e.hp) { if ($.lumen >= $.lumenMax) return { ok: false }; $.gain(id, -1); $.lumen = Math.min($.lumenMax, $.lumen + e.lumen); return { ok: true, msg: `Lumen +${e.lumen}` }; }
+  if (e.lumen && !e.hp) { if ($.lumen >= $.lumenMax) return { ok: false }; $.gain(id, -1); $.lumen = Math.min($.lumenMax, $.lumen + e.lumen); return { ok: true, msg: $.lumen >= $.lumenMax && e.lumen >= 999 ? 'Lumen fully restored!' : `Lumen +${e.lumen}` }; }
   if (e.escapeDungeon) { if (!DB.system.dungeonExit?.[$.map.id]) return { ok: false, msg: 'There is nowhere to fold a crane to here.' }; $.gain(id, -1); return { ok: true, action: { kind: 'escapeDungeon' } }; }
   if (e.warp) { if (!$.litPost) return { ok: false, msg: 'You have not lit a Lantern Post yet.' }; if ((DB.system.noWarp || []).includes($.map.id)) return { ok: false, msg: 'Something here refuses to let you leave.' }; $.gain(id, -1); return { ok: true, action: { kind: 'warp' } }; }
   if (e.peek) { if (!$.has('dew_lens')) return { ok: false, msg: 'You need the Dew Lens.' }; $.gain(id, -1); $.buffs.peek = e.peek; return { ok: true, msg: 'The other Shore swims into view…', action: { kind: 'peek', seconds: e.peek } }; }

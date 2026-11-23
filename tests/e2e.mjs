@@ -2,7 +2,7 @@
 // on 127.0.0.1:$PORT (default 8099), runs each test script sequentially, prints a PASS/FAIL table and
 // exits non-zero if any test failed.
 //   node tests/e2e.mjs                 # default suite (SUITE below)
-//   node tests/e2e.mjs n1 t2           # just these
+//   node tests/e2e.mjs n1 t3           # just these
 //   node tests/e2e.mjs --no-build ...  # reuse dist/
 // Env: CHROME_PATH (browser binary), PORT, SS (screenshot dir; default test-results/screenshots),
 //      E2E_TIMEOUT_MS (per test, default 600000).
@@ -19,7 +19,7 @@ const TIMEOUT = +(process.env.E2E_TIMEOUT_MS || 600000);
 // Order matters only for readability; every script starts its own New Game.
 // Quarantined (run by hand: node tests/e2e.mjs realm_carry): realm_carry (#37) - N10 ended in 'escape' at 0 Lumen on the slower CI runner; see PR #40.
 export const SUITE = ['smoke1', 'smoke2', 'smoke3', 'smoke4', 'smoke5', 'smoke6', 'smoke7', 'smoke8', 'smoke9',
-  'n1', 'n2', 'n3', 'n4', 'n5', 'c1', 'c2', 't1', 't2', 't3', 't4', 't5', 't6', 'b1', 'b2', 'b3', 'b4', 'b5',
+  'n1', 'n2', 'n3', 'n4', 'n5', 'c1', 'c2', 't1', 't3', 't4', 't5', 't6', 'b1', 'b2', 'b3', 'b4', 'b5',
   'chap', 'autoboss', 'ch3', 'default_speed'];
 
 const args = process.argv.slice(2); const build = !args.includes('--no-build');

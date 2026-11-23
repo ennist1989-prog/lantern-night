@@ -11,12 +11,26 @@ FLOOR, IFLOOR, WALL, WATER = 1, 2, 3, 4
 CH3FIX = 5   # art/custom/tiles/ch3fix.png (Ch3 Far-readability edits of pack tiles); only used when that file exists
 CH3FIX_PNG = os.path.join(ROOT, 'art/custom/tiles/ch3fix.png')
 def has_ch3fix(): return os.path.exists(CH3FIX_PNG)
+BORDER = 6   # art/custom/tiles/border.png (Ember edge-exit art, sheet 6): interior boards, canopy, stairs, cave rock; optional
+BORDER_PNG = os.path.join(ROOT, 'art/custom/tiles/border.png')
+MAZE = 7   # art/custom/tiles/maze.png (Ember maze-v1, 64x112): hedge autotile rows 0-3 (mask N1 E2 S4 W8 -> cell mask%4, mask//4), canopy corners row 4
+MAZE_PNG = os.path.join(ROOT, 'art/custom/tiles/maze.png')
+def has_border(): return os.path.exists(BORDER_PNG)
 GRASS = [G(1,11,12)]*6 + [G(1,12,12), G(1,13,12), G(1,14,12)]
 PATH_O = (11, 7)
 INT_FLOOR = [G(2,1,13), G(2,2,13), G(2,1,14), G(2,2,14)]
 STONE = [G(2,12,7)]
 DARKBRICK = G(2,12,13); DARKBRICK2 = G(2,12,14)
 CAVE = [G(2,12,13), G(2,13,13), G(2,12,14), G(2,13,14)]
+# Plank floor for interiors (playtest D2): the oval-cobble INT_FLOOR read as the same pattern as the DARKBRICK walls.
+WOOD_FLOOR = [G(1,12,15)]*3 + [G(1,14,18)]
+PT_WALL = G(BORDER, 0, 0); PT_FACE = G(BORDER, 1, 0)   # dark vertical-board wall body / face row (border.png)
+CANOPY = [[G(BORDER, 2, 0), G(BORDER, 3, 0)], [G(BORDER, 2, 1), G(BORDER, 3, 1)]]   # 2x2 seamless fill: CANOPY[y%2][x%2]
+CANOPY_EDGE = dict(n=G(BORDER, 4, 0), s=G(BORDER, 5, 0), e=G(BORDER, 6, 0), w=G(BORDER, 7, 0))   # letter = side the canopy is on
+STAIRS_L = G(BORDER, 0, 1); STAIRS_R = G(BORDER, 1, 1); FOG_LIP = G(BORDER, 4, 1); FOG_LIP_L = G(BORDER, 6, 1); FOG_LIP_R = G(BORDER, 7, 1)
+CAVE_ROCK = [G(BORDER, 5, 1), G(BORDER, 7, 2), G(BORDER, 7, 3)]   # cave_rock, _b, _c: pick per cell with cave_pick(x, y)
+def cave_pick(x, y): return CAVE_ROCK[((x * 73856093) ^ (y * 19349663)) % 3]   # Ember v2.1 hash pick (Python ints; no rng)
+TRAIL_PIECES = dict(w=(0, 2, 2, 3), e=(2, 2, 2, 3), w2=(0, 5, 2, 3), e2=(2, 5, 2, 3), s_cap=(4, 6, 3, 2), w_cap=(0, 8, 2, 3))   # sheet (col,row,w,h)
 SHRINE_F = [G(2,1,1), G(2,2,1), G(2,1,2), G(2,2,2)]
 BRIDGE = [G(2,12,3)]
 class Map:
@@ -28,7 +42,7 @@ class Map:
         self.reg = [0]*n
         self.objs = {'near': [], 'far': []}
         self.events = []; self.lights = []; self.encounter = None; self.counters = []
-        self.bgm = {'near': bgm_near, 'far': bgm_far}; self.noShift = False; self._eid = 0
+        self.bgm = {'near': bgm_near, 'far': bgm_far}; self.noShift = False; self._eid = 0; self.bg = None
         self.markers = []; self.dyn = []
     # ---- helpers
     def i(self, x, y): return y * self.w + x
@@ -58,11 +72,14 @@ class Map:
         for y in range(cy - r, cy + r + 1):
             for x in range(cx - r, cx + r + 1):
                 if self.inb(x, y) and (x - cx) ** 2 + (y - cy) ** 2 <= r * r + 1: self.reg[self.i(x, y)] = v
-    def blob(self, realm, cells, origin=PATH_O, sheet=FLOOR, base=None, layer='g', walk=True):
-        """Autotile (4-neighbour) a set of cells with the 4x4 blob block starting at origin."""
-        S = set(cells); ox, oy = origin
+    def blob(self, realm, cells, origin=PATH_O, sheet=FLOOR, base=None, layer='g', walk=True, open_cells=frozenset(), open_edge=False):
+        """Autotile (4-neighbour) a set of cells with the 4x4 blob block starting at origin.
+        open_cells / open_edge (playtest D6): an out-of-map neighbour counts as present for those cells (or all cells), so an
+        exit trail or a river runs off the screen edge instead of being capped with a rim."""
+        S = set(cells); ox, oy = origin; OC = set(open_cells)
+        def has(x, y, nx, ny): return (nx, ny) in S or ((open_edge or (x, y) in OC) and not self.inb(nx, ny))
         for (x, y) in S:
-            n, e, s, w = (x, y-1) in S, (x+1, y) in S, (x, y+1) in S, (x-1, y) in S
+            n, e, s, w = has(x, y, x, y-1), has(x, y, x+1, y), has(x, y, x, y+1), has(x, y, x-1, y)
             if n and e and s and w: c = (1, 1)
             elif not e and not w:
                 c = (3, 3) if (not n and not s) else (3, 0) if not n else (3, 2) if not s else (3, 1)
@@ -72,13 +89,16 @@ class Map:
                 c = (0 if not w else 2 if not e else 1, 0 if not n else 2 if not s else 1)
             self.tile(realm, x, y, G(sheet, ox + c[0], oy + c[1]), layer)
             for r in self.rs(realm): self.col[r][self.i(x, y)] = 0 if walk else 1
-    def obj(self, realm, name, tx, ty, fw=None, fh=1, dx=0, dy=0, block=True, flat=False, blockrect=None):
+    def obj(self, realm, name, tx, ty, fw=None, fh=1, dx=0, dy=0, block=True, flat=False, blockrect=None, above=False, sx=None, sy=None):
         w, h = OBJ[name][2], OBJ[name][3]
         tw = fw if fw is not None else max(1, math.ceil(w / 16))
         x = tx * TS + tw * 8 + dx; y = (ty + 1) * TS + dy
         for r in self.rs(realm):
             d = {'n': name, 'x': x, 'y': y}
             if flat: d['flat'] = True
+            if above: d['above'] = True   # drawn over the player/events (RPG Maker 'above characters' priority); collision unchanged
+            if sx: d['sx'] = sx
+            if sy: d['sy'] = sy
             self.objs[r].append(d)
             if block:
                 if blockrect: x0, y0, x1, y1 = blockrect
@@ -86,14 +106,20 @@ class Map:
                 for yy in range(y0, y1 + 1):
                     for xx in range(x0, x1 + 1):
                         if self.inb(xx, yy): self.col[r][self.i(xx, yy)] = 1
-    def light(self, x, y, r=4, realm=None):
+    def light(self, x, y, r=4, realm=None, a=None, tint=None, fa=None):
         d = {'x': x, 'y': y, 'r': r}
         if realm: d['realm'] = realm
+        if a is not None: d['a'] = a        # optional per-light alpha (default: realm lantern alpha)
+        if tint is not None: d['tint'] = tint
+        if fa is not None: d['fa'] = fa      # optional Far-only brightness (default 0.75); keeps the flicker  # optional per-light tint (default: fixed cyan glow)
         self.lights.append(d)
-    def post(self, tx, ty, rad=3, light=6):
+    def post(self, tx, ty, rad=3, light=6, save=True):
+        """save=False (one-save-per-map rule): the post stands as scenery with the same event ID and tile, but its wick is
+        spent, so it neither rests nor saves. Each map keeps at most one working Lantern Post (tests/save_points.mjs)."""
         self.obj('both', 'lantern_post', tx, ty)
         self.region_circle(tx, ty, rad, 6); self.light(tx, ty, light)
-        self.event(tx, ty, [page(g=dict(obj='lantern_post'), trigger='action', list=[{'c': 'post'}], marker=True)])
+        if save: self.event(tx, ty, [page(g=dict(obj='lantern_post'), trigger='action', list=[{'c': 'post'}], marker=True)])
+        else: self.event(tx, ty, [page(g=dict(obj='lantern_post'), trigger='action', list=[say(None, None, 'An old Lantern Post. Its wick burned down to ash long ago. There is a working Post elsewhere on this road.')])])
     def event(self, x, y, pages, realm='both'):
         self._eid += 1
         self.events.append({'id': self._eid, 'x': x, 'y': y, 'realm': realm, 'pages': pages}); return self._eid
@@ -102,7 +128,7 @@ class Map:
         self.event(x, y, [page(cond=cond, trigger='touch', list=l, through=True)], realm)
     def data(self):
         return dict(id=self.id, name=self.name, w=self.w, h=self.h, bgm=self.bgm, layers=self.layers, col=self.col, reg=self.reg,
-                    objs=self.objs, events=self.events, lights=self.lights, encounter=self.encounter, counters=self.counters, noShift=self.noShift, dyn=self.dyn)
+                    objs=self.objs, events=self.events, lights=self.lights, encounter=self.encounter, counters=self.counters, noShift=self.noShift, dyn=self.dyn, bg=self.bg)
     def dynwalk(self, realm, cells, cond, walk=True):
         """Collision that flips when an event condition holds (e.g. an Anchored bridge). Tiles stay as drawn."""
         self.dyn.append(dict(realm=realm, cells=[list(c) for c in cells], cond=cond, walk=walk))
@@ -112,6 +138,8 @@ class Map:
     def preview(self, realm, path, debug=False):
         sheets = {1: Image.open(os.path.join(ROOT, 'public/assets/tiles/floor.png')).convert('RGBA'), 2: Image.open(os.path.join(ROOT, 'public/assets/tiles/ifloor.png')).convert('RGBA'), 3: Image.open(os.path.join(ROOT, 'public/assets/tiles/wallsimple.png')).convert('RGBA'), 4: Image.open(os.path.join(ROOT, 'public/assets/tiles/water.png')).convert('RGBA')}
         if os.path.exists(CH3FIX_PNG): sheets[CH3FIX] = Image.open(CH3FIX_PNG).convert('RGBA')
+        if os.path.exists(BORDER_PNG): sheets[BORDER] = Image.open(BORDER_PNG).convert('RGBA')
+        if os.path.exists(MAZE_PNG): sheets[MAZE] = Image.open(MAZE_PNG).convert('RGBA')
         objs = Image.open(os.path.join(ROOT, 'public/assets/objects.png')).convert('RGBA')
         im = Image.new('RGBA', (self.w * TS, self.h * TS), (0, 0, 0, 255))
         for lname in ('g', 'o'):

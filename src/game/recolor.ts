@@ -17,6 +17,13 @@ export function recolorCanvas(src: CanvasImageSource, w: number, h: number, mix 
   }
   ctx.putImageData(id, 0, 0); return c;
 }
+/** Far-realm version of one colour (same remap as recolorCanvas), e.g. for a map's letterbox background. */
+export function farColor(hex: string, mix = 0.82): string {
+  const n = parseInt(hex.replace('#', ''), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const [R, G, B] = grad(Math.min(1, ((0.3 * r + 0.59 * g + 0.11 * b) / 255) * 1.08));
+  const c = (v: number) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  return '#' + c(R * mix + r * (1 - mix) * 0.6) + c(G * mix + g * (1 - mix) * 0.8) + c(B * mix + b * (1 - mix));
+}
 /** Get/create far-realm variant of a texture; copies frames (named or numeric). */
 export function farTexture(scene: Phaser.Scene, key: string): string {
   const fk = key + '_far'; if (scene.textures.exists(fk)) return fk;

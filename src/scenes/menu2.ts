@@ -24,7 +24,7 @@ export async function itemScreen(sc: S) {
     const rows = ids.map((id) => { const it = DB.items[id]; const u = it.usable === true || it.usable === 'menu'; return { label: it.name, icon: iconOf(it), value: '×' + $.items[id], enabled: u, color: it.type === 'material' ? COL.dim : RARITY_COL(it.rarity), data: id }; });
     list.setItems(rows, true); if (!rows.length) { list.clear(); list.txt('You are carrying nothing.', 20, 20, { color: COL.dim }); } list.index = Math.min(sel, Math.max(0, rows.length - 1)); list.refresh();
   };
-  list.onSelect = (it, i) => { sel = i; desc.clear(); if (it) { const d = DB.items[it.data]; desc.txt(d.desc + (d.type === 'offering' || d.offer ? '' : ''), 14, 8, { size: 18, wrap: 530 }); if (d.price) desc.txt('Sells for ' + Math.floor(d.price / 2) + ' G', 14, 54, { size: 14, color: COL.dim }); } };
+  list.onSelect = (it, i) => { sel = i; desc.clear(); if (it) { const d = DB.items[it.data]; desc.txt(d.desc + (d.type === 'offering' || d.offer ? '' : ''), 14, 8, { size: 18, wrap: 530 }); if (d.price && !d.noSell) desc.txt('Sells for ' + Math.floor(d.price / 2) + ' G', 14, 54, { size: 14, color: COL.dim }); } };
   build(); list.onSelect(list.current, list.index); list.active = true;
   let closeResult: any;
   await new Promise<void>((res) => {

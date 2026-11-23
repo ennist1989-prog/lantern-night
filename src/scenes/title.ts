@@ -32,7 +32,8 @@ export class TitleScene extends Phaser.Scene {
     for (let i = 0; i < 40; i++) { const s = this.add.rectangle(Math.random() * W, Math.random() * H, 3, 3, 0xcff6ff, 0.6); this.motes.push({ s, vx: (Math.random() - 0.5) * 12, vy: -6 - Math.random() * 16 }); }
     const t1 = this.add.text(W / 2, 72, 'LANTERN NIGHT', { fontFamily: FONT, fontSize: '84px', color: '#ffe9a0', stroke: '#2a1a3a', strokeThickness: 10 }).setOrigin(0.5); t1.setShadow(0, 6, '#000', 0, true, true);
     this.add.text(W / 2, 148, 'The Far Shore', { fontFamily: FONT, fontSize: '40px', color: '#bff6ff', stroke: '#06143a', strokeThickness: 7 }).setOrigin(0.5);
-    this.add.text(W / 2, H - 14, 'Chapters 1–3 playable slice  ·  Z/Enter confirm · X cancel · Q/Tab shift realms · Shift dash · F/Ctrl skip text', { fontFamily: FONT, fontSize: '15px', color: '#9fb4e8' }).setOrigin(0.5, 1).setDepth(10);
+    // two centred lines: the old single line was ~975px wide on an 816px canvas, so both ends were clipped (D1)
+    this.add.text(W / 2, H - 10, 'Chapters 1–3 playable slice\nZ/Enter confirm · X cancel · Q/Tab shift realms · Shift dash · F/Ctrl skip text', { fontFamily: FONT, fontSize: '15px', color: '#9fb4e8', align: 'center', lineSpacing: 2 }).setOrigin(0.5, 1).setDepth(10).setName('footer');
     this.fader = new Fader(this, 9999);
     const any = SaveManager.any();
     this.menu = new Selectable(this, W / 2 - 130, 400, 260, 168, 'near'); this.wins.push(this.menu); this.menu.setDepth(20); this.menu.rowH = 34; this.menu.pad = 14; this.menu.fontSize = 24; this.menu.align = 'center';
