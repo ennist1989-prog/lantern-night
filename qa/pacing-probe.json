@@ -1,0 +1,156 @@
+{
+  "probe": "tools/playtest/pacing-probe.mjs",
+  "generated": "2026-11-23T03:37:42.280Z",
+  "base": "http://127.0.0.1:8099/",
+  "settings": {
+    "bgm": 0.5,
+    "se": 0.7,
+    "textSpeed": 1,
+    "alwaysRun": false,
+    "walkSpeed": "classic",
+    "battleSpeed": 1,
+    "autoBattle": false,
+    "autoV2": true,
+    "difficulty": "standard",
+    "touch": true,
+    "msgAuto": false,
+    "juice": "full",
+    "warmth": 0
+  },
+  "timings_ms": {
+    "run_start": 812,
+    "title_shown": 2971,
+    "new_game": 4492,
+    "first_dialogue": 5687,
+    "first_item": 12819,
+    "control_given": 12820,
+    "first_save": 20753,
+    "first_encounter_start": 38302,
+    "first_encounter_end": 51514,
+    "first_item_or_levelup": 12819
+  },
+  "missing_timestamps": [],
+  "console_errors": [],
+  "idle_stretches": [],
+  "battle_trace": [
+    {
+      "t": 38311,
+      "party": 90,
+      "foes": 58
+    },
+    {
+      "t": 39490,
+      "party": 75,
+      "foes": 58
+    },
+    {
+      "t": 40365,
+      "party": 75,
+      "foes": 44
+    },
+    {
+      "t": 41567,
+      "party": 75,
+      "foes": 44
+    },
+    {
+      "t": 42448,
+      "party": 57,
+      "foes": 29
+    },
+    {
+      "t": 43331,
+      "party": 57,
+      "foes": 29
+    },
+    {
+      "t": 44498,
+      "party": 42,
+      "foes": 29
+    },
+    {
+      "t": 45384,
+      "party": 42,
+      "foes": 15
+    },
+    {
+      "t": 46552,
+      "party": 27,
+      "foes": 15
+    },
+    {
+      "t": 47435,
+      "party": 27,
+      "foes": 1
+    },
+    {
+      "t": 48309,
+      "party": 27,
+      "foes": 1
+    },
+    {
+      "t": 49475,
+      "party": 11,
+      "foes": 0
+    },
+    {
+      "t": 50349,
+      "party": 11,
+      "foes": 0
+    }
+  ],
+  "first_encounter_outcome": "win",
+  "route": [
+    {
+      "step": "intro",
+      "map": 2,
+      "x": 6,
+      "y": 6,
+      "at": 12820
+    },
+    {
+      "step": "house_to_village",
+      "map": 1,
+      "at": 14749
+    },
+    {
+      "step": "light_post",
+      "map": 1,
+      "x": 15,
+      "y": 16,
+      "at": 20753
+    },
+    {
+      "step": "shift_far",
+      "map": 1,
+      "at": 23422
+    },
+    {
+      "step": "enemy",
+      "id": 39,
+      "troop": "tr_dust_wisp",
+      "x": 10,
+      "y": 12,
+      "at": 24055
+    },
+    {
+      "step": "battle_end",
+      "at": 51514
+    }
+  ],
+  "final_state": {
+    "map": 1,
+    "x": 11,
+    "y": 12,
+    "realm": "far",
+    "level": 1,
+    "lumen": 53,
+    "saves": 1,
+    "hp": 11,
+    "fades": 0,
+    "defeated": 1,
+    "battle_result": "win"
+  },
+  "result": "pass",
+  "error": null
+}
