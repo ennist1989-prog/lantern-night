@@ -65,10 +65,49 @@ try {
   fs.writeFileSync(path.join(downloads, 'Broken_Zeldisaac.zip'), Buffer.from('<html><body>404 not found</body></html>', 'utf8'));
   fs.writeFileSync(path.join(downloads, 'Corrupt_KayKit.zip'), Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('this is not a zip body, only the first four bytes pretend to be')]));
 
-  const args = [TOOL, '--src', downloads, '--dest', path.join('public', 'assets'), '--max-category-mb', '10', '--apply'];
+  const baseArgs = [TOOL, '--src', downloads, '--dest', path.join('public', 'assets'), '--max-category-mb', '10'];
+
+  // 1. Dry run: real sizes per zip and per category, nothing written.
+  const dry = spawnSync(process.execPath, baseArgs, { cwd: repo, encoding: 'utf8' });
+  const dryOut = `${dry.stdout || ''}${dry.stderr || ''}`;
+  check('the dry run exits 0 and writes nothing', () => {
+    if (dry.status !== 0) throw new Error(`exit ${dry.status}: ${dryOut.slice(-300)}`);
+    for (const c of ['lantern-night-ready', 'other-game', 'future-vault']) {
+      if (exists(path.join(repo, 'public', 'assets', c))) throw new Error(`a dry run created public/assets/${c}`);
+    }
+    if (git(repo, ['status', '--short']).trim()) throw new Error('a dry run left changes in the repo');
+  });
+  check('the dry run prints a kept size per zip and a total per category', () => {
+    if (!/kept/.test(dryOut)) throw new Error('no kept column');
+    if (!/Category totals after this run/.test(dryOut)) throw new Error('no category totals block');
+    if (!/lantern-night-ready\s+[\d.]+ (B|KB|MB) in the repo \+\s*[\d.]+ (B|KB|MB) from\s+\d+ pack/.test(dryOut)) throw new Error('lantern-night-ready total missing');
+    if (!/Every category fits the 1024 MB budget/.test(dryOut)) throw new Error('no budget verdict');
+  });
+
+  // 2. A budget too small for the packs stops the run before anything is copied.
+  const stop = spawnSync(process.execPath, [...baseArgs, '--apply', '--budget-mb', '0.00001'], { cwd: repo, encoding: 'utf8' });
+  const stopOut = `${stop.stdout || ''}${stop.stderr || ''}`;
+  check('--apply stops with exit 2 when a category would pass the budget', () => {
+    if (stop.status !== 2) throw new Error(`expected exit 2, got ${stop.status}: ${stopOut.slice(-300)}`);
+    if (!/STOP: lantern-night-ready would reach/.test(stopOut)) throw new Error('stop message does not name the category');
+    for (const c of ['lantern-night-ready', 'other-game', 'future-vault']) {
+      if (exists(path.join(repo, 'public', 'assets', c))) throw new Error(`files were copied to public/assets/${c} before the budget check`);
+    }
+    if (git(repo, ['status', '--short']).trim()) throw new Error('the stopped run left changes in the repo');
+    const log = git(repo, ['log', '--oneline']);
+    if (log.trim().split('\n').length !== 1) throw new Error(`commits were made anyway:\n${log}`);
+  });
+
+  // 3. The same run goes ahead with the override, and everything else still holds.
+  const args = [...baseArgs, '--apply', '--budget-mb', '0.00001', '--allow-over-budget'];
   const run = spawnSync(process.execPath, args, { cwd: repo, encoding: 'utf8' });
   const out = `${run.stdout || ''}${run.stderr || ''}`;
   console.log(out);
+  check('--allow-over-budget lets the run finish and says it is over budget', () => {
+    if (run.status !== 0) throw new Error(`exit ${run.status}: ${out.slice(-300)}`);
+    if (!/OVER the 0\.00001 MB budget/.test(out)) throw new Error('over-budget category not flagged');
+    if (!/continuing because --allow-over-budget/.test(out)) throw new Error('override not explained');
+  });
 
   check('the run exits 0 with two broken zips in the folder', () => {
     if (run.status !== 0) throw new Error(`exit ${run.status}: ${out.split('\n').filter(Boolean).slice(-4).join(' | ')}`);
@@ -132,7 +171,7 @@ try {
   });
 
   check('--strict turns the same broken zips into exit 1', () => {
-    const strict = spawnSync(process.execPath, [...args, '--strict'], { cwd: repo, encoding: 'utf8' });
+    const strict = spawnSync(process.execPath, [...args, '--strict', '--budget-mb', '1024'], { cwd: repo, encoding: 'utf8' });
     if (strict.status !== 1) throw new Error(`expected exit 1, got ${strict.status}`);
   });
 } finally {

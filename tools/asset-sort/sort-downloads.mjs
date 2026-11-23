@@ -64,13 +64,16 @@ const allZips = has('all-zips');
 const buildAfter = !has('no-build');
 const moveZips = has('move-zips');
 const maxFileMb = Number(flag('max-file-mb', 95));
-const maxCategoryMb = Number(flag('max-category-mb', 500));
+const maxCategoryMb = Number(flag('max-category-mb', 0));        // 0 = no soft per-pack cap
+const budgetMb = Number(flag('budget-mb', 1024));                // hard stop per category
+const allowOverBudget = has('allow-over-budget');
 const strict = has('strict');
-const measure = has('measure');
 const logPath = path.resolve(String(flag('log', path.join('tasks', 'freebuff-results.md'))));
 const keepTemp = has('keep-temp');
 if (!Number.isFinite(maxFileMb) || maxFileMb <= 0) { console.error('--max-file-mb must be a positive number'); process.exit(2); }
-if (!Number.isFinite(maxCategoryMb) || maxCategoryMb <= 0) { console.error('--max-category-mb must be a positive number'); process.exit(2); }
+if (!Number.isFinite(maxCategoryMb) || maxCategoryMb < 0) { console.error('--max-category-mb must be 0 (off) or a positive number'); process.exit(2); }
+if (!Number.isFinite(budgetMb) || budgetMb <= 0) { console.error('--budget-mb must be a positive number'); process.exit(2); }
+const budgetBytes = Math.round(budgetMb * 1048576);
 
 const overrides = new Map();
 for (let i = 0; i < argv.length; i++) {
@@ -82,7 +85,9 @@ for (let i = 0; i < argv.length; i++) {
 
 // ------------------------------------------------------------------- helpers
 const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'pack';
-const mb = (bytes) => `${(bytes / 1048576).toFixed(1)} MB`;
+// Small packs would otherwise read as "0.0 MB", which hides the difference
+// between an empty pack and a 400 KB one.
+const mb = (bytes) => (bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1048576).toFixed(1)} MB`);
 
 function classify(zipName) {
   const base = path.basename(zipName, path.extname(zipName));
@@ -211,6 +216,63 @@ function safeJoin(root, rel) {
   return out === base || out.startsWith(base + path.sep) ? out : null;
 }
 
+/** Per-file byte sizes straight from the zip's central directory, so a dry run
+ *  can report real totals without extracting anything. Returns null for zip64
+ *  or anything odd, and the caller falls back to extracting and measuring. */
+function readCentralDirectory(file) {
+  let fd;
+  try {
+    fd = fs.openSync(file, 'r');
+    const st = fs.fstatSync(fd);
+    const tailLen = Math.min(st.size, 65557);
+    const tail = Buffer.alloc(tailLen);
+    fs.readSync(fd, tail, 0, tailLen, st.size - tailLen);
+    let eocd = -1;
+    for (let i = tail.length - 22; i >= 0; i -= 1) if (tail.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
+    if (eocd < 0) return null;
+    const count = tail.readUInt16LE(eocd + 10);
+    const cdSize = tail.readUInt32LE(eocd + 12);
+    const cdOffset = tail.readUInt32LE(eocd + 16);
+    if (count === 0xffff || cdSize === 0xffffffff || cdOffset === 0xffffffff) return null;   // zip64: measure by extracting
+    const cd = Buffer.alloc(cdSize);
+    if (cdSize) fs.readSync(fd, cd, 0, cdSize, cdOffset);
+    const entries = [];
+    let p = 0; let seen = 0;
+    while (seen < count && p + 46 <= cd.length && cd.readUInt32LE(p) === 0x02014b50) {
+      const usize = cd.readUInt32LE(p + 24);
+      const nlen = cd.readUInt16LE(p + 28); const elen = cd.readUInt16LE(p + 30); const clen = cd.readUInt16LE(p + 32);
+      const mode = cd.readUInt32LE(p + 38) >>> 16;
+      const name = cd.toString('utf8', p + 46, p + 46 + nlen);
+      if (usize === 0xffffffff) return null;
+      const isDir = name.endsWith('/') || (mode & 0o170000) === 0o040000;
+      if (!isDir && name) entries.push({ name, size: usize });
+      p += 46 + nlen + elen + clen;
+      seen += 1;
+    }
+    return entries.length ? { entries } : null;
+  } catch { return null; }
+  finally { if (fd !== undefined) { try { fs.closeSync(fd); } catch { /* already closed */ } } }
+}
+
+// Bytes already committed in a category folder, memoised: the projection and the
+// apply pass have to agree on what the starting point is.
+const existingBytesCache = new Map();
+function existingBytes(category) {
+  if (existingBytesCache.has(category)) return existingBytesCache.get(category);
+  const dir = path.join(dest, category);
+  let total = 0;
+  if (fs.existsSync(dir)) {
+    try {
+      for (const rel of walk(dir)) {
+        const p = path.join(dir, rel);
+        try { const st = fs.statSync(p); if (st.isFile()) total += st.size; } catch { /* skip */ }
+      }
+    } catch { /* skip */ }
+  }
+  existingBytesCache.set(category, total);
+  return total;
+}
+
 function git(args, { allowFail = false } = {}) {
   const res = spawnSync('git', args, { encoding: 'utf8' });
   if (res.status !== 0 && !allowFail) throw new Error(`git ${args.join(' ')} failed:\n${res.stderr || res.stdout}`);
@@ -253,17 +315,27 @@ for (const name of zips) {
   if (row.status === 'ok' && row.size < 22) { row.status = 'bad'; row.problem = `truncated zip (${row.size} bytes)`; }
   if (row.status === 'ok' && (packed.matched || allZips)) {
     try {
-      const { entries, tempDir } = entriesFor(zip, tempRoot, measure && !apply);
-      row.entries = entries; row.tempDir = tempDir;
-      const outside = entries.filter((e) => path.isAbsolute(e) || e.split(/[\\/]/).includes('..'));
+      const cd = readCentralDirectory(zip);
+      if (cd) {
+        row.entries = cd.entries.map((e) => e.name);
+        row.sizes = new Map(cd.entries.map((e) => [e.name, e.size]));
+      } else {
+        const { entries, tempDir } = entriesFor(zip, tempRoot, false);
+        row.entries = entries; row.tempDir = tempDir;
+        row.sizes = new Map(entries.map((rel) => { const p = path.join(tempDir, rel); try { return [rel, fs.statSync(p).size]; } catch { return [rel, 0]; } }));
+      }
+      const outside = row.entries.filter((e) => path.isAbsolute(e) || e.split(/[\\/]/).includes('..'));
       if (outside.length) {
         row.status = 'bad';
         row.problem = `${outside.length} entr${outside.length === 1 ? 'y' : 'ies'} point outside the archive (zip-slip), e.g. ${outside[0]}`;
       }
-      row.junk = entries.filter(isJunk);
-      row.keep = entries.filter((e) => !isJunk(e));
+      row.junk = row.entries.filter(isJunk);
+      row.keep = row.entries.filter((e) => !isJunk(e));
       if (!row.keep.length) { row.status = 'bad'; row.problem = 'archive holds no files after junk stripping'; }
-      if (tempDir) row.total = row.keep.reduce((sum, rel) => { const p = path.join(tempDir, rel); try { return sum + fs.statSync(p).size; } catch { return sum; } }, 0);
+      row.skippedLarge = row.keep.filter((rel) => (row.sizes.get(rel) || 0) > maxFileMb * 1048576);
+      const oversized = new Set(row.skippedLarge);
+      row.total = row.keep.filter((rel) => !oversized.has(rel)).reduce((sum, rel) => sum + (row.sizes.get(rel) || 0), 0);
+      row.totalKnown = true;
     } catch (err) {
       row.status = 'bad'; row.problem = firstLine(err.message);
       row.entries = []; row.junk = []; row.keep = [];
@@ -275,28 +347,64 @@ const badZips = plan.filter((r) => r.status === 'bad');
 
 const display = (r) => r.name.replace(/\.zip$/i, '');
 const width = Math.max(...plan.map((r) => display(r).length), 10);
-console.log(`Cap   : ${maxCategoryMb} MB per category, ${maxFileMb} MB per file (--max-category-mb / --max-file-mb)\n`);
-console.log(`${'zip'.padEnd(width)}  ${'zip size'.padStart(9)}  ${'category'.padEnd(18)}  files  junk  why`);
+console.log(`Budget: ${budgetMb} MB per category (--budget-mb), ${maxFileMb} MB per file (--max-file-mb)${maxCategoryMb ? `, soft cap ${maxCategoryMb} MB per category (--max-category-mb)` : ''}\n`);
+console.log(`${'zip'.padEnd(width)}  ${'zip'.padStart(9)}  ${'kept'.padStart(9)}  ${'category'.padEnd(18)}  files  junk  why`);
 for (const row of plan) {
   if (row.status === 'bad') {
-    console.log(`${display(row).padEnd(width)}  ${mb(row.size).padStart(9)}  ${'(bad zip)'.padEnd(18)}  ${'-'.padStart(5)}  ${'-'.padStart(4)}  SKIPPED: ${row.problem}`);
+    console.log(`${display(row).padEnd(width)}  ${mb(row.size).padStart(9)}  ${'-'.padStart(9)}  ${'(bad zip)'.padEnd(18)}  ${'-'.padStart(5)}  ${'-'.padStart(4)}  SKIPPED: ${row.problem}`);
     continue;
   }
   if (!row.matched && !allZips) {
-    console.log(`${display(row).padEnd(width)}  ${mb(row.size).padStart(9)}  ${'(skipped)'.padEnd(18)}  ${'-'.padStart(5)}  ${'-'.padStart(4)}  not one of the named packs; --all-zips would send it to future-vault`);
+    console.log(`${display(row).padEnd(width)}  ${mb(row.size).padStart(9)}  ${'-'.padStart(9)}  ${'(skipped)'.padEnd(18)}  ${'-'.padStart(5)}  ${'-'.padStart(4)}  not one of the named packs; --all-zips would send it to future-vault`);
     continue;
   }
-  const unpacked = row.total ? ` (${mb(row.total)} unpacked)` : '';
-  console.log(`${display(row).padEnd(width)}  ${mb(row.size).padStart(9)}  ${row.category.padEnd(18)}  ${String(row.keep.length).padStart(5)}  ${String(row.junk.length).padStart(4)}  ${row.label} - ${row.why}${unpacked}`);
-  if (row.review) console.log(`${''.padEnd(width)}  ${''.padStart(9)}  ${''.padEnd(18)}  ${''.padStart(5)}  ${''.padStart(4)}  REVIEW: ${row.review === true ? 'unrecognised pack, check by hand' : row.review}`);
+  const kept = row.totalKnown ? mb(row.total) : 'unknown';
+  console.log(`${display(row).padEnd(width)}  ${mb(row.size).padStart(9)}  ${kept.padStart(9)}  ${row.category.padEnd(18)}  ${String(row.keep.length).padStart(5)}  ${String(row.junk.length).padStart(4)}  ${row.label} - ${row.why}`);
+  if (row.skippedLarge.length) console.log(`${''.padEnd(width)}  ${''.padStart(9)}  ${''.padStart(9)}  ${''.padEnd(18)}  ${''.padStart(5)}  ${''.padStart(4)}  ${row.skippedLarge.length} file(s) over the ${maxFileMb} MB per-file limit will not be copied`);
+  if (row.review) console.log(`${''.padEnd(width)}  ${''.padStart(9)}  ${''.padStart(9)}  ${''.padEnd(18)}  ${''.padStart(5)}  ${''.padStart(4)}  REVIEW: ${row.review === true ? 'unrecognised pack, check by hand' : row.review}`);
 }
 if (badZips.length) console.log(`\n${badZips.length} bad zip(s) will be skipped, not fatal: ${badZips.map(display).join(', ')}`);
-if (!apply && !measure) console.log('Sizes are measured during --apply; add --measure to a dry run to see them first (it extracts to a temp folder).');
+
+// What each category would hold afterwards, junk and size limits applied.
+const softCapBytes = Math.round(maxCategoryMb * 1048576);
+const projections = new Map(CATEGORIES.map((c) => [c, { existing: existingBytes(c), next: 0, packs: 0, skippedByCap: [], unknown: 0 }]));
+for (const row of plan) {
+  if (row.status !== 'ok' || !(row.matched || allZips)) continue;
+  const p = projections.get(row.category);
+  if (!row.totalKnown) { p.unknown += 1; continue; }
+  if (softCapBytes && p.existing + p.next + row.total > softCapBytes) { p.skippedByCap.push(row); continue; }
+  p.next += row.total;
+  p.packs += 1;
+}
+const overBudget = [...projections].filter(([, p]) => p.existing + p.next > budgetBytes);
+console.log('\nCategory totals after this run (kept files; junk already excluded):');
+for (const [category, p] of projections) {
+  const total = p.existing + p.next;
+  const flag = total > budgetBytes ? `  OVER the ${budgetMb} MB budget` : '';
+  console.log(`  ${category.padEnd(18)} ${mb(p.existing).padStart(10)} in the repo + ${mb(p.next).padStart(10)} from ${String(p.packs).padStart(2)} pack(s) = ${mb(total).padStart(10)}${flag}`);
+  if (p.unknown) console.log(`    ${p.unknown} pack(s) with unmeasurable size are not in this total`);
+  if (p.skippedByCap.length) console.log(`    ${p.skippedByCap.length} pack(s) would be skipped whole by --max-category-mb ${maxCategoryMb}: ${p.skippedByCap.map(display).join(', ')}`);
+}
+if (overBudget.length) {
+  console.log(`\n--budget-mb ${budgetMb}: ${overBudget.map(([c]) => c).join(', ')} would end over budget.`);
+  console.log(apply
+    ? (allowOverBudget ? '  continuing because --allow-over-budget was passed.' : '  STOPPING: nothing is copied or committed. Raise --budget-mb, or pass --allow-over-budget to go ahead anyway.')
+    : '  --apply will stop rather than copy those packs. Raise --budget-mb, or pass --allow-over-budget to go ahead anyway.');
+} else {
+  console.log(`\nEvery category fits the ${budgetMb} MB budget.`);
+}
 
 const junkSample = plan.flatMap((r) => r.junk.slice(0, 3).map((j) => `${r.label}: ${j}`));
 if (junkSample.length) {
   console.log('\nJunk that will be dropped (first few):');
   for (const line of junkSample.slice(0, 12)) console.log(`  ${line}`);
+}
+
+if (apply && overBudget.length && !allowOverBudget) {
+  console.error(`\nSTOP: ${overBudget.map(([c, p]) => `${c} would reach ${mb(p.existing + p.next)}`).join(', ')} against the ${budgetMb} MB budget.`);
+  console.error('Nothing was copied or committed. Raise --budget-mb, pass --allow-over-budget, or move the big pack out of the folder.');
+  if (!keepTemp) fs.rmSync(tempRoot, { recursive: true, force: true });
+  process.exit(2);
 }
 
 if (!apply) {
@@ -307,21 +415,8 @@ if (!apply) {
 }
 
 // -------------------------------------------------------------- extraction
-const results = new Map(CATEGORIES.map((c) => [c, { packs: [], files: 0, bytes: 0, skipped: [], capped: [], failed: [], copyErrors: [] }]));
-const capBytes = Math.round(maxCategoryMb * 1048576);
-
-// Count what is already in each category folder, so a second run does not spend
-// a fresh cap on top of files the first run committed.
-for (const category of CATEGORIES) {
-  const agg = results.get(category); const dir = path.join(dest, category);
-  if (!fs.existsSync(dir)) continue;
-  try {
-    for (const rel of walk(dir)) {
-      const p = path.join(dir, rel);
-      try { const st = fs.statSync(p); if (st.isFile()) agg.bytes += st.size; } catch { /* skip */ }
-    }
-  } catch { /* skip */ }
-}
+const results = new Map(CATEGORIES.map((c) => [c, { packs: [], files: 0, bytes: existingBytes(c), skipped: [], capped: [], failed: [], copyErrors: [] }]));
+const capBytes = softCapBytes;
 
 for (const row of plan) {
   if (!row.matched && !allZips) continue;
@@ -368,8 +463,16 @@ for (const row of plan) {
     console.log(`\n${row.label}: SKIPPED - ${why}`);
     continue;
   }
-  // Cap whole packs, never half a pack: a partial pack is harder to notice than a skipped one.
-  if (agg.bytes + packBytes > capBytes) {
+  // Hard budget: pre-flight covers every pack whose size could be read, this
+  // catches anything only measured after extraction.
+  if (!allowOverBudget && agg.bytes + packBytes > budgetBytes) {
+    console.error(`\nSTOP: ${row.category} would pass the ${budgetMb} MB budget with ${display(row)} (${mb(agg.bytes)} already there + ${mb(packBytes)}).`);
+    console.error('Nothing more is copied; any category committed above stays committed. Raise --budget-mb or pass --allow-over-budget.');
+    if (!keepTemp) fs.rmSync(tempRoot, { recursive: true, force: true });
+    process.exit(2);
+  }
+  // Soft cap whole packs, never half a pack: a partial pack is harder to notice than a skipped one.
+  if (capBytes && agg.bytes + packBytes > capBytes) {
     const why = `${mb(packBytes)} does not fit ${row.category}: ${mb(agg.bytes)} of ${maxCategoryMb} MB already used`;
     row.status = 'capped'; row.problem = why; agg.capped.push(`${row.name}: ${why}`);
     console.log(`\n${row.label}: SKIPPED - ${why} (whole pack; raise --max-category-mb to include it)`);
@@ -475,7 +578,8 @@ if (fs.existsSync(logPath)) {
     `- result: Sorted the pack zips from ${src} with tools/asset-sort/sort-downloads.mjs into ${dest}/<category>/<pack>/; one commit per category folder.`,
     `  Packs:`,
     lines || '    (none matched)',
-    ...(skipped ? [`  Skipped, not fatal (bad zips and the ${maxCategoryMb} MB category cap):`, skipped] : []),
+    `  Budget: ${budgetMb} MB per category - ${overBudget.length ? `OVER: ${overBudget.map(([c, p]) => `${c} at ${mb(p.existing + p.next)}`).join(', ')}${allowOverBudget ? ' (allowed by --allow-over-budget)' : ''}` : 'every category fits; nothing was stopped'}.`,
+    ...(skipped ? [`  Skipped, not fatal (bad zips${maxCategoryMb ? ` and the ${maxCategoryMb} MB soft cap` : ''}):`, skipped] : []),
     `  Stripped: donate, Facebook, license, preview and readme files, plus Thumbs.db/.DS_Store/__MACOSX/.url/.lnk. Pack names are recorded here so attribution survives the license files being dropped; check each pack's original terms before shipping.`,
     `  Build: ${buildStatus === null ? 'not run (--no-build)' : `npm run build exited ${buildStatus}`}. Nothing is deployed.`,
     ...(buildTail && buildStatus !== 0 ? [`  Build tail:`, ...buildTail.split('\n').map((l) => `    ${l}`)] : []),

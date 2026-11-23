@@ -74,9 +74,10 @@ before anything ships. Check each pack's original terms before using its art.
 | `--all-zips` | off | unmatched zips go to `future-vault` instead of being skipped |
 | `--map name=category` | — | force a pack's category; repeatable |
 | `--max-file-mb <n>` | 95 | files over this are not copied (GitHub refuses >100 MB); they are listed |
-| `--max-category-mb <n>` | 500 | budget per category folder; a pack that would cross it is skipped whole, never half-copied |
-| `--measure` | off | dry run only: extract to a temp folder so the unpacked size of each pack is shown before applying |
-| `--strict` | off | exit 1 if any zip was bad or any pack was left out by the cap (default is to survive and report) |
+| `--budget-mb <n>` | 1024 | hard budget per category: if the run would end past it, `--apply` stops before copying anything and exits 2 |
+| `--allow-over-budget` | off | go ahead even when a category would end past `--budget-mb` |
+| `--max-category-mb <n>` | 0 (off) | optional soft cap: a pack that would cross it is skipped whole, never half-copied |
+| `--strict` | off | exit 1 if any zip was bad or any pack was left out by the soft cap (default is to survive and report) |
 | `--no-build` | off | skip `npm run build` |
 | `--move-zips` | off | move sorted zips into `<src>\_sorted-<date>\` |
 | `--log <file>` | `tasks/freebuff-results.md` | append the run here, if the branch has it |
@@ -88,15 +89,17 @@ before anything ships. Check each pack's original terms before using its art.
 2. Copy the rest into `public/assets/<category>/<slug>/`, skipping files over
    `--max-file-mb` (listed, never silently dropped) and symlinks or paths that
    would land outside the pack folder.
-3. Check the category budget: if adding the pack would cross
-   `--max-category-mb`, skip the whole pack and say so. Nothing is copied to
-   the point where a pack is half in the repo.
-4. `git add` + one commit per category folder that received files. Empty
+3. Pre-flight the budget: if any category would end past `--budget-mb`, stop
+   before copying or committing anything and exit 2 (unless
+   `--allow-over-budget`). A single huge pack cannot slip in.
+4. If `--max-category-mb` is set, skip whole packs that would cross it, and say
+   which ones. Nothing is ever copied to the point where a pack is half in.
+5. `git add` + one commit per category folder that received files. Empty
    categories are reported, not committed.
-5. `npm run build`; a non-zero exit prints the tail and makes the script exit 1.
-6. Append a dated entry to `tasks/freebuff-results.md` (packs, counts, commits,
-   bad zips, cap skips, build status) and commit it.
-7. Print the totals.
+6. `npm run build`; a non-zero exit prints the tail and makes the script exit 1.
+7. Append a dated entry to `tasks/freebuff-results.md` (packs, counts, commits,
+   bad zips, cap skips, budget state, build status) and commit it.
+8. Print the totals.
 
 ## Bad zips
 
@@ -111,15 +114,36 @@ the usual case), truncated, or that fails to extract is **skipped, not fatal**:
 Extraction is tried with `tar`, `unzip`, Python's `zipfile` and (on Windows)
 PowerShell, in that order, so one bad handler is not a failed pack.
 
-## Category size
+## Category size and the budget
 
-The cap is per category folder, default 500 MB (`--max-category-mb`), and it is
-applied per pack: a pack either fits and is copied whole, or is skipped whole
-and named in the output and in the results log. That keeps a category under the
-cap without leaving a half-copied pack that nobody notices. The single-file
-limit (95 MB, GitHub's 100 MB hard limit) still applies inside a pack that fits.
-Raise the cap deliberately, not by default: a category of several GB is a git
-problem regardless of the per-file limit.
+Two separate guards, both per category folder:
+
+- **`--budget-mb` (default 1024)** is a hard stop. The run works out what each
+  category would hold afterwards (files already in the repo + every pack that
+  would be copied) and, if any category would end past the budget, `--apply`
+  stops **before copying or committing anything** and exits 2, naming the
+  category and the projected total. Nothing is left half-done, and one huge pack
+  cannot be committed by accident. `--allow-over-budget` is the deliberate
+  override; the run then prints the overage and records it in the results log.
+- **`--max-category-mb` (default 0, off)** is a soft cap. When set, a pack that
+  would cross it is skipped whole and named in the output and the log, so the
+  run still finishes and no pack is half-copied.
+
+The single-file limit (`--max-file-mb`, 95 MB; GitHub refuses over 100 MB) still
+applies inside a pack that fits. A category of several GB is a git problem
+regardless of the per-file limit, so raise the budget deliberately.
+
+### What a dry run prints
+
+Sizes come from each zip's central directory, so the dry run reports them
+without extracting anything:
+
+- a **kept** column per zip: the bytes that would actually be copied, after junk
+  and after the per-file limit (zip64 archives that cannot be read this way fall
+  back to extraction);
+- a **category totals** block: `already in the repo + from this run = total`,
+  with `OVER the N MB budget` on any category that would cross it;
+- a verdict line saying whether `--apply` would stop.
 
 Nothing is pushed and nothing is deployed. Review `git log`/`git show`, then push
 yourself.
@@ -143,7 +167,7 @@ node tools/asset-sort/sort-downloads.test.mjs
 ```
 
 Builds a throwaway git repo and a throwaway downloads folder, then runs the real
-sorter against four embedded zips (two good, two broken) and checks 11 things:
+sorter against four embedded zips (two good, two broken) and checks 15 things:
 
 | fixture | what it proves |
 |---|---|
@@ -152,7 +176,12 @@ sorter against four embedded zips (two good, two broken) and checks 11 things:
 | `Broken_Zeldisaac.zip` - an HTML error page named `.zip` | caught before extraction, reported as "not a zip" |
 | `Corrupt_KayKit.zip` - a real `PK` header followed by garbage | passes the signature check, then fails every extractor, and is still skipped rather than aborting the run |
 
-The assertions are the point of the test: exit 0 with both broken zips present,
+It runs the tool three ways first: a dry run (real per-zip and per-category
+sizes printed, nothing written), then `--apply` with a budget far below the
+packs (exit 2, no files, no commits, the category named), then the same run with
+`--allow-over-budget` (finishes, flags the overage).
+
+The rest of the assertions are the point of the test: exit 0 with both broken zips present,
 both named in the run summary and in `tasks/freebuff-results.md`, no files from
 them in the repo, the good packs copied and committed one category at a time, a
 clean working tree afterwards, junk still stripped, and `--strict` flipping the
