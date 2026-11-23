@@ -1,6 +1,6 @@
 {
   "probe": "tools/playtest/pacing-probe.mjs",
-  "generated": "2026-11-23T03:37:42.280Z",
+  "generated": "2026-11-23T03:58:38.561Z",
   "base": "http://127.0.0.1:8099/",
   "settings": {
     "bgm": 0.5,
@@ -18,84 +18,104 @@
     "warmth": 0
   },
   "timings_ms": {
-    "run_start": 812,
-    "title_shown": 2971,
-    "new_game": 4492,
-    "first_dialogue": 5687,
-    "first_item": 12819,
-    "control_given": 12820,
-    "first_save": 20753,
-    "first_encounter_start": 38302,
-    "first_encounter_end": 51514,
-    "first_item_or_levelup": 12819
+    "run_start": 2566,
+    "title_shown": 4827,
+    "new_game": 6362,
+    "first_dialogue": 7629,
+    "first_item": 14759,
+    "control_given": 14764,
+    "first_save": 23245,
+    "first_encounter_start": 31528,
+    "first_encounter_end": 47892,
+    "first_item_or_levelup": 14759
   },
   "missing_timestamps": [],
   "console_errors": [],
   "idle_stretches": [],
   "battle_trace": [
     {
-      "t": 38311,
+      "t": 31532,
       "party": 90,
       "foes": 58
     },
     {
-      "t": 39490,
-      "party": 75,
+      "t": 32696,
+      "party": 90,
       "foes": 58
     },
     {
-      "t": 40365,
-      "party": 75,
+      "t": 33590,
+      "party": 74,
       "foes": 44
     },
     {
-      "t": 41567,
-      "party": 75,
+      "t": 34784,
+      "party": 74,
       "foes": 44
     },
     {
-      "t": 42448,
-      "party": 57,
-      "foes": 29
+      "t": 35657,
+      "party": 58,
+      "foes": 44
     },
     {
-      "t": 43331,
-      "party": 57,
-      "foes": 29
+      "t": 36534,
+      "party": 58,
+      "foes": 30
     },
     {
-      "t": 44498,
-      "party": 42,
-      "foes": 29
+      "t": 37698,
+      "party": 51,
+      "foes": 30
     },
     {
-      "t": 45384,
-      "party": 42,
-      "foes": 15
+      "t": 38571,
+      "party": 51,
+      "foes": 17
     },
     {
-      "t": 46552,
-      "party": 27,
-      "foes": 15
+      "t": 39742,
+      "party": 51,
+      "foes": 17
     },
     {
-      "t": 47435,
-      "party": 27,
-      "foes": 1
+      "t": 40617,
+      "party": 35,
+      "foes": 3
     },
     {
-      "t": 48309,
-      "party": 27,
-      "foes": 1
+      "t": 41787,
+      "party": 35,
+      "foes": 3
     },
     {
-      "t": 49475,
-      "party": 11,
+      "t": 42663,
+      "party": 18,
+      "foes": 3
+    },
+    {
+      "t": 43549,
+      "party": 18,
+      "foes": 3
+    },
+    {
+      "t": 44731,
+      "party": 2,
+      "foes": 3
+    },
+    {
+      "t": 45612,
+      "party": 2,
       "foes": 0
     },
     {
-      "t": 50349,
-      "party": 11,
+      "t": 46699,
+      "party": 2,
+      "foes": 0
+    },
+    {
+      "t": 47602,
+      "party": 2,
       "foes": 0
     }
   ],
@@ -106,47 +126,47 @@
       "map": 2,
       "x": 6,
       "y": 6,
-      "at": 12820
+      "at": 14764
     },
     {
       "step": "house_to_village",
       "map": 1,
-      "at": 14749
+      "at": 16713
     },
     {
       "step": "light_post",
       "map": 1,
       "x": 15,
       "y": 16,
-      "at": 20753
+      "at": 23245
     },
     {
       "step": "shift_far",
       "map": 1,
-      "at": 23422
+      "at": 25720
     },
     {
       "step": "enemy",
       "id": 39,
       "troop": "tr_dust_wisp",
       "x": 10,
-      "y": 12,
-      "at": 24055
+      "y": 11,
+      "at": 26343
     },
     {
       "step": "battle_end",
-      "at": 51514
+      "at": 47892
     }
   ],
   "final_state": {
     "map": 1,
-    "x": 11,
+    "x": 12,
     "y": 12,
     "realm": "far",
     "level": 1,
-    "lumen": 53,
+    "lumen": 54,
     "saves": 1,
-    "hp": 11,
+    "hp": 2,
     "fades": 0,
     "defeated": 1,
     "battle_result": "win"
