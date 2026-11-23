@@ -4,7 +4,7 @@ const shot = (n) => page.screenshot({ path: `screenshots/${n}.png` });
 try {
   await newGame(page);
   await mashUntil(page, () => window.__S.$.sw('intro_done'));
-  await sleep(500); await teleport(page, 1, 8, 6, 'down');
+  await sleep(500); await page.evaluate(() => window.__S.$.setSw('post_lit', true)); await teleport(page, 1, 16, 17, 'up');   // Menu > Save needs a lit Lantern Post (saves are a reward)
   await page.evaluate(() => { const S = window.__S; S.$.addActor('kaze'); S.$.addActor('daigo'); S.$.gold = 300; S.$.gain('onigiri', 2); S.$.gain('hush_bell', 1); S.$.gain('brass_lantern', 1); S.$.gain('lantern_oil', 1); S.$.quests.main = { stage: 2, done: false }; S.$.quests.chime = { stage: 0, done: false }; S.$.quests.wisps = { stage: 0, done: false }; S.$.bst('dust_wisp').seen = true; S.$.bst('dust_wisp').weak = ['flame']; S.$.bst('paper_lantern').seen = true; S.$.actors.mio.hp = 20; S.$.tutorialsShown.parley = true; });
   const tests = [['Item', 0, 0], ['Skill', 1, 1], ['Equip', 2, 1], ['Status', 3, 1], ['Formation', 4, 0], ['Quests', 5, 0], ['Bestiary', 6, 0], ['Notes', 7, 0], ['Options', 8, 0], ['Save', 9, 0]];
   for (const [name, down, pick] of tests) {

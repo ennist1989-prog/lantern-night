@@ -313,7 +313,7 @@ def build_crossing():
         say('hisa', 'Old Hisa', 'A Lantern-bearer, at my ferry! Ferry’s been dry for years, dear, but the shop’s open and the futon’s aired.'),
         IF({'nsw': 'sq05_seen'}, [say('hisa', 'Old Hisa', 'Funny thing. Every night a little dog sits on my doorstep. Every morning he’s gone. I’ve never once been able to pet him.'), quest('sq05', 0), sw('sq05_seen')]),
         choice(['Shop', 'Rest (30 G)', 'Chat', 'Leave'], [[{'c': 'shop', 'items': hisa_goods, 'name': 'Old Hisa', 'face': 'hisa'}],
-            [{'c': 'inn', 'price': 30, 'name': 'Old Hisa', 'face': 'hisa', 'ask': 'Thirty gold for river fish and a quiet room. Stay the night?'}],
+            [{'c': 'inn', 'price': 30, 'noSave': True, 'name': 'Old Hisa', 'face': 'hisa', 'ask': 'Thirty gold for river fish and a quiet room. Stay the night?'}],
             [IF({'nsw': 'kappa_passed'}, [say('hisa', 'Old Hisa', 'The Kappa at the ford? He’s proud, not cruel. Bring him a cucumber and bow back when he bows. My Oto used to bark at him.')],
                 [say('hisa', 'Old Hisa', 'Past the ford is the Hollow, where the Willow Mother weeps. Folk go in there to forget something, and come out forgetting everything.')])], []])])], 'near')
     # ---- Oto (Far, at the doorstep): sq05
@@ -422,7 +422,7 @@ def build_hollow():
     m.region(0, 0, 33, 27, 3); m.encounter = dict(region=3, zone='z09')
     m.region(25, 2, 32, 11, 0); m.region(26, 16, 32, 24, 6)
     for y in (19, 20, 21): m.door_touch(0, y, 111, 44, 12, 'left', se=None)
-    m.post(4, 22, light=POST_LIGHT); m.post(22, 9, light=POST_LIGHT)
+    m.post(4, 22, light=POST_LIGHT, save=False); m.post(22, 9, light=POST_LIGHT)   # one save per map: keep the deep Post
     m.event(3, 20, [page(cond={'nsw': 'hollow_intro'}, trigger='auto', list=[
         say(None, None, 'Willow branches hang to the ground like curtains. A slow violet river cuts the hollow in two, and everything near it is very quiet.'),
         mio('I can hear singing. Names again, like the forest. But she keeps losing her place.'),

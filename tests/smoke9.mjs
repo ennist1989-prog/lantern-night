@@ -4,7 +4,7 @@ const shot = (n) => page.screenshot({ path: `screenshots/${n}.png` });
 try {
   await newGame(page);
   await mashUntil(page, () => window.__S.$.sw('intro_done'));
-  await sleep(500); await teleport(page, 1, 8, 6, 'down');
+  await sleep(500); await page.evaluate(() => window.__S.$.setSw('post_lit', true)); await teleport(page, 1, 16, 17, 'up');   // Menu > Save needs a lit Lantern Post (saves are a reward)
   await page.evaluate(() => { const S = window.__S; S.$.addActor('kaze'); S.$.addActor('daigo'); S.$.addBond('straw_hound'); S.$.addBond('dust_wisp'); S.$.bst('straw_hound').seen = true; S.$.bst('straw_hound').parleyed = true; S.$.bst('straw_hound').weak = ['near:flame','far:lumen']; S.$.bst('dust_wisp').seen = true; S.$.actors.mio.exp += 0; S.$.gold = 300; S.$.gain('rice_ball', 2); S.$.gain('mochi', 2); S.$.gain('hush_bell', 1); S.$.gain('garb2', 1); S.$.gain('lantern_oil', 1); S.$.quests.main = { stage: 2, done: false }; S.$.quests.chime = { stage: 0, done: false }; S.$.quests.wisps = { stage: 0, done: false }; S.$.bst('dust_wisp').seen = true; S.$.bst('dust_wisp').weak = ['flame']; S.$.bst('paper_lantern').seen = true; S.$.actors.mio.hp = 20; S.$.tutorialsShown.parley = true; });
   const tests = [['Item', 0, 0], ['Skill', 1, 1], ['Equip', 2, 1], ['Status', 3, 1], ['Formation', 4, 0], ['Quests', 5, 0], ['Bonds', 6, 0], ['Bestiary', 7, 0], ['Notes', 8, 0], ['Options', 9, 0], ['Save', 10, 0]];
   for (const [name, down, pick] of tests) {

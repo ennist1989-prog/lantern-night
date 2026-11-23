@@ -19,7 +19,7 @@ try {
   ok(r.start === 1 && r.after2 === 2 && r.noRegress === 2 && r.after3 === 3, 'chapter command advances and never regresses');
   ok(r.meta1 === 3 && r.meta2 === 2, 'save-slot meta carries chapter (old save inferred 2)'); ok(r.loaded2 === 2 && r.ver === 3, 'loading v2 save migrates chapter -> 2, ver 3');
   await page.evaluate(() => { window.__game.scene.getScene('Map').openSave(); }); await waitScene(page, 'SaveLoad'); await sleep(700);
-  fs.mkdirSync('/workspace/lantern-night/screenshots/b2', { recursive: true }); await page.screenshot({ path: '/workspace/lantern-night/screenshots/b2/save_slots_chapter.png' });
+  fs.mkdirSync((process.env.SHOTS || process.env.SS || '/workspace/lantern-night/screenshots') + '/b2', { recursive: true }); await page.screenshot({ path: (process.env.SHOTS || process.env.SS || '/workspace/lantern-night/screenshots') + '/b2/save_slots_chapter.png' });
   const txt = await page.evaluate(() => window.__game.scene.getScene('SaveLoad').children.list.flatMap((c) => (c.list || [c])).flatMap((c) => (c.list || [c])).filter((c) => c.type === 'Text').map((c) => c.text));
   ok(txt.includes('Ch 3') && txt.includes('Ch 2'), 'save slots show Ch 3 / Ch 2');
   ok(errors.filter((e) => !/willReadFrequently/.test(e)).length === 0, 'no console errors ' + JSON.stringify(errors.slice(0, 3)));

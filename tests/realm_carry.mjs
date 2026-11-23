@@ -48,6 +48,8 @@ try {
     await page.evaluate((l) => { const { $, Settings } = window.__S; Settings.data.autoBattle = false; Settings.save(); $.realm = 'far'; $.lumen = l; $.healAll(); const m = window.__game.scene.getScene('Map'); m.applyRealmVisuals(); window.__done = null; window.__forced = false; window.__pre = { fades: $.fades, map: $.map.id, x: $.map.x, y: $.map.y };
       m.startBattle('tr_dust_wisp', { random: true, zone: 'z02' }).then((r) => (window.__done = r)); }, lumen0);
     await waitScene(page, 'Battle', 15000);
+    // The driver steers by menu labels; a stale cursor on the Fight/Flee window could pick Flee and end the fight as 'escape' (seen intermittently). Flee is not what N10 checks, so lock it.
+    await page.evaluate(() => { window.__game.scene.getScene('Battle').B.noEscape = true; });
     for (let t = 0; t < 160; t++) { if (await page.evaluate(() => window.__done)) break; const s = await waitInput(page, 40000).catch(() => null); if (!s || s.ended) { await press(page, 'Enter', 40); await sleep(150); continue; }
       const go = await page.evaluate((hold) => { const B = window.__game.scene.getScene('Battle').B; if (B.forcedNear) window.__forced = true; const go = !hold || B.forcedNear; B.foes.forEach((f) => { if (go) f.hp = Math.min(f.hp, 1); else { f.mhp = Math.max(f.mhp, 999); f.hp = f.mhp; } }); return go; }, holdUntilForced);
       if (s.win === 'target') await press(page, 'Enter', 50);

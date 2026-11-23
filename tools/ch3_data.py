@@ -28,6 +28,7 @@ Y = load(P('system.json'))
 # map ids: 10 Whispering Forest (both realms), 111 The Crossing (Far map per the bible), 112 Willow Hollow, 113 Misty Grove
 for k in ('7', '8', '9'): Y['mapNames'].pop(k, None); Y['dungeonExit'].pop(k, None)
 Y['mapNames'].update({'10': 'Whispering Forest', '111': 'The Crossing', '112': 'Willow Hollow', '113': 'Misty Grove'})
+Y['mapNames']['7'] = 'Reedwind Maze'; Y['dungeonExit']['7'] = {'map': 1, 'x': 23, 'y': 26, 'dir': 'up'}   # training maze (map 7)
 Y['dungeonExit'].pop('10', None); Y['dungeonExit']['112'] = {'map': 111, 'x': 43, 'y': 12, 'dir': 'left'}
 Y['notes'] = [n for n in Y.get('notes', []) if n.get('unlock') != 'willow_tip'] + [dict(unlock='willow_tip', title='The Willow Mother',
     text='She is grieving, not hunting. Blades can’t end her grief: her roots drink the river and her wounds close. Parley instead: Remember her children three times until she is Calm, then Send her home. Striking her breaks the Calm. If the party falls, the Lantern brings you back to try again.')]

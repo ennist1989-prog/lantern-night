@@ -76,6 +76,13 @@ check(gg.find('art_overlay(); art_manifest()') > gg.find("'ch3_assets.py'") > 0,
 wm = SPEC['willow_mother']['sprite']
 check(wm.get('noFar') is True and 'tint' not in wm, f'willow_mother: noFar and no tint expected: {wm}')
 check(wm.get('phaseStrips', {}).get('Rootstorm') == 'willow_mother_strained' and SPEC['kappa_toll']['sprite'].get('phaseStrips', {}).get('Dish Spilled') == 'kappa_toll_spilled', 'phaseStrips for Willow Rootstorm / Kappa Dish Spilled')
+# objects atlas: every objects.json cell must lie inside objects.png and hold at least one visible pixel (a merge once kept a
+# shorter objects.png than its objects.json, so the maze supply_box rects pointed off the image and the box was invisible)
+_oa = Image.open(os.path.join(ROOT, 'public', 'assets', 'objects.png')).convert('RGBA'); _of = json.load(open(os.path.join(ROOT, 'public', 'assets', 'objects.json')))
+for _n, (_x, _y, _w, _h) in _of.items():
+    _in = _x >= 0 and _y >= 0 and _x + _w <= _oa.width and _y + _h <= _oa.height
+    check(_in, f'objects.json {_n} {[_x, _y, _w, _h]} falls outside objects.png {_oa.size}')
+    if _in: check(_oa.crop((_x, _y, _x + _w, _y + _h)).getextrema()[3][1] > 0, f'objects.json {_n} {[_x, _y, _w, _h]} is fully transparent in objects.png')
 if fails:
     print('\nFAIL'); [print(' -', f) for f in fails]; sys.exit(1)
 print('\nOK: all boss frame layouts as expected; bell_keeper = 96x48 x6')
