@@ -64,8 +64,13 @@ const allZips = has('all-zips');
 const buildAfter = !has('no-build');
 const moveZips = has('move-zips');
 const maxFileMb = Number(flag('max-file-mb', 95));
+const maxCategoryMb = Number(flag('max-category-mb', 500));
+const strict = has('strict');
+const measure = has('measure');
 const logPath = path.resolve(String(flag('log', path.join('tasks', 'freebuff-results.md'))));
 const keepTemp = has('keep-temp');
+if (!Number.isFinite(maxFileMb) || maxFileMb <= 0) { console.error('--max-file-mb must be a positive number'); process.exit(2); }
+if (!Number.isFinite(maxCategoryMb) || maxCategoryMb <= 0) { console.error('--max-category-mb must be a positive number'); process.exit(2); }
 
 const overrides = new Map();
 for (let i = 0; i < argv.length; i++) {
@@ -178,12 +183,32 @@ function listZip(zip) {
   return null;
 }
 
-function entriesFor(zip, tempDir) {
-  const listed = listZip(zip);
-  if (listed) return { entries: listed, tempDir: null };
+function entriesFor(zip, tempDir, forceExtract = false) {
+  if (!forceExtract) {
+    const listed = listZip(zip);
+    if (listed) return { entries: listed, tempDir: null };
+  }
   const into = fs.mkdtempSync(path.join(tempDir, 'x-'));
   extract(zip, into);
   return { entries: walk(into), tempDir: into };
+}
+
+// A .zip that is really an HTML error page, a truncated download or a 0-byte
+// file fails here instead of halfway through an extraction.
+function looksLikeZip(file) {
+  try {
+    const fd = fs.openSync(file, 'r'); const buf = Buffer.alloc(4); const n = fs.readSync(fd, buf, 0, 4, 0); fs.closeSync(fd);
+    if (n < 4) return false;
+    return buf[0] === 0x50 && buf[1] === 0x4b && ((buf[2] === 0x03 && buf[3] === 0x04) || (buf[2] === 0x05 && buf[3] === 0x06) || (buf[2] === 0x07 && buf[3] === 0x08));
+  } catch { return false; }
+}
+
+const firstLine = (s) => String(s || '').split('\n').map((l) => l.trim()).filter(Boolean)[0] || 'unknown error';
+
+/** Keeps a copied file inside the pack's target folder (zip-slip guard). */
+function safeJoin(root, rel) {
+  const base = path.resolve(root); const out = path.resolve(base, rel);
+  return out === base || out.startsWith(base + path.sep) ? out : null;
 }
 
 function git(args, { allowFail = false } = {}) {
@@ -220,32 +245,53 @@ console.log(`Mode  : ${apply ? 'APPLY (moves files and commits)' : 'dry run (not
 
 for (const name of zips) {
   const zip = path.join(src, name);
-  const size = fs.statSync(zip).size;
   const packed = classify(name);
-  const row = { name, zip, size, ...packed, entries: [], junk: [], keep: [], total: 0, skippedLarge: [] };
-  if (packed.matched || allZips) {
-    const { entries, tempDir } = entriesFor(zip, tempRoot);
-    row.entries = entries;
-    row.junk = entries.filter(isJunk);
-    row.keep = entries.filter((e) => !isJunk(e));
-    if (tempDir) {
-      row.total = row.keep.reduce((sum, rel) => sum + (fs.existsSync(path.join(tempDir, rel)) ? fs.statSync(path.join(tempDir, rel)).size : 0), 0);
+  const row = { name, zip, size: 0, ...packed, entries: [], junk: [], keep: [], total: 0, skippedLarge: [], status: 'ok', problem: null, tempDir: null };
+  try { row.size = fs.statSync(zip).size; } catch (err) { row.status = 'bad'; row.problem = `unreadable: ${firstLine(err.message)}`; }
+  if (row.status === 'ok' && row.size === 0) { row.status = 'bad'; row.problem = 'empty file (0 bytes)'; }
+  if (row.status === 'ok' && !looksLikeZip(zip)) { row.status = 'bad'; row.problem = 'not a zip (no PK signature - partial download or an HTML page?)'; }
+  if (row.status === 'ok' && row.size < 22) { row.status = 'bad'; row.problem = `truncated zip (${row.size} bytes)`; }
+  if (row.status === 'ok' && (packed.matched || allZips)) {
+    try {
+      const { entries, tempDir } = entriesFor(zip, tempRoot, measure && !apply);
+      row.entries = entries; row.tempDir = tempDir;
+      const outside = entries.filter((e) => path.isAbsolute(e) || e.split(/[\\/]/).includes('..'));
+      if (outside.length) {
+        row.status = 'bad';
+        row.problem = `${outside.length} entr${outside.length === 1 ? 'y' : 'ies'} point outside the archive (zip-slip), e.g. ${outside[0]}`;
+      }
+      row.junk = entries.filter(isJunk);
+      row.keep = entries.filter((e) => !isJunk(e));
+      if (!row.keep.length) { row.status = 'bad'; row.problem = 'archive holds no files after junk stripping'; }
+      if (tempDir) row.total = row.keep.reduce((sum, rel) => { const p = path.join(tempDir, rel); try { return sum + fs.statSync(p).size; } catch { return sum; } }, 0);
+    } catch (err) {
+      row.status = 'bad'; row.problem = firstLine(err.message);
+      row.entries = []; row.junk = []; row.keep = [];
     }
-    row.tempDir = tempDir;
   }
   plan.push(row);
 }
+const badZips = plan.filter((r) => r.status === 'bad');
 
-const width = Math.max(...plan.map((r) => r.label.length), 10);
-console.log(`${'pack'.padEnd(width)}  ${'zip size'.padStart(9)}  ${'category'.padEnd(18)}  files  junk  why`);
+const display = (r) => r.name.replace(/\.zip$/i, '');
+const width = Math.max(...plan.map((r) => display(r).length), 10);
+console.log(`Cap   : ${maxCategoryMb} MB per category, ${maxFileMb} MB per file (--max-category-mb / --max-file-mb)\n`);
+console.log(`${'zip'.padEnd(width)}  ${'zip size'.padStart(9)}  ${'category'.padEnd(18)}  files  junk  why`);
 for (const row of plan) {
-  if (!row.matched && !allZips) {
-    console.log(`${row.label.padEnd(width)}  ${mb(row.size).padStart(9)}  ${'(skipped)'.padEnd(18)}  ${'-'.padStart(5)}  ${'-'.padStart(4)}  not one of the named packs; --all-zips would send it to future-vault`);
+  if (row.status === 'bad') {
+    console.log(`${display(row).padEnd(width)}  ${mb(row.size).padStart(9)}  ${'(bad zip)'.padEnd(18)}  ${'-'.padStart(5)}  ${'-'.padStart(4)}  SKIPPED: ${row.problem}`);
     continue;
   }
-  console.log(`${row.label.padEnd(width)}  ${mb(row.size).padStart(9)}  ${row.category.padEnd(18)}  ${String(row.keep.length).padStart(5)}  ${String(row.junk.length).padStart(4)}  ${row.why}`);
+  if (!row.matched && !allZips) {
+    console.log(`${display(row).padEnd(width)}  ${mb(row.size).padStart(9)}  ${'(skipped)'.padEnd(18)}  ${'-'.padStart(5)}  ${'-'.padStart(4)}  not one of the named packs; --all-zips would send it to future-vault`);
+    continue;
+  }
+  const unpacked = row.total ? ` (${mb(row.total)} unpacked)` : '';
+  console.log(`${display(row).padEnd(width)}  ${mb(row.size).padStart(9)}  ${row.category.padEnd(18)}  ${String(row.keep.length).padStart(5)}  ${String(row.junk.length).padStart(4)}  ${row.label} - ${row.why}${unpacked}`);
   if (row.review) console.log(`${''.padEnd(width)}  ${''.padStart(9)}  ${''.padEnd(18)}  ${''.padStart(5)}  ${''.padStart(4)}  REVIEW: ${row.review === true ? 'unrecognised pack, check by hand' : row.review}`);
 }
+if (badZips.length) console.log(`\n${badZips.length} bad zip(s) will be skipped, not fatal: ${badZips.map(display).join(', ')}`);
+if (!apply && !measure) console.log('Sizes are measured during --apply; add --measure to a dry run to see them first (it extracts to a temp folder).');
 
 const junkSample = plan.flatMap((r) => r.junk.slice(0, 3).map((j) => `${r.label}: ${j}`));
 if (junkSample.length) {
@@ -261,45 +307,109 @@ if (!apply) {
 }
 
 // -------------------------------------------------------------- extraction
-const results = new Map(CATEGORIES.map((c) => [c, { packs: [], files: 0, bytes: 0, skipped: [] }]));
+const results = new Map(CATEGORIES.map((c) => [c, { packs: [], files: 0, bytes: 0, skipped: [], capped: [], failed: [], copyErrors: [] }]));
+const capBytes = Math.round(maxCategoryMb * 1048576);
+
+// Count what is already in each category folder, so a second run does not spend
+// a fresh cap on top of files the first run committed.
+for (const category of CATEGORIES) {
+  const agg = results.get(category); const dir = path.join(dest, category);
+  if (!fs.existsSync(dir)) continue;
+  try {
+    for (const rel of walk(dir)) {
+      const p = path.join(dir, rel);
+      try { const st = fs.statSync(p); if (st.isFile()) agg.bytes += st.size; } catch { /* skip */ }
+    }
+  } catch { /* skip */ }
+}
 
 for (const row of plan) {
   if (!row.matched && !allZips) continue;
-  const into = fs.mkdtempSync(path.join(tempRoot, 'pack-'));
-  extract(row.zip, into);
-  const root = singleRoot(into);
-  const entries = walk(root);
-  const junk = entries.filter(isJunk);
-  const keep = entries.filter((e) => !isJunk(e));
-  const target = path.join(dest, row.category, row.slug);
-  let copied = 0;
-  let bytes = 0;
-  for (const rel of keep) {
-    const from = path.join(root, rel);
-    const size = fs.statSync(from).size;
-    if (size > maxFileMb * 1048576) {
-      row.skippedLarge.push(`${rel} (${mb(size)})`);
-      continue;
-    }
-    const to = path.join(target, rel);
-    fs.mkdirSync(path.dirname(to), { recursive: true });
-    if (fs.existsSync(to)) continue;
-    fs.copyFileSync(from, to);
-    copied += 1;
-    bytes += size;
-  }
   const agg = results.get(row.category);
-  agg.packs.push(row.label);
-  agg.files += copied;
-  agg.bytes += bytes;
-  console.log(`\n${row.label} -> ${path.relative(process.cwd(), target)}`);
-  console.log(`  copied ${copied} file(s), ${mb(bytes)}; dropped ${junk.length} junk file(s)`);
+  if (row.status === 'bad') {
+    agg.failed.push(`${row.name}: ${row.problem}`);
+    console.log(`\n${row.label}: SKIPPED - ${row.problem}`);
+    continue;
+  }
+  let into = row.tempDir;
+  try {
+    if (!into) { into = fs.mkdtempSync(path.join(tempRoot, 'pack-')); extract(row.zip, into); }
+  } catch (err) {
+    row.status = 'bad'; row.problem = firstLine(err.message);
+    agg.failed.push(`${row.name}: ${row.problem}`);
+    console.log(`\n${row.label}: SKIPPED - ${row.problem}`);
+    continue;
+  }
+  const target = path.join(dest, row.category, row.slug);
+  let root, entries;
+  try { root = singleRoot(into); entries = walk(root); } catch (err) {
+    row.status = 'bad'; row.problem = `unreadable after extraction: ${firstLine(err.message)}`;
+    agg.failed.push(`${row.name}: ${row.problem}`);
+    console.log(`\n${row.label}: SKIPPED - ${row.problem}`);
+    continue;
+  }
+  const junk = entries.filter(isJunk);
+  let links = 0, unsafe = 0;
+  const files = [];
+  for (const rel of entries) {
+    if (isJunk(rel)) continue;
+    const from = path.join(root, rel);
+    let st; try { st = fs.lstatSync(from); } catch { continue; }
+    if (st.isSymbolicLink() || !st.isFile()) { links += 1; continue; }
+    const to = safeJoin(target, rel);
+    if (!to) { unsafe += 1; continue; }
+    if (st.size > maxFileMb * 1048576) { row.skippedLarge.push(`${rel} (${mb(st.size)})`); continue; }
+    files.push({ from, to, size: st.size });
+  }
+  const packBytes = files.reduce((n, f) => n + f.size, 0);
+  if (!files.length) {
+    const why = row.skippedLarge.length ? `every file is over the ${maxFileMb} MB per-file limit` : 'nothing left after junk stripping';
+    row.status = 'bad'; row.problem = why; agg.failed.push(`${row.name}: ${why}`);
+    console.log(`\n${row.label}: SKIPPED - ${why}`);
+    continue;
+  }
+  // Cap whole packs, never half a pack: a partial pack is harder to notice than a skipped one.
+  if (agg.bytes + packBytes > capBytes) {
+    const why = `${mb(packBytes)} does not fit ${row.category}: ${mb(agg.bytes)} of ${maxCategoryMb} MB already used`;
+    row.status = 'capped'; row.problem = why; agg.capped.push(`${row.name}: ${why}`);
+    console.log(`\n${row.label}: SKIPPED - ${why} (whole pack; raise --max-category-mb to include it)`);
+    continue;
+  }
+  let copied = 0, bytes = 0, present = 0;
+  for (const f of files) {
+    try {
+      fs.mkdirSync(path.dirname(f.to), { recursive: true });
+      if (fs.existsSync(f.to)) { present += 1; continue; }
+      fs.copyFileSync(f.from, f.to);
+      copied += 1; bytes += f.size;
+    } catch (err) {
+      agg.copyErrors.push(`${row.name}/${path.relative(target, f.to)}: ${firstLine(err.message)}`);
+    }
+  }
+  if (copied) {
+    agg.packs.push(row.label);
+    agg.files += copied;
+    agg.bytes += bytes;
+    row.status = 'sorted';
+  } else {
+    row.status = 'present';   // everything was already in the repo: nothing new to commit
+  }
+  console.log(`\n${display(row)} -> ${path.relative(process.cwd(), target)}`);
+  console.log(`  ${copied ? `copied ${copied} file(s), ${mb(bytes)}` : 'no new file(s)'}${present ? `, ${present} already present` : ''} (category now ${mb(agg.bytes)} of ${maxCategoryMb} MB); dropped ${junk.length} junk file(s)`);
+  if (links || unsafe) console.log(`  skipped ${links} link(s) and ${unsafe} path(s) pointing outside the pack`);
   if (row.skippedLarge.length) {
     console.log(`  OVER the ${maxFileMb} MB per-file limit, not copied (GitHub rejects files over 100 MB):`);
     for (const name of row.skippedLarge.slice(0, 10)) console.log(`    ${name}`);
     if (row.skippedLarge.length > 10) console.log(`    ... and ${row.skippedLarge.length - 10} more`);
   }
   agg.skipped.push(...row.skippedLarge);
+}
+
+for (const [category, agg] of results) {
+  if (!agg.files && !agg.failed.length && !agg.capped.length) continue;
+  console.log(`\n${category}: ${agg.files} file(s), ${mb(agg.bytes)} of ${maxCategoryMb} MB, ${agg.packs.length} pack(s) committed`);
+  if (agg.failed.length) console.log(`  skipped as bad: ${agg.failed.length}`);
+  if (agg.capped.length) console.log(`  skipped by the category cap: ${agg.capped.length} (${agg.capped.map((c) => c.split(':')[0]).join(', ')})`);
 }
 
 // ----------------------------------------------------------------- commits
@@ -345,12 +455,18 @@ if (buildAfter) {
 // --------------------------------------------------------------------- log
 if (fs.existsSync(logPath)) {
   const lines = plan
-    .filter((r) => r.matched || allZips)
+    .filter((r) => r.status === 'sorted' || r.status === 'present')
     .map((r) => {
       const sha = shas.get(r.category);
-      return `    ${r.label} - ${r.category}${sha ? ` (commit ${sha})` : ''}: ${r.keep.length} file(s) packed, ${r.junk.length} junk dropped${r.skippedLarge.length ? `, ${r.skippedLarge.length} over the size limit` : ''}.`;
+      const agg = results.get(r.category);
+      return `    ${r.name} (${r.label}) - ${r.category}${sha ? ` (commit ${sha})` : ''}: ${r.status === 'present' ? 'already in the repo, nothing new' : `${r.keep.length} file(s) packed`}, ${r.junk.length} junk dropped${r.skippedLarge.length ? `, ${r.skippedLarge.length} over the ${maxFileMb} MB per-file limit` : ''}; category total ${mb(agg.bytes)} of the ${maxCategoryMb} MB cap.`;
     })
     .join('\n');
+  const skipped = [
+    ...plan.filter((r) => r.status === 'bad').map((r) => `    ${r.name}: bad zip - ${r.problem} (left in ${src}, nothing committed)`),
+    ...plan.filter((r) => r.status === 'capped').map((r) => `    ${r.name}: not copied - ${r.problem} (left in ${src})`),
+    ...CATEGORIES.flatMap((c) => results.get(c).copyErrors.map((e) => `    copy failed: ${e}`)),
+  ].join('\n');
   const entry = [
     '',
     `- date: ${date}`,
@@ -359,6 +475,7 @@ if (fs.existsSync(logPath)) {
     `- result: Sorted the pack zips from ${src} with tools/asset-sort/sort-downloads.mjs into ${dest}/<category>/<pack>/; one commit per category folder.`,
     `  Packs:`,
     lines || '    (none matched)',
+    ...(skipped ? [`  Skipped, not fatal (bad zips and the ${maxCategoryMb} MB category cap):`, skipped] : []),
     `  Stripped: donate, Facebook, license, preview and readme files, plus Thumbs.db/.DS_Store/__MACOSX/.url/.lnk. Pack names are recorded here so attribution survives the license files being dropped; check each pack's original terms before shipping.`,
     `  Build: ${buildStatus === null ? 'not run (--no-build)' : `npm run build exited ${buildStatus}`}. Nothing is deployed.`,
     ...(buildTail && buildStatus !== 0 ? [`  Build tail:`, ...buildTail.split('\n').map((l) => `    ${l}`)] : []),
@@ -378,20 +495,30 @@ if (fs.existsSync(logPath)) {
 if (moveZips) {
   const done = path.join(src, `_sorted-${date}`);
   fs.mkdirSync(done, { recursive: true });
-  for (const row of plan) {
-    if (!row.matched && !allZips) continue;
-    fs.renameSync(row.zip, path.join(done, row.name));
-  }
-  console.log(`\nMoved ${plan.filter((r) => r.matched || allZips).length} zip(s) to ${done}`);
+  const movable = plan.filter((r) => (r.matched || allZips) && r.status !== 'bad');
+  for (const row of movable) fs.renameSync(row.zip, path.join(done, row.name));
+  console.log(`\nMoved ${movable.length} zip(s) to ${done}${badZips.length ? `; ${badZips.length} bad zip(s) left where they were` : ''}`);
 }
 
 if (!keepTemp) fs.rmSync(tempRoot, { recursive: true, force: true });
 
 const totalFiles = CATEGORIES.reduce((sum, c) => sum + results.get(c).files, 0);
 const totalBytes = CATEGORIES.reduce((sum, c) => sum + results.get(c).bytes, 0);
-console.log(`\nDone: ${totalFiles} file(s), ${mb(totalBytes)} across ${[...shas.keys()].length} category commit(s).`);
+const cappedAll = CATEGORIES.flatMap((c) => results.get(c).capped);
+const failedAll = CATEGORIES.flatMap((c) => results.get(c).failed);
+const copyErrorsAll = CATEGORIES.flatMap((c) => results.get(c).copyErrors);
+console.log(`\nDone: ${totalFiles} new file(s) in ${[...shas.keys()].length} category commit(s); categories now hold ${mb(totalBytes)}.`);
+const failedNames = [...new Set([...badZips.map((r) => r.name), ...failedAll.map((f) => f.split(':')[0])])];
+if (failedNames.length) console.log(`Survived ${failedNames.length} unreadable pack(s), nothing copied from them: ${failedNames.map((n) => n.replace(/\.zip$/i, '')).join(', ')}`);
+if (cappedAll.length) console.log(`Left ${cappedAll.length} pack(s) out because of the ${maxCategoryMb} MB cap: ${cappedAll.map((c) => c.split(':')[0]).join(', ')}`);
+if (plan.some((r) => r.status === 'present')) console.log(`${plan.filter((r) => r.status === 'present').length} pack(s) were already in the repo; nothing new committed for them.`);
+if (copyErrorsAll.length) console.log(`${copyErrorsAll.length} file(s) could not be copied; the log entry lists them.`);
 if (buildStatus !== null && buildStatus !== 0) {
   console.error('The build failed after sorting - do not push until `npm run build` exits 0.');
+  process.exit(1);
+}
+if (strict && (badZips.length || failedAll.length || cappedAll.length || copyErrorsAll.length)) {
+  console.error('--strict: a bad zip or a cap skip happened, exiting 1.');
   process.exit(1);
 }
 process.exit(0);

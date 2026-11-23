@@ -74,6 +74,9 @@ before anything ships. Check each pack's original terms before using its art.
 | `--all-zips` | off | unmatched zips go to `future-vault` instead of being skipped |
 | `--map name=category` | — | force a pack's category; repeatable |
 | `--max-file-mb <n>` | 95 | files over this are not copied (GitHub refuses >100 MB); they are listed |
+| `--max-category-mb <n>` | 500 | budget per category folder; a pack that would cross it is skipped whole, never half-copied |
+| `--measure` | off | dry run only: extract to a temp folder so the unpacked size of each pack is shown before applying |
+| `--strict` | off | exit 1 if any zip was bad or any pack was left out by the cap (default is to survive and report) |
 | `--no-build` | off | skip `npm run build` |
 | `--move-zips` | off | move sorted zips into `<src>\_sorted-<date>\` |
 | `--log <file>` | `tasks/freebuff-results.md` | append the run here, if the branch has it |
@@ -83,13 +86,40 @@ before anything ships. Check each pack's original terms before using its art.
 
 1. Extract each matched zip to a temp folder; drop junk by name.
 2. Copy the rest into `public/assets/<category>/<slug>/`, skipping files over
-   `--max-file-mb` (listed, never silently dropped).
-3. `git add` + one commit per category folder that received files. Empty
+   `--max-file-mb` (listed, never silently dropped) and symlinks or paths that
+   would land outside the pack folder.
+3. Check the category budget: if adding the pack would cross
+   `--max-category-mb`, skip the whole pack and say so. Nothing is copied to
+   the point where a pack is half in the repo.
+4. `git add` + one commit per category folder that received files. Empty
    categories are reported, not committed.
-4. `npm run build`; a non-zero exit prints the tail and makes the script exit 1.
-5. Append a dated entry to `tasks/freebuff-results.md` (packs, counts, commits,
-   build status) and commit it.
-6. Print the totals.
+5. `npm run build`; a non-zero exit prints the tail and makes the script exit 1.
+6. Append a dated entry to `tasks/freebuff-results.md` (packs, counts, commits,
+   bad zips, cap skips, build status) and commit it.
+7. Print the totals.
+
+## Bad zips
+
+A zip that is 0 bytes, not a zip at all (an HTML error page saved as `.zip` is
+the usual case), truncated, or that fails to extract is **skipped, not fatal**:
+
+- it is reported in the table and the run continues with the next zip;
+- nothing from it is copied, and no half-extracted files reach the repo;
+- it stays where it is, even with `--move-zips`, so you can re-download it;
+- the run still exits 0 unless `--strict` is passed.
+
+Extraction is tried with `tar`, `unzip`, Python's `zipfile` and (on Windows)
+PowerShell, in that order, so one bad handler is not a failed pack.
+
+## Category size
+
+The cap is per category folder, default 500 MB (`--max-category-mb`), and it is
+applied per pack: a pack either fits and is copied whole, or is skipped whole
+and named in the output and in the results log. That keeps a category under the
+cap without leaving a half-copied pack that nobody notices. The single-file
+limit (95 MB, GitHub's 100 MB hard limit) still applies inside a pack that fits.
+Raise the cap deliberately, not by default: a category of several GB is a git
+problem regardless of the per-file limit.
 
 Nothing is pushed and nothing is deployed. Review `git log`/`git show`, then push
 yourself.
