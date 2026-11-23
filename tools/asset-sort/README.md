@@ -135,3 +135,27 @@ yourself.
   file over 100 MB and a history that large is impractical. `--max-file-mb`
   catches the individual offenders, but a huge pack is better trimmed by hand
   first, or sent to `future-vault` with `--map`.
+
+## Tests
+
+```bash
+node tools/asset-sort/sort-downloads.test.mjs
+```
+
+Builds a throwaway git repo and a throwaway downloads folder, then runs the real
+sorter against four embedded zips (two good, two broken) and checks 11 things:
+
+| fixture | what it proves |
+|---|---|
+| `Zeldisaac_noroot.zip` - files at the archive root next to a folder | no top folder to strip: the layout is kept as-is, no wrapper folder invented, root-level files not lost |
+| `KayKit_Adventurers_top.zip` - everything under one folder | that folder is stripped, so the pack starts at its own content |
+| `Broken_Zeldisaac.zip` - an HTML error page named `.zip` | caught before extraction, reported as "not a zip" |
+| `Corrupt_KayKit.zip` - a real `PK` header followed by garbage | passes the signature check, then fails every extractor, and is still skipped rather than aborting the run |
+
+The assertions are the point of the test: exit 0 with both broken zips present,
+both named in the run summary and in `tasks/freebuff-results.md`, no files from
+them in the repo, the good packs copied and committed one category at a time, a
+clean working tree afterwards, junk still stripped, and `--strict` flipping the
+same run to exit 1. The zips are base64 in the test file, so it needs no zip
+writer and no network; everything it writes lives in a temp folder that is
+removed afterwards.
