@@ -1,6 +1,6 @@
 import { chromium } from 'playwright-core';
 export async function launch(url = process.env.BASE || 'http://127.0.0.1:8099/', opts = {}) {
-  const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+  const browser = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
   const ctx = await browser.newContext({ viewport: { width: 816, height: 624 }, ...opts });
   const page = await ctx.newPage();
   await page.route(/sentry\.io/, (r) => r.abort());   // never report test sessions to Sentry

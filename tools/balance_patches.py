@@ -77,6 +77,12 @@ if isinstance(hw.get('parley'), dict): hw['parley']['recruit'] = False; hw['parl
 enemies['hearth_wisp'] = hw
 troops['tr_hearth_wisp'] = {'id': 'tr_hearth_wisp', 'name': 'Hearth-Lost Wisp', 'enemies': ['hearth_wisp'], 'kind': 'normal', 'level': 3, 'exp': 30, 'gold': 20, 'events': []}
 shutil.copyfile(os.path.join(MON, 'dust_wisp.png'), os.path.join(MON, 'hearth_wisp.png'))
+# D2: the first Far-Shore Dust Wisp is the tutorial skirmisher ("dies in 1-2 hits"), but its Far form halved physical, so a
+# player who only pressed Attack did 14 a hit instead of 28: five rounds, and probe runs ended at 11/90 and 2/90 HP (attack-only
+# sim: 52% wins at L1). Phys 0.5 -> 0.75 keeps Lumen at 1.5x, so Flare still one-shots and is still the right answer, while
+# attack-only L1 solo Mio now wins ~95% in ~3 rounds. Asserted as D2 in tests/sim.cjs. Applied after the hearth_wisp clone
+# above, so that fight keeps its 0.5 and its 3.5x-HP grind check.
+enemies['dust_wisp']['forms']['far']['rates']['phys'] = 0.75
 dump(ep, enemies); dump(tp, troops)
 print('balance patches ok: warden mhp', w['stats']['mhp'], 'exp', w['exp'], '| bell_keeper atk', bk['stats']['atk'], '| bell_keeper rewards', r['items'], r['unlock'], '| kappa_toll', kt['stats'])
 
