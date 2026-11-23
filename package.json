@@ -11,6 +11,7 @@
     "data": "python3 -B tools/gen_game.py",
     "art": "python3 -B tools/art_custom.py",
     "check:assets": "node scripts/check-assets.mjs",
+    "verify:assets": "python3 -B tools/verify_assets.py",
     "test:art": "python3 -B tests/test_frame_meta.py",
     "test:overlap": "node tests/overlap.mjs",
     "test:willow": "node tests/willow_sim.cjs",
