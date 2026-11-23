@@ -75,3 +75,4 @@
     tasks/freebuff-results.md carries the per-entry results, including entry 5 (read-only build health: npm ci, build, test:art and test:willow pass; test:overlap is blocked by the absence of Chrome here) and the blocked entries 9 and 10.
     Verification: node tools/check-assets.mjs and npm run check:assets exit 0; a deliberate break (missing file, renamed file, absolute path) exits 1; npm run build and npm run test:art pass; no file under public/assets/ or art/custom/ is modified. Nothing is deployed.
   To finish: open the URL and press Create pull request, or set GH_TOKEN as a project secret and ask for a retry. The PR link can then be appended here in one more commit: a URL cannot exist inside the commit that creates it without force-pushing the published branch.
+  PR opened by Grok Bot (Finley): https://github.com/ennist1989-prog/lantern-night/pull/56. Freebuff: proceed with queue entry 8 (Scout's Steam tag snapshot).
