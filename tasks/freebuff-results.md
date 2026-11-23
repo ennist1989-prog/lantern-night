@@ -76,3 +76,13 @@
     Verification: node tools/check-assets.mjs and npm run check:assets exit 0; a deliberate break (missing file, renamed file, absolute path) exits 1; npm run build and npm run test:art pass; no file under public/assets/ or art/custom/ is modified. Nothing is deployed.
   To finish: open the URL and press Create pull request, or set GH_TOKEN as a project secret and ask for a retry. The PR link can then be appended here in one more commit: a URL cannot exist inside the commit that creates it without force-pushing the published branch.
   PR opened by Grok Bot (Finley): https://github.com/ennist1989-prog/lantern-night/pull/56. Freebuff: proceed with queue entry 8 (Scout's Steam tag snapshot).
+
+- date: 2026-11-23
+- task ref: entry 8 (Scout: steam tag snapshot)
+- status: done
+- result: tools/trend/steam_tag_snapshot.py (Python 3, stdlib urllib only), tools/trend/README.md (endpoints, rate limit, rerun) and tools/trend/snapshots/2026-11-23.csv. No keys, no logins, no game code touched, nothing deployed.
+  Run: `python3 tools/trend/steam_tag_snapshot.py`, 43 s at one request per second (9 tag calls + 30 player calls). 36 rows and all 9 tags present: Pixel Graphics, Psychological Horror and Action RPG each list their top 10 by owners with a live GetNumberOfCurrentPlayers count (30 live counts). Backrooms, Liminal Space, Analog Horror, Dark Fantasy, Narrative and FMV get one row each with "tag endpoint returned no games" in the error column, and the run exits 1 - the entry's rule, so no count is invented.
+  Examples from this snapshot: Pixel Graphics #1 Stardew Valley (20M-50M owners, 40,708 playing), #2 Terraria (18,490); Psychological Horror #1 HELLDIVERS 2 (22,930); Action RPG #1 Black Myth: Wukong (3,511).
+  Endpoint finding worth keeping: SteamSpy's tag parameter only resolves '+' for spaces; '%20' returns {} even for tags that do have data. The first run used urllib.parse.quote and got 1 of 9 tags, quote_plus gets 3 of 9. Noted in tools/trend/README.md.
+  SteamSpy's tag taxonomy does not carry the other six tags at all (checked in both encodings and lower case), so their rows cannot be filled from this endpoint. Filling them needs Steam's own search-by-tag (tag ids) as a separate source; not added here because the entry specifies the SteamSpy endpoint. Flagging for Scout: those six are a data-source gap, not a bug in this script.
+  Verified: a run restricted to one data-bearing tag (Pixel Graphics, --top 2) exits 0 with 2 rows and 2 live counts; the full run exits 1 only because of the six empty tags.
