@@ -5,7 +5,7 @@ Pipeline and maintenance scripts.
 | what | command | notes |
 |---|---|---|
 | asset pipeline | `npm run assets` → `npm run data` → `python3 tools/ch_audio.py` | destructive first step; see `ASSETS.md` |
-| post-condition check | `npm run verify:assets` | asserts `mon/`, boss meta, chapter bgm, icon slots, manifest |
+| post-condition check | `npm run verify:assets` | asserts `mon/`, boss meta, chapter bgm, icon slots, window skins, manifest |
 | reference check | `npm run check:assets` (= `node tools/check-assets.mjs`) | static scan of asset paths; exit 1 on missing, case-mismatched or absolute refs |
 | pixel lint | `python3 tools/pixel-lint/pixel_lint.py` | palette/alpha/outline/brightness/gold/contrast rules -> `tools/pixel-lint/report.md` |
 | contact sheets | `python3 tools/art_contact_sheets.py` | 2x sheets + palette report under `docs/art/contact_sheets/` |

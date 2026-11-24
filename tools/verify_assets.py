@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Post-conditions for public/assets/ — run after any pipeline step.
 
-`npm run assets` wipes public/assets/ and only rebuilds pack art. Three things it cannot restore itself come from
-later steps: monster crops and boss sprites/metadata from `npm run data`, and the lazy chapter tracks from
-`tools/ch_audio.py`. This script asserts the tree is complete, so an assets-only rebuild fails here instead of
-shipping a game with 404s and wrong boss frames.
+`npm run assets` wipes public/assets/ and only rebuilds pack art. Four things it cannot restore itself come from
+later steps: monster crops and boss sprites/metadata from `npm run data`, the lazy chapter tracks from
+`tools/ch_audio.py`, and the window skins from `art/custom/ui/` (the `npm run art` overlay). This script asserts the
+tree is complete, so an assets-only rebuild fails here instead of shipping a game with 404s and wrong boss frames.
 
     npm run verify:assets                  # exit 0 = complete, 1 = broken (every failure printed)
     python3 tools/verify_assets.py [ROOT]  # ROOT defaults to the repo root (used to check a copy)
@@ -184,6 +184,36 @@ def check_icons():
     print(f'     icons.png: {slots} slots, {len(idx)} keys, custom slots {sorted(A.ICON_SLOTS.values())}')
 
 
+# -------------------------------------------------------------- window skins
+# art/custom/ui/{windowskin,windowskin_far}.png: 96x48 = [48x48 background | 48x48 frame], the layout src/ui/windows.ts
+# winTexture() reads (frame half 9-sliced at 16 px corners, drawn at 2x). boot.ts loads both with no fallback, so a gap
+# here ships a missing-texture window; nothing else in this script looks at ui/.
+SKINS = ('windowskin', 'windowskin_far')
+SKIN_W, SKIN_H = 96, 48
+
+
+def check_skins():
+    found = []
+    for name in SKINS:
+        p = os.path.join(ASSETS, 'ui', name + '.png')
+        if not os.path.exists(p):
+            fail(f'ui/{name}.png missing -> art/custom/ui/{name}.png is the source of truth; run `npm run art` '
+                 f'(boot.ts loads it unconditionally, so nothing else here catches the gap)')
+            continue
+        try:
+            w, h = Image.open(p).size
+        except Exception as e:
+            fail(f'ui/{name}.png unreadable ({e}) -> regenerate art/custom/ui/{name}.png')
+            continue
+        if (w, h) != (SKIN_W, SKIN_H):
+            fail(f'ui/{name}.png is {w}x{h}, expected {SKIN_W}x{SKIN_H} (48x48 background | 48x48 frame, 16 px '
+                 f'corners) -> regenerate art/custom/ui/{name}.png; winTexture() would 9-slice it wrong')
+            continue
+        found.append(f'{name}.png {w}x{h}')
+    if len(found) == len(SKINS):
+        print(f'     ui/: {", ".join(found)}')
+
+
 # ------------------------------------------------------ manifest vs disk
 def check_manifest():
     man = load_json(os.path.join(ASSETS, 'manifest.json'))
@@ -210,6 +240,7 @@ def main():
     run('boss images, meta keys and frame layouts agree', check_boss)
     run(f'chapter bgm ({len(CHAPTER_BGM)} lazy tracks) present', check_bgm)
     run('icons.png/json hold the custom slots', check_icons)
+    run('window skins (Near + Far) present at 96x48', check_skins)
     run('manifest.json matches the files on disk', check_manifest)
     for n in notes:
         print(f'note {n}')
@@ -221,7 +252,7 @@ def main():
         print(f'\n{len(unique)} failure(s): public/assets/ is incomplete (an `npm run assets`-only tree looks like this).')
         print('Fix with: npm run data && python3 tools/ch_audio.py   (then `npm run art` if the manifest is stale)')
         return 1
-    print('\nOK: public/assets/ is complete (mon/ crops, boss meta + layouts, chapter bgm, icon slots, manifest)')
+    print('\nOK: public/assets/ is complete (mon/ crops, boss meta + layouts, chapter bgm, icon slots, window skins, manifest)')
     return 0
 
 

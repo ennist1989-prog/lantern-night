@@ -12,7 +12,7 @@ npm run assets                  # ONLY destructive step: rmtree public/assets, r
 npm run data                    # public/data + boss meta + mon/ crops; art/custom overlay runs near the end
 python3 tools/ch_audio.py       # the 7 lazy chapter tracks `assets` just deleted
 npm run art                     # no-op safety: re-overlay + refresh manifest.json
-npm run verify:assets           # post-conditions: mon/ crops, boss meta + layouts, chapter bgm, icon slots
+npm run verify:assets           # post-conditions: mon/ crops, boss meta + layouts, chapter bgm, icon slots, window skins
 npm run test:art                # boss frame-layout regression
 npx tsc --noEmit                # only if src/ changed; add `npm run build` too
 ```
@@ -32,8 +32,7 @@ What `npm run assets` destroys, and who restores it:
 | `boss/meta.json` for `bell_keeper`, `gonbei`, `hundred_year_anvil`, `tengu_master`, `garden_guardian`, `archive_echo` (build writes only `tengu` + `gspirit`) | `npm run data` | wrong frames/scale, silently (`battlescene` falls back to `{fw:50, fh:50}`) |
 | `bgm/{forest,forest_far,grove,crossing,crossing_far,willow,willow_far}.ogg` | `python3 tools/ch_audio.py` — **`npm run data` does not** | lazy chapter music never loads |
 
-`npm run verify:assets` (read-only, no `_dl/` or research checkout needed) checks all three rows of that table plus boss
-PNGs, phase strips and icon slots, and exits non-zero listing what is missing — run it instead of eyeballing the folder.
+`npm run verify:assets` (read-only, no `_dl/` or research checkout needed) checks all three rows of that table plus boss PNGs, phase strips, icon slots and both 96×48 window skins (`ui/windowskin.png`, `ui/windowskin_far.png`), and exits non-zero listing what is missing — run it instead of eyeballing the folder.
 
 **Only added art?** Run `npm run art` (then `npm run verify:assets && npm run test:art`). Skip `assets` and `data` entirely.
 
@@ -54,7 +53,7 @@ copy `public/assets/` from a machine that has both.
 
 | Command | Output |
 |---|---|
-| `npm run assets` | 4 tilesets, `objects.png/json` (512 px wide, height-sorted, includes `art/custom/objects/` overrides), 21 chars + faces, 10 monsters, 2 bosses, 15 fx, `icons.png/json` (74 pack icons), `windowskin.png`, fonts, 14 bgm + 30 se + 5 me; ends with `art_overlay(); art_manifest()` |
+| `npm run assets` | 4 tilesets, `objects.png/json` (512 px wide, height-sorted, includes `art/custom/objects/` overrides), 21 chars + faces, 10 monsters, 2 bosses, 15 fx, `icons.png/json` (74 pack icons), `windowskin.png` + `windowskin_far.png` (both copied from `art/custom/ui/`), fonts, 14 bgm + 30 se + 5 me; ends with `art_overlay(); art_manifest()` |
 | `npm run data` | in order: `gen_db` → `spec_import` → `items_import` → `sq_import` → `balance_patches` → `ch3_assets` → `ch3_data` → overlay → build maps. Writes `public/data/**`, `mon/`, `boss/*` + `meta.json`, `icons2.*`, `screenshots/maps/*.png` |
 | `python3 tools/ch_audio.py` | the 7 lazy chapter tracks, 64k mono |
 | `npm run art` | `art/custom/**` overlay, `objects`/`icons` atlas patches, custom boss `meta.json` entries, `manifest.json` |
