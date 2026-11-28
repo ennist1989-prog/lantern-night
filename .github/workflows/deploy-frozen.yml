@@ -1,0 +1,59 @@
+name: deploy-frozen
+
+# One-off, pinned redeploy of the frozen head 4ecfbcd (Thomas-approved 2026-11-27).
+# Runs only on pushes to deploy/ln-redeploy-2026-11-27. It builds the PINNED SHA below (never main),
+# with the VITE_SENTRY_DSN repo secret, and force-pushes dist/ to gh-pages (same as scripts/deploy.sh).
+on:
+  push:
+    branches: [deploy/ln-redeploy-2026-11-27]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-frozen
+  cancel-in-progress: false
+
+env:
+  FROZEN_SHA: 4ecfbcd9856d70e585114da5d72bc3c349abcff5
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.FROZEN_SHA }}
+      - name: Assert exact frozen SHA
+        run: |
+          test "$(git rev-parse HEAD)" = "$FROZEN_SHA"
+          git merge-base --is-ancestor "$FROZEN_SHA" HEAD
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build (production mode, Sentry DSN from secret)
+        env:
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+        run: |
+          test -n "$VITE_SENTRY_DSN" || { echo "VITE_SENTRY_DSN secret missing/empty - refusing to deploy without Sentry"; exit 1; }
+          npm run build
+          # DSN present in the bundle (never print it)
+          grep -rlE --include='*.js' 'https://[0-9a-f]{20,}@' dist/assets >/dev/null && echo "DSN embedded in bundle: yes"
+          git rev-parse HEAD > dist/BUILD_SHA.txt
+      - name: Push dist to gh-pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TMP="$(mktemp -d)"
+          cp -r dist/. "$TMP/"
+          touch "$TMP/.nojekyll"
+          cd "$TMP"
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name=lantern-night -c user.email=lantern-night@users.noreply.github.com commit -q -m "Deploy frozen ${FROZEN_SHA::7} $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
