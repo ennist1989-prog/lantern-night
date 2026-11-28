@@ -10,7 +10,7 @@ def build_village():
         for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1): cells.add((x, y))
     rect(15, 15, 20, 18); rect(17, 3, 18, 14); rect(5, 16, 14, 17); rect(21, 16, 35, 17); rect(17, 19, 18, 24); rect(5, 22, 16, 24)
-    rect(7, 15, 7, 15); rect(25, 15, 25, 15); rect(12, 12, 12, 15); rect(24, 9, 24, 15); rect(3, 21, 9, 26)
+    rect(6, 15, 6, 15); rect(25, 15, 25, 15); rect(12, 12, 12, 15); rect(24, 9, 24, 15); rect(3, 21, 9, 26)
     STAIRS = {(x, y) for x in (17, 18) for y in (0, 1, 2)}   # D6 #1: the shrine path climbs on as stone stairs into the north gap
     if has_border(): cells |= STAIRS
     m.fill('both', 34, 13, 35, 19, GRASS, walk=False)
@@ -40,7 +40,7 @@ def build_village():
     m.light(16, 5, 3); m.light(20, 5, 3)
     m.obj('both', 'statue_fox', 15, 6, fw=1); m.obj('both', 'statue_fox', 21, 6, fw=1)
     # ---- buildings
-    m.obj('both', 'house_orange', 5, 14, fh=3); m.walk('both', 7, 14, True)          # Sachi's
+    m.obj('both', 'house_orange', 5, 14, fh=3); m.walk('both', 6, 14, True)          # Sachi's (door is drawn in the house's 2nd column, x=6)
     m.obj('both', 'shop', 24, 14, fh=3); m.walk('both', 25, 14, True)                 # teahouse
     m.obj('both', 'house_timber', 11, 11, fh=3); m.walk('both', 12, 11, True)         # forge
     m.obj('both', 'house_tan', 26, 8, fw=4, fh=3); m.walk('both', 27, 8, True)       # elder (locked)
@@ -99,7 +99,7 @@ def build_village():
     for (px, py, r) in [(16, 16, 3), (18, 6, 2), (8, 23, 3)]: m.region_circle(px, py, r, 6)
     m.encounter = dict(region=3, zone='z01'); m.region(5, 22, 16, 24, 3)
     # ---- Sachi's door & teahouse door & locked buildings
-    m.event(7, 14, [page(trigger='touch', through=True, list=[IF({'sw': 'intro_done'}, [{'c': 'transfer', 'map': 2, 'x': 6, 'y': 8, 'dir': 'up'}], [say('mio', 'Mio', '(I should talk to Granny first.)'), {'c': 'move', 'route': ['down']}])])])
+    m.event(6, 14, [page(trigger='touch', through=True, list=[IF({'sw': 'intro_done'}, [{'c': 'transfer', 'map': 2, 'x': 6, 'y': 8, 'dir': 'up'}], [say('mio', 'Mio', '(I should talk to Granny first.)'), {'c': 'move', 'route': ['down']}])])])
     m.event(25, 14, [page(trigger='touch', through=True, list=[{'c': 'transfer', 'map': 3, 'x': 7, 'y': 8, 'dir': 'up'}])])
     m.event(12, 11, [page(trigger='touch', through=True, list=[
         IF({'sw': 'daigo_joined'}, [say('daigo', 'Daigo', 'The forge’s cold, but I’ll get it going again. Soon as the Bell rings.'), {'c': 'move', 'route': ['down']}],
@@ -280,6 +280,7 @@ def west_road(m, cells, stairs):
     the rng stream and every older event ID are unchanged; the new events are appended after them."""
     import copy
     keep = (copy.deepcopy(m.layers), copy.deepcopy(m.col))
+    objs0 = copy.deepcopy(m.objs)   # Thomas 11/07: the loop-back road stays hidden (main's canopy) until the maze is cleared
     m.blob('both', cells | WEST, open_cells={(35, 16), (35, 17), (0, 16), (0, 17)} | stairs)
     # only the west road cells take the re-blobbed tiles/collision; everything else (stairs, rest of the road) stays as on main
     for r in ('near', 'far'):
@@ -309,3 +310,24 @@ def west_road(m, cells, stairs):
     for x in (22, 23, 24):
         m.event(x, 29, [page(trigger='touch', through=True, list=[IF({'sw': 'post_lit'}, [{'c': 'transfer', 'map': 7, 'x': 27, 'y': 1, 'dir': 'down'}],
             [say('mio', 'Mio', '(The old reed field trail. Granny is waiting for me. I should see her first.)'), {'c': 'move', 'route': ['up']}])])])
+    hide_west_road(m, keep, objs0)
+def hide_west_road(m, keep, objs0):
+    """Thomas 11/07: the maze exit's loop-back road (x 0..5, rows 15..18) must not show on the village map before the first
+    maze clear. Before maze_cleared the spot draws exactly what main drew there (cover tiles + the two border trees and
+    flowers) and keeps main's collision (dyn, walk=False); the banner posts show only after. The road events (0,16)/(0,17)
+    and every event ID are untouched; walking out of the maze exit still works and sets maze_cleared before the transfer."""
+    hide = {'nsw': 'maze_cleared'}
+    for r in ('near', 'far'):
+        cells, block = [], []
+        for y in range(14, 20):
+            for x in range(0, 6):
+                i = y * m.w + x
+                if any(keep[0][r][l][i] != m.layers[r][l][i] for l in m.layers[r]) or keep[1][r][i] != m.col[r][i]:
+                    cells.append((x, y, {l: keep[0][r][l][i] for l in m.layers[r]}))
+                    if keep[1][r][i] != 0 and m.col[r][i] == 0: block.append((x, y))
+        m.cover(r, cells, hide)
+        if block: m.dynwalk(r, block, hide, walk=False); m.dyn[-1]['cover'] = True
+        old = [o for o in objs0[r] if o not in m.objs[r] and o['x'] < 6 * 16]
+        for o in m.objs[r]:
+            if o not in objs0[r] and o['x'] < 6 * 16: o['cond'] = {'sw': 'maze_cleared'}; o['condOpen'] = True
+        for o in old: m.objs[r].append(dict(o, cond=hide))

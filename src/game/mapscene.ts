@@ -16,7 +16,7 @@ const SHEETS = ['floor', 'ifloor', 'wallsimple', 'water', 'ch3fix', 'border', 'm
 export interface GEvent { id: number; data: any; char: Char; page: any | null; pageIdx: number; wander: number; erased: boolean; aggro: boolean; stun: number; marker: Phaser.GameObjects.Text | null; home: { x: number; y: number }; running: boolean; }
 export class MapScene extends Phaser.Scene {
   world!: Phaser.GameObjects.Container; ui!: Phaser.GameObjects.Container; fxLayer!: Phaser.GameObjects.Container; msg!: MessageSystem; fader!: Fader; interp!: Interpreter;
-  mapData: any; player!: Char; followers: Char[] = []; evs: GEvent[] = []; extra: Phaser.GameObjects.GameObject[] = []; groundImgs: Record<string, Phaser.GameObjects.Image> = {}; objs: Phaser.GameObjects.Image[] = [];
+  mapData: any; player!: Char; followers: Char[] = []; evs: GEvent[] = []; extra: Phaser.GameObjects.GameObject[] = []; groundImgs: Record<string, Phaser.GameObjects.Image> = {}; objs: Phaser.GameObjects.Image[] = []; covers: { im: Phaser.GameObjects.Image; cond: any; realm: string; cells: number[][]; key: string }[] = []; coverOff = false;
   ready = false; transitioning = false; overlay = false; shiftLocked = false; shifting = false; wasMoving = false; trail: { x: number; y: number }[] = []; shiftCool = 0;
   hud!: Win; hudG!: Phaser.GameObjects.Graphics; hudTxt!: Phaser.GameObjects.Text; hudLum!: Phaser.GameObjects.Text; vig!: Phaser.GameObjects.Image; glows: Phaser.GameObjects.Image[] = []; motes: { s: Phaser.GameObjects.Rectangle; vx: number; vy: number }[] = [];
   tintRect!: Phaser.GameObjects.Rectangle; banner: Win | null = null; stepsLeft = 50; scrollX = 0; scrollY = 0; camOverride: { x: number; y: number } | null = null; lowWarned = false; lastBgm = '';
@@ -58,10 +58,11 @@ export class MapScene extends Phaser.Scene {
     // teardown
     this.evs.forEach((e) => { e.char.destroy(); e.marker?.destroy(); }); this.evs = []; this.followers.forEach((f) => f.destroy()); this.followers = []; this.player?.destroy();
     this.objs.forEach((o) => o.destroy()); this.objs = []; Object.values(this.groundImgs).forEach((g) => g.destroy()); this.groundImgs = {}; this.glows.forEach((g) => g.destroy()); this.glows = [];
+    this.covers.forEach((c) => { c.im.destroy(); if (this.textures.exists(c.key)) this.textures.remove(c.key); }); this.covers = [];
     for (const r of ['near', 'far']) { const k = `ground_${r}`; if (this.textures.exists(k)) this.textures.remove(k); }
     if (opts.resetDefeated) { for (const k of Object.keys($.defeated)) if (k.startsWith(id + ':')) delete $.defeated[k]; }
     $.map = { id, x, y, dir };
-    this.bakeGround(md);
+    this.bakeGround(md); this.bakeCovers(md);
     this.buildObjects(); this.player = new Char(this, x, y); this.player.setSheet('mio', false, dir); this.world.add(this.player.spr);
     this.trail = [{ x, y }]; this.refreshFollowers();
     this.buildEvents(); this.applyRealmVisuals(); this.refreshEvents();
@@ -70,6 +71,27 @@ export class MapScene extends Phaser.Scene {
     Audio.bgm(this.mapBgm());
     this.mapLights = (md.lights || []);
     this.ready = true;
+  }
+  /** Map `covers` (mapkit cover): the tiles a spot showed before something opened up there (e.g. the maze loop-back road on
+   *  map 1, hidden until maze_cleared). Drawn over the baked ground while `cond` holds; collision comes from a paired dyn rule. */
+  bakeCovers(md: any) {
+    this.coverOff = false;
+    // old-save guard: if Mio loads standing on a covered cell, never trap her: show the opened state for this visit
+    for (const cv of md.covers || []) if (cv.cells.some((c: any) => c[0] === $.map.x && c[1] === $.map.y)) this.coverOff = true;
+    (md.covers || []).forEach((cv: any, n: number) => {
+      const c = document.createElement('canvas'); c.width = md.w * TS; c.height = md.h * TS; const ctx = c.getContext('2d')!; ctx.imageSmoothingEnabled = false;
+      for (const [x, y, L] of cv.cells) for (const lname of Object.keys(L)) { const g = L[lname]; if (!g) continue; const sh = g >> 16, row = (g >> 8) & 255, col = g & 255; const img = this.textures.get('tile_' + SHEETS[sh - 1]).getSourceImage() as HTMLImageElement; ctx.drawImage(img, col * TS, row * TS, TS, TS, x * TS, y * TS, TS, TS); }
+      const out = cv.realm === 'far' ? recolorCanvas(c, c.width, c.height) : c; const key = `cover_${n}_${cv.realm}`;
+      if (this.textures.exists(key)) this.textures.remove(key); this.textures.addCanvas(key, out);
+      const im = this.add.image(0, 0, key).setOrigin(0, 0).setDepth(-99999); this.world.add(im); this.covers.push({ im, cond: cv.cond, realm: cv.realm, cells: cv.cells.map((q: any) => [q[0], q[1]]), key });
+    });
+  }
+  condOK(cond: any) { return !cond || (!this.coverOff && this.interp.cond(cond, { ev: 0, map: this.mapData.id })); }
+  /** Switch-conditional map art: cover tiles and objects with a `cond` show only while it holds (re-checked after every event). */
+  applyConds() {
+    if (!this.mapData) return; const realm = $.realm;
+    this.covers.forEach((c) => c.im.setVisible(c.realm === realm && this.condOK(c.cond)));
+    this.objs.forEach((o) => { const oc = (o as any).cond; if (oc) o.setVisible((o as any).realm === realm && (this.coverOff ? !!(o as any).condOpen : this.interp.cond(oc, { ev: 0, map: this.mapData.id }))); });
   }
   bakeGround(md: any) {
     const w = md.w, h = md.h;
@@ -90,7 +112,7 @@ export class MapScene extends Phaser.Scene {
     for (const realm of ['near', 'far'] as const) for (const o of md.objs[realm] || []) {
       const key = realm === 'far' ? farTexture(this, 'objects') : 'objects';
       const im = this.add.image(o.x, o.y, key, o.n).setOrigin(0.5, 1); im.setDepth(o.flat ? o.y - 5000 : o.above ? 90000 + o.y : o.y + (o.dy || 0)); if (o.sx || o.sy) im.setScale(o.sx || 1, o.sy || 1);
-      (im as any).realm = realm; this.world.add(im); this.objs.push(im);   // PF2: 'above' objs draw over characters (below markers/balloons at 99999)
+      (im as any).realm = realm; if (o.cond) { (im as any).cond = o.cond; (im as any).condOpen = !!o.condOpen; } this.world.add(im); this.objs.push(im);   // PF2: 'above' objs draw over characters (below markers/balloons at 99999)
     }
   }
   buildEvents() {
@@ -109,7 +131,7 @@ export class MapScene extends Phaser.Scene {
     const far = $.realm === 'far';
     const bg = this.mapData?.bg; this.cameras.main.setBackgroundColor(bg ? (far ? farColor(bg) : bg) : 0x000000);   // D5: small interiors tint the letterbox to their wall colour
     this.groundImgs.near.setVisible(!far); this.groundImgs.far.setVisible(far);
-    this.objs.forEach((o) => o.setVisible((o as any).realm === (far ? 'far' : 'near')));
+    this.objs.forEach((o) => o.setVisible((o as any).realm === (far ? 'far' : 'near'))); this.applyConds();
     this.player.setSheet('mio', false, this.player.dir); this.followers.forEach((f, i) => f.setSheet($.party[i + 1], false, f.dir));
     this.vig.setVisible(far); this.motes.forEach((m) => m.s.setVisible(far));
     this.msg.setTone(far ? 'far' : 'near'); this.hud.setTone(far ? 'far' : 'near');
@@ -126,7 +148,7 @@ export class MapScene extends Phaser.Scene {
     for (let i = e.data.pages.length - 1; i >= 0; i--) { const p = e.data.pages[i]; if (!this.interp.cond(p.cond, ctx)) continue; if (p.enemy && $.defeated[`${ctx.map}:${e.id}`]) continue; return i; }
     return -1;
   }
-  refreshEvents() { if (!this.mapData) return; for (const e of this.evs) { const i = this.selectPage(e); if (i !== e.pageIdx) { e.pageIdx = i; e.page = i >= 0 ? e.data.pages[i] : null; this.applyPageGraphic(e); } else if (!e.page) this.applyPageGraphic(e); } }
+  refreshEvents() { if (!this.mapData) return; for (const e of this.evs) { const i = this.selectPage(e); if (i !== e.pageIdx) { e.pageIdx = i; e.page = i >= 0 ? e.data.pages[i] : null; this.applyPageGraphic(e); } else if (!e.page) this.applyPageGraphic(e); } this.applyConds(); }
   applyPageGraphic(e: GEvent) {
     const p = e.page, c = e.char; const far = $.realm === 'far' || (e.data.realm === 'far' && $.buffs.peek > 0);
     if (!p || !p.g) { c.spr.setVisible(false); c.visible = false; return; }
@@ -158,7 +180,7 @@ export class MapScene extends Phaser.Scene {
   /** Map `dyn` rules (mapkit dynwalk): walkability that changes with a switch, e.g. a drifting bridge held by Anchor. */
   dynAt(tx: number, ty: number, realm: string): boolean | null {
     const D = this.mapData.dyn; if (!D || !D.length) return null;
-    for (const r of D) { if (r.realm !== 'both' && r.realm !== realm) continue; if (!r.cells.some((c: number[]) => c[0] === tx && c[1] === ty)) continue; if (this.interp.cond(r.cond, { ev: 0, map: this.mapData.id })) return !!r.walk; }
+    for (const r of D) { if (r.realm !== 'both' && r.realm !== realm) continue; if (r.cover && this.coverOff) continue; if (!r.cells.some((c: number[]) => c[0] === tx && c[1] === ty)) continue; if (this.interp.cond(r.cond, { ev: 0, map: this.mapData.id })) return !!r.walk; }
     return null;
   }
   region(tx: number, ty: number) { const m = this.mapData; if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) return 0; return m.reg[ty * m.w + tx]; }
