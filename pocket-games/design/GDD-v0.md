@@ -26,18 +26,32 @@ Owner: Pocket Design · Status: **first draft, needs Thomas sign-off on remainin
 
 Everything else in this document is **proposal**, unless marked DECIDED.
 
-## 1. Reference game (pending identification)
+## 1. Reference game (not yet identified)
 
-Thomas's full vision comes from a **game he played when younger and cannot name**. Pocket Research is actively trying to identify it (started 2026-11-27, late evening ET). **No identification file is on `main` yet.** This section will be rewritten when that file lands.
+Thomas's full vision comes from a **game he played when younger and cannot name**. Pocket Research wrote an identification brief on 2026-11-27 (US Eastern): [`pocket-games/research/mystery-game-identification.md`](../research/mystery-game-identification.md). **Short answer: not identified.** No candidate matches all clues, and nobody on that pass played the games. This section will be rewritten if a name is confirmed.
 
-**Clues Thomas gave Research:** (1) bonus abilities — fireballs, ice balls, toxic balls, electric balls, and lightning that shoots outward and hits nearby enemies on contact; (2) bonuses don't cap — levels are paced so you only get so many before the boss, but if you don't die you keep everything and can go well beyond; (3) every level gets harder — more monsters, harder bosses; (4) secret portals that teleport you to random side levels with special bonuses. He thinks it is a well-known, possibly older, mobile game.
+**Clues (two rounds, from the brief).** Round 1 is the vision already in §0: elemental ball/sword abilities (C1), uncapped stacking (C2), escalating levels (C3), secret portals to side levels (C4). Round 2 adds remembered structure: classes like wizard / archer / berserker (C5); start at the **bottom of a forest map and walk up**, no fixed destination, explore for **treasure chests** (C6); swarms from every angle (C7); attacks **auto-swing constantly** (C8); phone **joystick** (C9); each **chapter has 10 levels on the same map**, with escalating monster count, strength and health (C10); **10 bonuses per chapter**, one every 2–3 levels, stacking across chapters (C11); level 2 has **10 waves**, level 3 repeats the pattern (C12); designed to be hard, **~50–60% win rate** (C13 — now DECIDED as D9); further abilities: gas, spikes, comets/meteors, volcanic eruption, earthquake, and "floats" that keep you off ground spike traps (C14).
 
-**Candidates found (not confirmed):**
-- **Original Archero (2019)** — Pocket Research's *strongest early guess* in its session (not yet written up). Public wikis show a close ability match: Fire / Ice / Poison / Bolt **Circles** (orbiting orbs), plus elemental effects (Blaze burn, Freeze, Poison DoT until death, Bolt lightning that hits nearby enemies) and orbiting swords. Level-up offers 3 abilities; stacks reset each run. **Gaps vs Thomas's clues:** room-to-room / small-stage structure rather than free-roam maps; **secret portals to side levels are not documented** in the sources checked; combat is stop-to-shoot, not continuous free-roam auto-fire. Sources: https://archero.fandom.com/wiki/Category:Abilities , https://dqservice.fyi/wiki/archero/en/ab-circles/ , https://dqservice.fyi/wiki/archero/en/ab-elements/ . Until Research confirms or rejects this, treat Archero element numbers below as *inspiration*, not as a locked copy.
-- **Crazy Gunner: Pixel Survivor** (Ryki Studio) and **Pixel Survivor** titles — games Thomas named as close free-roam matches. Research's brief is on main: [`pocket-games/research/crazy-gunner-pixel-survivor-brief.md`](../research/crazy-gunner-pixel-survivor-brief.md). Headline: the two names may be **one game**; neither has a verified in-run slot reel or a physical "boss opens a gate" flow in published sources; they are auto-fire survivor-likes with XP-bar 1-of-3 upgrades, ~5-minute stages, and (in Crazy Gunner) menu unlocks rather than walk-through gates. Useful to copy: cheap visible rerolls, dual-branch evolutions, a readable stage/boss bar, no energy, real numbers on upgrade cards, offline rewards. Useful to avoid: forced menu-return ads, gacha chests, sudden stage-15/23 walls. Closest *reel* cousins Research found along the way (Lumen Drift, Lucky Survivors) are listed in that brief §6 — not the childhood game.
-- Other names Thomas has pointed Research at (no files on `main` yet): **Archero 2**, **Pixel Defenders Merge TD**.
+**Ranked candidates (all low to low-medium; none confirmed)** — full table in the brief §3:
 
-**What to fold in now, provisionally:** elemental status language and orbiting-orb / outward-projectile split from Archero's public ability list; Crazy Gunner's "physical gate, not a menu unlock" recommendation [CG §5 Improve]; mid-world sub-boss marker on the boss meter [CG §5 Copy]; no energy [CG]; show real numbers on cards [CG]. All of this stays proposal-level until the childhood game is named.
+| Rank | Game | Why it's here | Gaps |
+|---|---|---|---|
+| 1 | **Legend of Survivors** (Joyboy, 2024) | Swarm survivor, swipe-to-move, skills include fireballs / meteor showers / storms, skill choice after stages, Normal/Hard chapters | Class names, 10 levels/chapter, and secret portals not confirmed; too new to be a childhood game if Thomas means the 2010s |
+| 2 | **Heroes vs. Hordes: Survival RPG** (Swift Games, 10M+) | Swarms, cursed forests, chests/hidden treasures, warrior/mage/assassin factions, auto-survival | Berserker/archer names and portal/10-level structure unverified |
+| 3 | **Magic Survival** (LEME, 2019) | Auto-attack, elemental spells, chests, bonus levels past a cap, many classes including Wizard | No archer/berserker, no 10-level chapters, no portals |
+| 4 | **Archero** (Habby, 2019) | Best match for *ability flavour*: Fire/Ice/Poison/Bolt Circles (orbiting orbs + status) and chain lightning on nearby enemies | Poor structural match: small rooms, stand-still shooting, no open-forest swarm, no wizard/archer/berserker, no 10-levels-on-one-map, secret portals only as an event-mode bonus door. Brief §2 verdict: look elsewhere if the memory is an open swarm. |
+| 5 | **Soul Knight** (ChillyRoom, 2017) | Elemental buffs, secret rooms, alternate biomes | Room-based, not an open swarm |
+| — | 2026 look-alikes (Toywardens, Harrowrift, Arena Heroes: Survivor, Orbonk) | Some literally list Wizard/Archer/Berserker or "10 levels on every map" | Too new for a childhood memory; useful only as design references |
+
+Crazy Gunner / Pixel Survivor (Thomas named them as close *current* matches, not as the childhood game) are covered in [`pocket-games/research/crazy-gunner-pixel-survivor-brief.md`](../research/crazy-gunner-pixel-survivor-brief.md). They cannot be the remembered game (Crazy Gunner launched Jan 2026). Useful anyway: cheap visible rerolls, dual-branch evolutions, a readable stage/boss bar, no energy, real numbers on cards, physical gates rather than menu unlocks; avoid forced ads and gacha.
+
+**What we are folding in now (proposal, pending a confirmed name):**
+- Keep the elemental kit (D7) with one clear status each, provisionally using Archero's published numbers (brief §5, §6.1) until we have a better source.
+- Open-forest swarm + constant auto-attack + joystick already match C6–C9 and beat Archero's room/stand-still model (brief §6.4). **World 1 proposal:** a forest map, player starts at the bottom and explores upward; treasure chests are a roam reward (C6).
+- **Chapter structure (proposal, from Thomas's memory C10–C12, not yet a decision):** a *chapter* is 10 levels on the **same map**, ~10 waves in later levels, **10 bonuses per chapter** (one every 2–3 levels) that stack into the next chapter. This would replace the current "one world = one map + one boss" assumption if Thomas wants the remembered rhythm. See open question #1.
+- Secret portals stay as designed in §8; no candidate had a confirmed in-run secret portal, so our rules are original (brief §5, §6.5).
+- Extra remembered abilities (C14) stay **proposal-only** in §7: Meteors, Volcanic Eruption, Earthquake, Spike Field, and Float (ignore ground spikes).
+- The 50–60% hard-game target is already **DECIDED** (D9, C13).
 
 ## 2. Pillars and core constraints
 
@@ -66,13 +80,14 @@ Thomas's full vision comes from a **game he played when younger and cannot name*
 | Ranger | Lightning | +move speed | Chain jumps +1 while moving |
 
 - M0: 1 class (Knight). M1: 3 classes. M2: 5 (add Rogue, Cleric — data-only if the ability framework is built right).
+- **Name alignment (proposal):** the identification brief's remembered classes are wizard / archer / berserker. Mage / Ranger / Knight map cleanly onto those three if Thomas wants the names to match.
 - Draws on: [RL] "hero = passive rule rewrite"; [SG] characters each start with a different weapon.
 
 ## 4. Run structure
 
 ### 4.1 Shape (proposal unless marked)
 - **Run = a sequence of Worlds** (D5). Assumption: *world == one map "level"* ending in a boss, then a **physical gate** you walk through (D5; [CG] "make the gate a physical event, not a menu unlock"). **Open question #1** if a world should contain several maps.
-- **World map:** one bounded map ~3 screens tall × 2 wide (portrait), camera follows the player. Enemies spawn off-screen near the player. A few **shrines** offer a free reel spin. **Secret portals** (D8) hide off the main path — see §8.
+- **World map:** one bounded map ~3 screens tall × 2 wide (portrait), camera follows the player. Enemies spawn off-screen near the player. **World 1 proposal:** a forest, the player **starts at the bottom and walks up**, no single required destination, with **treasure chests** to find (C6 from the identification brief). A few **shrines** offer a free reel spin. **Secret portals** (D8) hide off the main path — see §8.
 - **Boss availability (proposal — this is how D4 "no cap" stays true):** each world has a **boss meter** filled by weighted kills (`Q_w`, see §7). When it fills: a banner, a **boss arena / door unlocks** on the map, and a mid-world **sub-boss may have already appeared at ~50% of the meter** ([CG] stage-bar markers). The player **chooses when to walk in**. Until they do, they can keep roaming, killing, and stacking bonuses; spawn pressure keeps rising (up to the cap in §9) so lingering is a risk, not a free farm. Walking in closes the arena, remaining trash despawns or is locked out, and the boss fight starts. Beat the boss → **gate opens** at the map's edge → walk through → next world.
 - **Death:** run ends. Keep a share of gold; show "what killed you" and a best-world record. **One free revive per run** (restore 50 % HP, brief invulnerability). proposal.
 - **Save:** auto-save at every bonus popup, at portal entry/return, and at gate entry.
@@ -200,7 +215,9 @@ Target kill rate `R_w = 1.2 × (1 + 0.15·(w − 1))` weighted kills/s. Boss-are
 
 - M0 ships Orbiting Swords, Fireballs, and Lightning (covers orbit, projectile, and chain). M1 ships all six. Meta can unlock later abilities into the pool so early runs see a smaller set.
 
-**Extras (proposal only — not in the core set):** Guardian Shield (absorb 1 hit / 8 s); Spirit Wolf (a pet). Do not ship in M0/M1 unless Thomas asks.
+**Extras (proposal only — not in the core set).** Do not ship in M0/M1 unless Thomas asks.
+- From the remembered kit (identification brief C14): **Meteors** (random-target strikes with a short warning); **Volcanic Eruption** (bursts from the ground under enemies); **Earthquake** (screen-wide stagger / damage pulse); **Spike Field** (ground hazard the player can also be hurt by); **Float** (a timed hover that ignores ground spikes — not found in any reference game, treat as Thomas-originated).
+- Other optionals: Guardian Shield (absorb 1 hit / 8 s); Spirit Wolf (a pet).
 
 ## 8. Secret portals and side levels (D8 decided; details proposal)
 
@@ -365,7 +382,7 @@ Answered in this revision and **removed:** the core ability list; uncapped stack
 
 Still open:
 
-1. **World shape.** Is a *world* one map ending in a boss (our assumption), or several maps per world? How long should one world feel (~4.5 min if you take the boss at first unlock)?
+1. **World / chapter shape.** Current assumption: a *world* is one map ending in a boss (~4.5 min if you take the boss at first unlock). Thomas's remembered game (identification brief C10–C12) is a *chapter of 10 levels on the same map*, with ~10 waves in later levels and **10 bonuses per chapter** stacking forward. Which structure should Pocket Rogue use?
 2. **Boss entry.** Proposal: the boss *arena unlocks* when a kill meter fills, and the player chooses when to walk in so lingering (D4) is possible. Confirm, or prefer a timer, a forced spawn, or a door that is always on the map.
 3. **Reel triggers.** Proposal: every 4th bonus is a free reel, plus an opt-in Gamble button (Lucky Token), plus map shrines. Which mix? Confirm no HP cost, no ad-gated or paid spins.
 4. **Platform / engine and monetization.** Web-first (Phaser/TS) or native (Godot 4 / Capacitor)? Free-with-ads, premium, or none? Pocket Code needs the engine call first.
@@ -374,10 +391,10 @@ Still open:
 7. **Win-rate measurement.** Confirm "win" = clearing the authored run (metric A), with per-world rates reported alongside, and the 50–60 % band measured on a mixed bot suite plus a human spot-check.
 8. **Legal / IP.** Confirm Rogue Legend, Archero, and the survivor-likes are structural inspiration only (no names, art, or text), and sign off on store age-rating exposure for a gamble-style reel.
 9. **Art follow-up.** Pocket Art's style guide v1.1 still describes a 24-tile board, tile icons, and a side-view battle. It needs a free-roam revision (moving sprites, swarms, ability VFX, popup cards, portals, world tilesets).
-10. **Childhood reference.** When Research names the game, should we realign any of the above (especially portals, ball delivery, and linger-vs-timer) to match it closely?
+10. **Childhood reference.** The game is **still unnamed** ([`mystery-game-identification.md`](../research/mystery-game-identification.md)). Best unconfirmed leads: Legend of Survivors, Heroes vs. Hordes. When a name is confirmed, should we realign portals, ball delivery (orbit vs shoot-outward), and chapter shape to match it closely? The brief's fastest questions for Thomas: look/camera (pixel vs 3D, portrait vs landscape), era and device, and anything on the icon or first menu.
 
 ## Sources
-- Pocket Research: `pocket-games/rogue-legend-brief.md`, `pocket-games/research/competitor-breakdown.md`, `pocket-games/research/crazy-gunner-pixel-survivor-brief.md`. Childhood-game identification: **not yet on main**.
+- Pocket Research: `pocket-games/rogue-legend-brief.md`, `pocket-games/research/competitor-breakdown.md`, `pocket-games/research/crazy-gunner-pixel-survivor-brief.md`, [`pocket-games/research/mystery-game-identification.md`](../research/mystery-game-identification.md) (**not identified**; best leads Legend of Survivors, Heroes vs. Hordes).
 - Similar-games research: [`research/similar-games.md`](research/similar-games.md).
 - Pocket Art: `pocket-games/art/style-guide.md` (v1.1).
 - Pocket Code: `pocket-games/code/README.md`.
