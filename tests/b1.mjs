@@ -1,6 +1,6 @@
-import { launch, press, sleep, waitScene, newGame, mashUntil, teleport, activeScenes } from './lib.mjs';
+import { launch, press, sleep, waitScene, newGame, mashUntil, teleport, activeScenes, SSDIR } from './lib.mjs';
 import fs from 'fs';
-const SS = (process.env.SHOTS || process.env.SS || '/workspace/lantern-night/screenshots');   // SHOTS env: screenshot root (default: the shared checkout)
+const SS = SSDIR;
 const { browser, page, errors } = await launch();
 try {
   await newGame(page);

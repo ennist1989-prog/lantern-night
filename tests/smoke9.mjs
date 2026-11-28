@@ -1,6 +1,6 @@
-import { launch, sleep, press, hold, waitScene, waitFor, activeScenes, ev, newGame, mashUntil, teleport } from './lib.mjs';
+import { launch, sleep, press, hold, waitScene, waitFor, activeScenes, ev, newGame, mashUntil, teleport, SSDIR } from './lib.mjs';
 const { browser, page, errors } = await launch();
-const shot = (n) => page.screenshot({ path: `screenshots/${n}.png` });
+const shot = (n) => page.screenshot({ path: `${SSDIR}/${n}.png` });
 try {
   await newGame(page);
   await mashUntil(page, () => window.__S.$.sw('intro_done'));
