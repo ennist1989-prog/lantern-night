@@ -21,7 +21,7 @@ An index, not a spec. Each line points to its source. Design truth lives in the 
 ## 3. Builds and deploy state (verified from `git ls-remote`, 27 Nov 2026)
 | Item | Value |
 |---|---|
-| `main` tip | `4ecfbcd` (merge of PR #58, 27 Nov 10:11 PM EST), then docs-only queue commits on top (`d852ba7` = Freebuff entries 12/13). No game code changed after 4ecfbcd |
+| `main` tip | `4ecfbcd` (merge of PR #58, 27 Nov 10:11 PM EST), then docs-only commits on top (`d852ba7` Freebuff entries 12/13; `0d4e162` this master and GAMES.md). No game code changed after 4ecfbcd |
 | **Frozen build** | branch `frozen/ln-redeploy-2026-11-27` = `4ecfbcd9856d70e585114da5d72bc3c349abcff5` |
 | Six-bot gate | **6/6 YES on 4ecfbcd** (Wisp, QA, Pip, Ember, Pixel Sage, Ledger), 27 Nov ~10:44 PM EST. Source: `PRIORITIES.md` tail, `CHANGELOG.md` tail |
 | Live (`gh-pages`) | `e9203a0682d834780c6a1aa006199e14cf00ec88`, built from `79eaf00`, deployed 7 Nov 2026 7:37 PM EST |
