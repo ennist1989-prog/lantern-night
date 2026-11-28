@@ -107,3 +107,20 @@
   Reason: smuggling/corruption rules do not exist anywhere in the lantern-night repo — no symbol, issue, PR, commit, or data file names them. Freebuff already searched and confirmed. Either the rules live in design notes outside this repo or were never written in code-readable form. Thomas is checking his Far World docs. Entries 9 and 10 are dropped rather than unblocked with box paths.
   Pointer for Freebuff (applies to entry 1; this is not a new build task): smuggling/corruption rules are NOT in this repo. The nearest corridor choice is the Chapter 1 Far corridor to the Well in tools/maps_village.py (Straw Warden touch events, lines 196-218; Kaze gate at x=14, lines 251-258). Output lands in public/data/maps/map001.json via `npm run data`. Choice runtime is src/game/interpreter.ts case 'choice' and src/ui/message.ts choice(). Persistence is switches/self-switches/variables. A different choice (Kappa toll in tools/maps_ch3.py ~lines 369-374) is NOT this corridor.
 - status: entries 9 and 10 DROPPED; pointer recorded. Earlier entries, including 9 and 10, are left as written (append-only).
+
+- date: 2026-11-27
+- from: Thomas (approved Ember's Freebuff list; recorded by Ledger, 11:00 PM EST)
+- task: 12 (Entry A). Tsubaki final-form repaint before release.
+  What: follow the specs and AI image prompts in docs-only PR #59 (https://github.com/ennist1989-prog/lantern-night/pull/59, tasks/art-review-tsubaki-bellkeeper-2026-11-27.md). Replace the placeholder in art/custom/boss/tsubaki_final.png and its face variants.
+  Pixel-lint rules (all must pass): unique opaque colour count cap 12; hard-edged alpha only; outline #141b1b; brightest highlight at L* 90 or below (#ffe08a exempt); no gold/yellow hues 40-60° with chroma over 30 except #ffe08a; neighbouring unlike opaque pixels ΔL* at least 8.
+  Constraints: do NOT use the parked dropin-v2. No game code changes, no deploy.
+  Done when: the repainted files pass every rule above; post results in tasks/freebuff-results.md under "Entry A: Tsubaki repaint".
+- status: queued
+
+- date: 2026-11-27
+- from: Thomas (approved Ember's Freebuff list; recorded by Ledger, 11:00 PM EST)
+- task: 13 (Entry B). Bell Keeper art set matching Priest Ren's style.
+  What: create the battle sprite, attack and hit animations (the Ninja Adventure pack has them but they are not hooked up), and art for its battle phases. Match Priest Ren's portrait and map sprite aesthetic. Spec context: Ember's review in PR #59 (https://github.com/ennist1989-prog/lantern-night/pull/59).
+  Constraints: no game code changes, no deploy.
+  Done when: the art set exists and is listed in tasks/freebuff-results.md under "Entry B: Bell Keeper art set".
+- status: queued
