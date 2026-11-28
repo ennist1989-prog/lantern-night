@@ -112,23 +112,8 @@ for i, n in enumerate(names):
     ia.alpha_composite(im, (cx, cy)); imeta[n] = i
 ia.save(O+"icons.png"); json.dump(imeta, open(O+"icons.json","w"))
 
-# ---------- window skin (own design, 3-part: bg + frame), generated ----------
-sk = Image.new("RGBA", (96, 48), (0,0,0,0)); d = ImageDraw.Draw(sk)
-# background 48x48 tile: deep indigo gradient w/ faint woven pattern
-for yy in range(48):
-    for xx in range(48):
-        t = yy/47
-        base = (int(14+10*t), int(22+18*t), int(58+40*t))
-        if (xx+yy) % 8 == 0: base = tuple(min(255, c+8) for c in base)
-        sk.putpixel((xx,yy), base+(255,))
-# frame 48x48: 4px ornate border with corner studs (9-slice: 16px corners)
-fr = Image.new("RGBA", (48,48), (0,0,0,0)); fd = ImageDraw.Draw(fr)
-fd.rounded_rectangle([0,0,47,47], radius=7, outline=(245,238,214,255), width=2)
-fd.rounded_rectangle([2,2,45,45], radius=5, outline=(122,150,214,255), width=1)
-fd.rounded_rectangle([3,3,44,44], radius=4, outline=(40,56,120,255), width=1)
-for cx,cy in [(5,5),(42,5),(5,42),(42,42)]:
-    fd.rectangle([cx-1,cy-1,cx+1,cy+1], fill=(255,214,102,255))
-sk.alpha_composite(fr, (48,0)); mk(O+"ui/windowskin.png"); sk.save(O+"ui/windowskin.png")
+# ---------- window skin ----------
+# Not generated: art/custom/ui/windowskin{,_far}.png are finished art that art_overlay() copies in after the rmtree.
 
 # ---------- font ----------
 mk(O+"fonts/x"); shutil.copyfile(DL+"PixelifySans.ttf", O+"fonts/PixelifySans.ttf")
