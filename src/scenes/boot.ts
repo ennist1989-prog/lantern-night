@@ -22,7 +22,7 @@ export class BootScene extends Phaser.Scene {
     const L = this.load; L.setPath('assets/'); const dataPath = (u: string) => u; void dataPath;
     ['floor', 'ifloor', 'wallsimple', 'water'].forEach((n) => L.image('tile_' + n, `tiles/${n}.png`));
     L.image('objects', 'objects.png'); L.json('objectsmeta', 'objects.json'); L.json('iconsmeta', 'icons.json'); L.json('icons2meta', 'icons2.json'); L.spritesheet('icons2', 'icons2.png', { frameWidth: 34, frameHeight: 34 }); L.spritesheet('icons', 'icons.png', { frameWidth: 24, frameHeight: 24 });
-    L.image('windowskin', 'ui/windowskin.png');
+    L.image('windowskin', 'ui/windowskin.png'); L.image('windowskin_far', 'ui/windowskin_far.png');
     CHARS.filter((c) => !isOpt('chars', c)).forEach((c) => L.spritesheet('char_' + c, `chars/${c}.png`, { frameWidth: 16, frameHeight: 16 }));
     FACES.filter((c) => !isOpt('faces', c)).forEach((c) => L.image('face_' + c, `faces/${c}.png`));
     // Boss phase strips (sprite.phaseStrips, e.g. willow_mother_strained) are queued only when the manifest lists the file, so a

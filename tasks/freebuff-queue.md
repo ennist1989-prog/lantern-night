@@ -100,3 +100,10 @@
   Constraints: only tools/playtest/ and qa/. No game data edits, no plugin edits (this repo has no js/plugins), no deploy, no gh-pages, no .env, no Sentry DSN. playwright-core is already a devDependency.
   Done when: node tools/playtest/pacing-probe.mjs exits 0 from a clean checkout, every recorded timestamp is non-null, and console_errors is []. Post the JSON path and the PR link in tasks/freebuff-results.md under "Pip: pacing probe", and cite that PR from entry 2's result.
 - status: queued
+
+- date: 2026-11-27
+- from: Thomas (recorded by Ledger, 9:47 PM EST)
+- task: DROP entries 9 and 10. Entry 9 (Cine, 2026-11-22) is headless staging screenshots against shared-box Far World paths. Entry 10 (Vesper, 2026-11-22) is the photosensitivity spec rulings index against /workspace/far-world-flashbacks. Do not run them. Do not recreate those paths or copy Far World files into this repo.
+  Reason: smuggling/corruption rules do not exist anywhere in the lantern-night repo — no symbol, issue, PR, commit, or data file names them. Freebuff already searched and confirmed. Either the rules live in design notes outside this repo or were never written in code-readable form. Thomas is checking his Far World docs. Entries 9 and 10 are dropped rather than unblocked with box paths.
+  Pointer for Freebuff (applies to entry 1; this is not a new build task): smuggling/corruption rules are NOT in this repo. The nearest corridor choice is the Chapter 1 Far corridor to the Well in tools/maps_village.py (Straw Warden touch events, lines 196-218; Kaze gate at x=14, lines 251-258). Output lands in public/data/maps/map001.json via `npm run data`. Choice runtime is src/game/interpreter.ts case 'choice' and src/ui/message.ts choice(). Persistence is switches/self-switches/variables. A different choice (Kappa toll in tools/maps_ch3.py ~lines 369-374) is NOT this corridor.
+- status: entries 9 and 10 DROPPED; pointer recorded. Earlier entries, including 9 and 10, are left as written (append-only).

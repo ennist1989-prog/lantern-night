@@ -2,7 +2,7 @@ import { chromium } from 'playwright-core';
 import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
 // Env knobs: BASE (game URL), CHROME_PATH (Chrome/Chromium binary), SHOTS or SS (screenshot dir),
 // E2E_DEFAULT_SPEED=1 (play at the shipped default walk/text speed instead of the brisk test pace).
-export const CHROME_PATH = process.env.CHROME_PATH || '/usr/bin/google-chrome';
+export const CHROME_PATH = process.env.CHROME_PATH || process.env.CHROME || '/usr/bin/google-chrome';
 export const SSDIR = path.resolve(process.env.SHOTS || process.env.SS || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'screenshots'));
 fs.mkdirSync(SSDIR, { recursive: true });
 export async function launch(url = process.env.BASE || 'http://127.0.0.1:8099/', opts = {}) {

@@ -12,7 +12,7 @@ function* cmds(list) { for (const c of list || []) { yield c; for (const k of ['
 const evAt = (m, x, y, r) => m.events.filter((e) => e.x === x && e.y === y && realms(e.realm).includes(r));
 const isTransferEv = (e) => e.pages.some((p) => [...cmds(p.list)].some((c) => c.c === 'transfer' && c.map !== undefined));
 // house doors (button-free touch doors already) and story warps that are scripted, not walk-off exits
-const HOUSE = new Set(['1:7,14', '2:6,9', '1:25,14', '3:7,9']);
+const HOUSE = new Set(['1:6,14', '2:6,9', '1:25,14', '3:7,9']);
 const STORY = new Set(['6:8,5', '6:1,1']);
 const transfers = [];
 for (const m of Object.values(maps)) for (const e of m.events) e.pages.forEach((p, pi) => { for (const c of cmds(p.list)) if (c.c === 'transfer' && c.map !== undefined && c.map !== m.id) transfers.push({ m, e, p, pi, c }); });

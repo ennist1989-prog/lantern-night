@@ -1,0 +1,37 @@
+tag,rank,appid,name,owners,current_players,error
+Liminal Space,,,,,,tag endpoint returned no games
+Backrooms,,,,,,tag endpoint returned no games
+Analog Horror,,,,,,tag endpoint returned no games
+Psychological Horror,1,553850,HELLDIVERS 2,"20,000,000 .. 50,000,000",22930,
+Psychological Horror,2,2246340,Monster Hunter Wilds,"20,000,000 .. 50,000,000",10250,
+Psychological Horror,3,413150,Stardew Valley,"20,000,000 .. 50,000,000",40708,
+Psychological Horror,4,359550,Tom Clancy's Rainbow Six Siege,"20,000,000 .. 50,000,000",57071,
+Psychological Horror,5,438100,VRChat,"20,000,000 .. 50,000,000",47529,
+Psychological Horror,6,431960,Wallpaper Engine,"20,000,000 .. 50,000,000",52976,
+Psychological Horror,7,1517290,Battlefield 2042,"10,000,000 .. 20,000,000",674,
+Psychological Horror,8,381210,Dead by Daylight,"10,000,000 .. 20,000,000",35185,
+Psychological Horror,9,322170,Geometry Dash,"10,000,000 .. 20,000,000",37426,
+Psychological Horror,10,1426210,It Takes Two,"10,000,000 .. 20,000,000",4894,
+Dark Fantasy,,,,,,tag endpoint returned no games
+Action RPG,1,2358720,Black Myth: Wukong,"50,000,000 .. 100,000,000",3511,
+Action RPG,2,1599340,Lost Ark,"50,000,000 .. 100,000,000",5530,
+Action RPG,3,230410,Warframe,"50,000,000 .. 100,000,000",55627,
+Action RPG,4,1091500,Cyberpunk 2077,"20,000,000 .. 50,000,000",64765,
+Action RPG,5,1245620,ELDEN RING,"20,000,000 .. 50,000,000",17886,
+Action RPG,6,899770,Last Epoch,"20,000,000 .. 50,000,000",1397,
+Action RPG,7,2246340,Monster Hunter Wilds,"20,000,000 .. 50,000,000",10250,
+Action RPG,8,238960,Path of Exile,"20,000,000 .. 50,000,000",44226,
+Action RPG,9,4115450,Phantom Blade Zero,"20,000,000 .. 50,000,000",33726,
+Action RPG,10,292030,The Witcher 3: Wild Hunt — Remastered,"20,000,000 .. 50,000,000",14736,
+Narrative,,,,,,tag endpoint returned no games
+Pixel Graphics,1,413150,Stardew Valley,"20,000,000 .. 50,000,000",40708,
+Pixel Graphics,2,105600,Terraria,"20,000,000 .. 50,000,000",18490,
+Pixel Graphics,3,250900,The Binding of Isaac: Rebirth,"10,000,000 .. 20,000,000",25294,
+Pixel Graphics,4,304050,Trove,"10,000,000 .. 20,000,000",308,
+Pixel Graphics,5,1868140,DAVE THE DIVER,"5,000,000 .. 10,000,000",2091,
+Pixel Graphics,6,588650,Dead Cells,"5,000,000 .. 10,000,000",1173,
+Pixel Graphics,7,427520,Factorio,"5,000,000 .. 10,000,000",13609,
+Pixel Graphics,8,1118200,People Playground,"5,000,000 .. 10,000,000",1489,
+Pixel Graphics,9,391540,Undertale,"5,000,000 .. 10,000,000",1121,
+Pixel Graphics,10,1794680,Vampire Survivors,"5,000,000 .. 10,000,000",2518,
+FMV,,,,,,tag endpoint returned no games

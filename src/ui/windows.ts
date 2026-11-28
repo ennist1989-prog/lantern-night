@@ -12,12 +12,13 @@ export type Tone = 'near' | 'far';
 export function winTexture(scene: Phaser.Scene, w: number, h: number, tone: Tone = 'near'): string {
   const key = `win_${w}x${h}_${tone}`;
   if (scene.textures.exists(key)) return key;
-  const skinImg = scene.textures.get('windowskin').getSourceImage() as HTMLImageElement;
+  // Far has its own 96x48 skin (art/custom/ui/windowskin_far.png, copied in by art_overlay). No recolour fallback: a
+  // missing Far skin should be visible, and `npm run verify:assets` fails the pipeline before it can ship.
+  const skinImg = scene.textures.get(tone === 'far' ? 'windowskin_far' : 'windowskin').getSourceImage() as HTMLImageElement;
   const tex = scene.textures.createCanvas(key, w, h)!; const ctx = tex.getContext(); ctx.imageSmoothingEnabled = false;
   // background: stretch 48x48 bg
   ctx.save(); ctx.globalAlpha = 0.93; ctx.beginPath(); (ctx as any).roundRect(3, 3, w - 6, h - 6, 12); ctx.clip();
   ctx.drawImage(skinImg, 0, 0, 48, 48, 0, 0, w, h); ctx.restore();
-  if (tone === 'far') { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(20,110,120,0.30)'; ctx.fillRect(0, 0, w, h); ctx.restore(); }
   // frame 9-slice (corners 16 native -> 32 drawn x2? use 1:1 scaled x2)
   const c = 16, s = 2, cs = c * s;
   const fx = 48; const dw = w - cs * 2, dh = h - cs * 2;

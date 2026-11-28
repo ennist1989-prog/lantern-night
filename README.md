@@ -55,6 +55,8 @@ Almost everything under `public/data/` is **generated**. Hand edits there are ov
 
 Rule of thumb: tune numbers in `tools/balance_patches.py`; change story and events in the `tools/maps_*.py` generators; fix spec bugs at the source in rpg-research `_gen` (then re-emit). Never hand-edit `public/data/**`.
 
+For the full rebuild chain (`npm run assets` → `npm run data` → `python3 tools/ch_audio.py`), its prerequisites and the sprite-dimension conventions, see **[`ASSETS.md`](ASSETS.md)**.
+
 **npm scripts**
 - `npm run data` = `tools/gen_game.py`: gen_db → spec_import → items_import → sq_import → balance_patches → maps. Run after any generator edit and commit the regenerated JSON.
 - `npm run art` = `tools/art_custom.py`: copies `art/custom/**` over the built assets and refreshes `manifest.json`. `npm run data` also does this.
