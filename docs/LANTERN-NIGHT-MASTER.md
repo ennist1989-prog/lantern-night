@@ -74,3 +74,9 @@ GitHub open issues: **#27** and **#28** only. Ember's art verdicts, 27 Nov 10:59
 - `CHANGELOG.md` (box: /workspace/ln-pm/CHANGELOG.md) — dated history
 - `PRIORITIES.md` (box: /workspace/ln-pm/PRIORITIES.md) — board and post-deploy list
 - Handoff for Freebuff: `/workspace/lantern-night-handoff.md`
+
+## 2026-11-27 11:16 PM EST — Lantern Night redeploy LIVE (logged by Ledger)
+- Reported by Wisp as deployed on Thomas's own OK (Thomas's words not seen by Ledger directly). Live https://ennist1989-prog.github.io/lantern-night/ serves BUILD_SHA.txt = 4ecfbcd9856d70e585114da5d72bc3c349abcff5 (verified by Ledger 11:16 PM). gh-pages c16aaf9 (verified). Deploy run https://github.com/ennist1989-prog/lantern-night/actions/runs/46105830430 at 11:04 PM EST (per Wisp).
+- Rollback tag pre-redeploy-2026-11-27 → e9203a0 (verified). main is now 360b0a0 (docs-only commits on top; not what is live).
+- Sentry on in production; smoke event LANTERN-NIGHT-6 at 11:07 PM EST (per Wisp; not checked by Ledger). Main, #38 and fusion untouched (per Wisp).
+- Follow-ups added: upload Sentry source maps; filter localhost events (change lives in #38). QA live smoke test on 4ecfbcd requested by Ledger.
